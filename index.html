@@ -19,6 +19,8 @@
     .tab-active { border-bottom: 2px solid #60a5fa; color: #60a5fa; }
     .loading { display: inline-block; width: 20px; height: 20px; border: 2px solid #374151; border-top: 2px solid #60a5fa; border-radius: 50%; animation: spin 1s linear infinite; }
     @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    .currency-btn { transition: all 0.2s; }
+    .currency-btn.active { background: #3b82f6; color: white; border-color: #3b82f6; }
     ::-webkit-scrollbar { width: 8px; height: 8px; }
     ::-webkit-scrollbar-track { background: #111827; }
     ::-webkit-scrollbar-thumb { background: #374151; border-radius: 4px; }
@@ -28,20 +30,31 @@
 <body class="bg-gray-950 text-gray-100 min-h-screen">
   
   <header class="glass sticky top-0 z-50 border-b border-gray-800">
-    <div class="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
+    <div class="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between flex-wrap gap-3">
       <div class="flex items-center gap-3">
         <div class="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl flex items-center justify-center">
           <i class="fas fa-chart-line text-white text-lg"></i>
         </div>
         <div>
           <h1 class="text-xl font-bold gradient-text">Portfolio Tracker</h1>
-          <p class="text-xs text-gray-400">Dashboard en tiempo real</p>
+          <p class="text-xs text-gray-400" id="subtitle">Dashboard en tiempo real</p>
         </div>
       </div>
+      
       <div class="flex items-center gap-3">
-        <span id="lastUpdate" class="text-xs text-gray-500">Actualizando...</span>
+        <!-- Selector de Moneda -->
+        <div class="flex bg-gray-800 rounded-lg p-1 border border-gray-700">
+          <button onclick="setCurrency('USD')" id="btn-usd" class="currency-btn active px-3 py-1.5 rounded text-sm font-medium">
+            <i class="fas fa-dollar-sign mr-1"></i>USD
+          </button>
+          <button onclick="setCurrency('DOP')" id="btn-dop" class="currency-btn px-3 py-1.5 rounded text-sm font-medium text-gray-400 hover:text-white">
+            <i class="fas fa-coins mr-1"></i>DOP
+          </button>
+        </div>
+        
+        <span id="lastUpdate" class="text-xs text-gray-500 hidden sm:inline">Actualizando...</span>
         <button onclick="loadData()" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg text-sm font-medium transition-colors flex items-center gap-2">
-          <i class="fas fa-sync-alt"></i> Actualizar
+          <i class="fas fa-sync-alt"></i> <span class="hidden sm:inline">Actualizar</span>
         </button>
       </div>
     </div>
@@ -63,6 +76,12 @@
 
     <div id="content" class="hidden space-y-6 animate-fade-in">
       
+      <!-- Info de tasa -->
+      <div id="rateInfo" class="hidden bg-gray-900/50 border border-gray-800 rounded-lg px-4 py-2 text-sm text-gray-400 flex items-center gap-2">
+        <i class="fas fa-exchange-alt text-blue-400"></i>
+        <span id="rateText"></span>
+      </div>
+
       <!-- KPI Cards -->
       <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <div class="bg-gray-900/80 border border-gray-800 rounded-xl p-5 card-hover">
@@ -200,6 +219,7 @@
                   <th class="text-left py-3 px-2">Sector</th>
                   <th class="text-right py-3 px-2">Cantidad</th>
                   <th class="text-right py-3 px-2">Costo Base</th>
+                  <th class="text-center py-3 px-2">Moneda Orig.</th>
                   <th class="text-center py-3 px-2">Plataforma</th>
                 </tr>
               </thead>
@@ -228,6 +248,7 @@
                   <th class="text-right py-3 px-2">Cantidad</th>
                   <th class="text-right py-3 px-2">Precio</th>
                   <th class="text-right py-3 px-2">Total</th>
+                  <th class="text-center py-3 px-2">Moneda</th>
                   <th class="text-center py-3 px-2">Plataforma</th>
                 </tr>
               </thead>
@@ -243,7 +264,7 @@
               <thead>
                 <tr class="text-gray-400 border-b border-gray-800">
                   <th class="text-left py-3 px-2">Plataforma</th>
-                  <th class="text-center py-3 px-2">Moneda</th>
+                  <th class="text-center py-3 px-2">Moneda Orig.</th>
                   <th class="text-right py-3 px-2">Trans.</th>
                   <th class="text-right py-3 px-2">Depositado</th>
                   <th class="text-right py-3 px-2">Invertido</th>
@@ -267,18 +288,43 @@
     let allTransactions = [];
     let txPage = 0;
     const TX_PER_PAGE = 25;
+    let currentCurrency = "USD";
+    let currentRate = null;
+
+    function setCurrency(currency) {
+      if (currency === currentCurrency) return;
+      currentCurrency = currency;
+      
+      // Actualizar botones
+      document.getElementById('btn-usd').classList.toggle('active', currency === 'USD');
+      document.getElementById('btn-usd').classList.toggle('text-gray-400', currency !== 'USD');
+      document.getElementById('btn-dop').classList.toggle('active', currency === 'DOP');
+      document.getElementById('btn-dop').classList.toggle('text-gray-400', currency !== 'DOP');
+      
+      loadData();
+    }
 
     async function loadData() {
       showLoading();
       
       try {
-        const data = await fetchWithJSONP(API_URL + "?action=dashboard");
+        var url = API_URL + "?action=dashboard&currency=" + currentCurrency;
+        if (currentCurrency !== "USD" && currentRate) {
+          url += "&rate=" + currentRate;
+        }
+        
+        const data = await fetchWithJSONP(url);
         
         if (data.error) {
           throw new Error(data.error);
         }
         
-        allTransactions = data.allTransactions || data.recentTransactions || [];
+        // Guardar tasa si viene del servidor
+        if (data.meta && data.meta.exchangeRate) {
+          currentRate = data.meta.exchangeRate;
+        }
+        
+        allTransactions = data.allTransactions || [];
         txPage = 0;
         
         renderDashboard(data);
@@ -313,7 +359,7 @@
         
         script.onerror = function() {
           cleanup();
-          reject(new Error('No se pudo cargar el script. Verifica la URL de Apps Script.'));
+          reject(new Error('No se pudo cargar el script. Verifica la URL.'));
         };
         
         var separator = url.indexOf('?') !== -1 ? '&' : '?';
@@ -324,6 +370,20 @@
     }
 
     function renderDashboard(data) {
+      // Mostrar info de tasa si es DOP
+      var rateInfo = document.getElementById('rateInfo');
+      var rateText = document.getElementById('rateText');
+      
+      if (currentCurrency === 'DOP' && currentRate) {
+        rateInfo.classList.remove('hidden');
+        rateText.textContent = 'Tasa de cambio: 1 USD = ' + currentRate.toFixed(2) + ' DOP';
+      } else {
+        rateInfo.classList.add('hidden');
+      }
+      
+      // Actualizar subtítulo
+      document.getElementById('subtitle').textContent = 'Dashboard en ' + currentCurrency;
+
       // KPIs
       document.getElementById('kpiTotalTx').textContent = data.metrics && data.metrics.totalTransactions ? data.metrics.totalTransactions : 0;
       document.getElementById('kpiInvested').textContent = formatCurrency(data.metrics && data.metrics.totalInvested ? data.metrics.totalInvested : 0);
@@ -348,7 +408,11 @@
 
     async function loadPlatforms() {
       try {
-        const data = await fetchWithJSONP(API_URL + "?action=platforms");
+        var url = API_URL + "?action=platforms&currency=" + currentCurrency;
+        if (currentCurrency !== "USD" && currentRate) {
+          url += "&rate=" + currentRate;
+        }
+        const data = await fetchWithJSONP(url);
         renderPlatformsTable(data.platforms || []);
       } catch (e) {
         console.error("Error loading platforms:", e);
@@ -369,7 +433,7 @@
       var nextBtn = document.getElementById('txNext');
       
       if (!allTransactions || allTransactions.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="7" class="py-8 text-center text-gray-500">No hay transacciones</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="8" class="py-8 text-center text-gray-500">No hay transacciones</td></tr>';
         countSpan.textContent = '0';
         return;
       }
@@ -390,8 +454,9 @@
           '<td class="py-3 px-2 font-medium">' + (t.ticker || t.assetName || '-') + '</td>' +
           '<td class="py-3 px-2 text-center">' + getActionBadge(t.action) + '</td>' +
           '<td class="py-3 px-2 text-right font-mono">' + (t.quantity || 0) + '</td>' +
-          '<td class="py-3 px-2 text-right font-mono text-gray-400">' + formatCurrency(t.price) + '</td>' +
-          '<td class="py-3 px-2 text-right font-mono">' + formatCurrency(Math.abs(t.total || 0)) + '</td>' +
+          '<td class="py-3 px-2 text-right font-mono text-gray-400">' + formatCurrency(t.displayPrice || t.price) + '</td>' +
+          '<td class="py-3 px-2 text-right font-mono">' + formatCurrency(Math.abs(t.displayTotal || t.totalUSD || t.total || 0)) + '</td>' +
+          '<td class="py-3 px-2 text-center"><span class="px-2 py-1 bg-gray-800 rounded text-xs">' + (t.currency || '-') + '</span></td>' +
           '<td class="py-3 px-2 text-center text-gray-400">' + (t.platform || '-') + '</td>' +
         '</tr>';
       }).join('');
@@ -467,7 +532,7 @@
         data: {
           labels: data.map(function(d) { return d.platform || 'Desconocido'; }),
           datasets: [{
-            label: 'Invertido ($)',
+            label: 'Invertido (' + currentCurrency + ')',
             data: data.map(function(d) { return d.invested || 0; }),
             backgroundColor: colors,
             borderRadius: 6,
@@ -495,8 +560,19 @@
             }
           },
           scales: {
-            y: { grid: { color: '#374151' }, ticks: { color: '#9ca3af', callback: function(v) { return '$' + (v >= 1000 ? (v/1000).toFixed(1) + 'k' : v); } } },
-            x: { grid: { display: false }, ticks: { color: '#9ca3af' } }
+            y: { 
+              grid: { color: '#374151' }, 
+              ticks: { 
+                color: '#9ca3af', 
+                callback: function(v) { 
+                  return formatCompact(v);
+                } 
+              } 
+            },
+            x: { 
+              grid: { display: false }, 
+              ticks: { color: '#9ca3af' } 
+            }
           },
           layout: { padding: 10 }
         }
@@ -506,7 +582,7 @@
     function renderAssetsTable(assets) {
       var tbody = document.getElementById('assetsTable');
       if (!assets || assets.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="7" class="py-8 text-center text-gray-500">No hay activos en cartera</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="8" class="py-8 text-center text-gray-500">No hay activos en cartera</td></tr>';
         return;
       }
       
@@ -518,6 +594,7 @@
           '<td class="py-3 px-2 text-gray-400">' + (a.sector || '-') + '</td>' +
           '<td class="py-3 px-2 text-right font-mono">' + ((a.quantity || 0).toFixed(4)) + '</td>' +
           '<td class="py-3 px-2 text-right font-mono text-gray-400">' + formatCurrency(a.costBasis) + '</td>' +
+          '<td class="py-3 px-2 text-center"><span class="px-2 py-1 bg-gray-800 rounded text-xs">' + (a.originalCurrency || a.currency || '-') + '</span></td>' +
           '<td class="py-3 px-2 text-center"><span class="px-2 py-1 bg-gray-800 rounded text-xs">' + (a.platform || '-') + '</span></td>' +
         '</tr>';
       }).join('');
@@ -533,7 +610,7 @@
       tbody.innerHTML = platforms.map(function(p) {
         return '<tr class="border-b border-gray-800/50 hover:bg-gray-800/30 transition-colors">' +
           '<td class="py-3 px-2 font-medium">' + (p.platform || '-') + '</td>' +
-          '<td class="py-3 px-2 text-center"><span class="px-2 py-1 bg-gray-800 rounded text-xs">' + (p.currency || '-') + '</span></td>' +
+          '<td class="py-3 px-2 text-center"><span class="px-2 py-1 bg-gray-800 rounded text-xs">' + (p.originalCurrency || p.currency || '-') + '</span></td>' +
           '<td class="py-3 px-2 text-right font-mono">' + (p.transactions || 0) + '</td>' +
           '<td class="py-3 px-2 text-right font-mono text-emerald-400">' + formatCurrency(p.totalDeposits) + '</td>' +
           '<td class="py-3 px-2 text-right font-mono text-blue-400">' + formatCurrency(p.totalInvested) + '</td>' +
@@ -560,8 +637,21 @@
     }
 
     function formatCurrency(value) {
-      if (value === undefined || value === null || isNaN(value)) return '$0.00';
-      return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 2 }).format(value);
+      if (value === undefined || value === null || isNaN(value)) {
+        return currentCurrency === 'DOP' ? 'RD$0.00' : '$0.00';
+      }
+      return new Intl.NumberFormat('en-US', { 
+        style: 'currency', 
+        currency: currentCurrency === 'DOP' ? 'DOP' : 'USD',
+        minimumFractionDigits: 2 
+      }).format(value);
+    }
+
+    function formatCompact(value) {
+      if (value === undefined || value === null || isNaN(value)) return currentCurrency === 'DOP' ? 'RD$0' : '$0';
+      if (value >= 1000000) return (currentCurrency === 'DOP' ? 'RD$' : '$') + (value/1000000).toFixed(1) + 'M';
+      if (value >= 1000) return (currentCurrency === 'DOP' ? 'RD$' : '$') + (value/1000).toFixed(1) + 'k';
+      return (currentCurrency === 'DOP' ? 'RD$' : '$') + value;
     }
 
     function switchTab(tab) {
