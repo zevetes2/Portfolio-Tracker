@@ -255,7 +255,7 @@
           <i class="fas fa-layer-group text-white text-sm sm:text-lg"></i>
         </div>
         <div>
-          <h1 class="text-base sm:text-xl font-bold tracking-tight text-white">Capital <span class="text-brand-400">Tracker</span></h1>
+          <h1 class="text-base sm:text-xl font-bold tracking-tight text-white">A&E Portfolio <span class="text-brand-400">Tracker</span></h1>
           <p class="text-[10px] text-slate-400 uppercase tracking-widest font-semibold hidden sm:block" id="subtitle">Dashboard en tiempo real</p>
         </div>
       </div>
@@ -780,7 +780,7 @@
       document.getElementById('pfDailyChange').textContent = (dailyChange >= 0 ? '+' : '') + formatCurrency(dailyChange);
       document.getElementById('pfDailyChange').className = 'font-bold text-sm sm:text-base leading-none ' + (dailyChange >= 0 ? 'text-emerald-400' : 'text-rose-400');
 
-      var dailyPct = summary.overallDailyChangePct || 0;
+      var dailyPct = dailyChange / (summary.totalCurrentValue - dailyChange) * 100 || 0;
       document.getElementById('pfDailyChangePct').textContent = (dailyPct >= 0 ? '+' : '') + dailyPct.toFixed(2) + '%';
       document.getElementById('pfDailyChangePctContainer').className = 'px-2 py-1 rounded-md text-[10px] sm:text-xs font-bold ' + (dailyPct >= 0 ? 'bg-emerald-500/20 text-emerald-400' : 'bg-rose-500/20 text-rose-400');
 
@@ -790,12 +790,12 @@
       if (summary.topGainers && summary.topGainers.length > 0) {
         var best = summary.topGainers[0];
         document.getElementById('pfBestPosition').textContent = best.ticker;
-        document.getElementById('pfBestROI').textContent = '+' + (best.unrealizedROI || 0).toFixed(2) + '%';
+        document.getElementById('pfBestROI').textContent = '+' + (best.unrealizedROI * 100 || 0).toFixed(2) + '%';
       }
       if (summary.topLosers && summary.topLosers.length > 0) {
         var worst = summary.topLosers[0];
         document.getElementById('pfWorstPosition').textContent = worst.ticker;
-        document.getElementById('pfWorstROI').textContent = (worst.unrealizedROI || 0).toFixed(2) + '%';
+        document.getElementById('pfWorstROI').textContent = (worst.unrealizedROI * 100 || 0).toFixed(2) + '%';
       }
     }
 
@@ -811,7 +811,7 @@
               '<div><p class="font-bold text-xs text-slate-200">' + p.ticker + '</p></div>' +
             '</div>' +
             '<div class="text-right">' +
-              '<p class="font-bold text-xs text-emerald-400">+' + (p.unrealizedROI || 0).toFixed(2) + '%</p>' +
+              '<p class="font-bold text-xs text-emerald-400">+' + (p.unrealizedROI * 100 || 0).toFixed(2) + '%</p>' +
             '</div>' +
           '</div>';
         }).join('');
@@ -825,7 +825,7 @@
               '<div><p class="font-bold text-xs text-slate-200">' + p.ticker + '</p></div>' +
             '</div>' +
             '<div class="text-right">' +
-              '<p class="font-bold text-xs text-rose-400">' + (p.unrealizedROI || 0).toFixed(2) + '%</p>' +
+              '<p class="font-bold text-xs text-rose-400">' + (p.unrealizedROI * 100 || 0).toFixed(2) + '%</p>' +
             '</div>' +
           '</div>';
         }).join('');
@@ -848,7 +848,15 @@
             '</div>' +
           '</div>';
         }).join('');
-      } else { el.innerHTML = '<p class="text-slate-500 text-sm col-span-full">Sin datos de exposición</p>'; }
+      } else { 
+        el.innerHTML = '<div class="col-span-full flex flex-col items-center justify-center py-8 text-center">' +
+          '<div class="w-12 h-12 bg-slate-800/60 rounded-full flex items-center justify-center mb-3">' +
+            '<i class="fas fa-pie-chart text-slate-500 text-lg"></i>' +
+          '</div>' +
+          '<p class="text-slate-400 text-sm font-medium mb-1">Sin datos de exposición</p>' +
+          '<p class="text-slate-600 text-xs">Agrega activos a tu portafolio para ver la distribución</p>' +
+        '</div>'; 
+      }
     }
 
     function renderPortfolioCharts(summary) {
