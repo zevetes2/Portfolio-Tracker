@@ -834,17 +834,33 @@
 
     function renderLargestPositions(summary) {
       var el = document.getElementById('largestPositionsList');
-      if (summary.largestPositions && summary.largestPositions.length > 0) {
-        el.innerHTML = summary.largestPositions.map(function(p) {
-          var weight = summary.totalCurrentValue > 0 ? ((p.currentValue || 0) / summary.totalCurrentValue * 100).toFixed(1) : 0;
+      var data = summary.largestPositions;
+      var title = 'Top Posiciones';
+      var totalValue = summary.totalCurrentValue || 0;
+      
+      // Fallback: si no hay largestPositions pero sí byAssetClass, usar eso
+      if ((!data || data.length === 0) && summary.byAssetClass && summary.byAssetClass.length > 0) {
+        data = summary.byAssetClass;
+        title = 'Por Clase de Activo';
+        totalValue = data.reduce(function(s, item) { return s + (item.value || 0); }, 0);
+      }
+      
+      if (data && data.length > 0) {
+        el.innerHTML = data.map(function(p, idx) {
+          var displayName = p.ticker || p.name || 'Sin nombre';
+          var value = p.currentValue !== undefined ? p.currentValue : p.value;
+          var weight = totalValue > 0 ? ((value || 0) / totalValue * 100).toFixed(1) : 0;
+          var palette = ['#3b82f6', '#8b5cf6', '#10b981', '#f59e0b', '#f43f5e', '#0ea5e9', '#6366f1'];
+          var color = p.ticker ? '#3b82f6' : (palette[idx % palette.length]);
+          
           return '<div class="bg-slate-800/40 rounded-xl p-3 border border-slate-700/50 hover:bg-slate-800/60 transition-colors">' +
             '<div class="flex items-center justify-between mb-1.5">' +
-              '<span class="font-bold text-sm text-slate-200">' + p.ticker + '</span>' +
+              '<span class="font-bold text-sm text-slate-200">' + displayName + '</span>' +
               '<span class="text-[10px] font-medium text-slate-400 bg-slate-900 px-1.5 py-0.5 rounded">' + weight + '%</span>' +
             '</div>' +
-            '<p class="text-sm font-semibold text-slate-300 mb-2">' + formatCurrency(p.currentValue) + '</p>' +
+            '<p class="text-sm font-semibold text-slate-300 mb-2">' + formatCurrency(value) + '</p>' +
             '<div class="w-full bg-slate-900 rounded-full h-1 overflow-hidden">' +
-              '<div class="bg-brand-500 h-1 rounded-full" style="width:' + weight + '%"></div>' +
+              '<div class="h-1 rounded-full" style="width:' + weight + '%; background-color: ' + color + '"></div>' +
             '</div>' +
           '</div>';
         }).join('');
