@@ -19,6 +19,29 @@
     .tab-active { border-bottom: 2px solid #60a5fa; color: #60a5fa; }
     .loading { display: inline-block; width: 20px; height: 20px; border: 2px solid #374151; border-top: 2px solid #60a5fa; border-radius: 50%; animation: spin 1s linear infinite; }
     @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    
+    /* Fix para tooltips de Chart.js */
+    #chartjs-tooltip {
+      opacity: 1;
+      position: absolute;
+      background: rgba(0, 0, 0, 0.8);
+      color: white;
+      border-radius: 6px;
+      pointer-events: none;
+      transform: translate(-50%, 0);
+      transition: all .1s ease;
+      max-width: 250px;
+      word-wrap: break-word;
+      font-size: 12px;
+      padding: 8px 12px;
+      z-index: 100;
+    }
+    
+    /* Scrollbar personalizado */
+    ::-webkit-scrollbar { width: 8px; height: 8px; }
+    ::-webkit-scrollbar-track { background: #111827; }
+    ::-webkit-scrollbar-thumb { background: #374151; border-radius: 4px; }
+    ::-webkit-scrollbar-thumb:hover { background: #4b5563; }
   </style>
 </head>
 <body class="bg-gray-950 text-gray-100 min-h-screen">
@@ -64,7 +87,7 @@
     <div id="content" class="hidden space-y-6 animate-fade-in">
       
       <!-- KPI Cards -->
-      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <div class="bg-gray-900/80 border border-gray-800 rounded-xl p-5 card-hover">
           <div class="flex items-center justify-between mb-3">
             <span class="text-gray-400 text-sm">Total Invertido</span>
@@ -108,6 +131,50 @@
           <p id="kpiAssets" class="text-2xl font-bold text-white">0</p>
           <p class="text-xs text-gray-500 mt-1">Posiciones abiertas</p>
         </div>
+        
+        <div class="bg-gray-900/80 border border-gray-800 rounded-xl p-5 card-hover">
+          <div class="flex items-center justify-between mb-3">
+            <span class="text-gray-400 text-sm">Depositado</span>
+            <div class="w-8 h-8 bg-emerald-500/20 rounded-lg flex items-center justify-center">
+              <i class="fas fa-university text-emerald-400 text-sm"></i>
+            </div>
+          </div>
+          <p id="kpiDeposits" class="text-2xl font-bold text-white">$0.00</p>
+          <p class="text-xs text-gray-500 mt-1">Depósitos + Transferencias</p>
+        </div>
+
+        <div class="bg-gray-900/80 border border-gray-800 rounded-xl p-5 card-hover">
+          <div class="flex items-center justify-between mb-3">
+            <span class="text-gray-400 text-sm">Retiros</span>
+            <div class="w-8 h-8 bg-red-500/20 rounded-lg flex items-center justify-center">
+              <i class="fas fa-money-bill-wave text-red-400 text-sm"></i>
+            </div>
+          </div>
+          <p id="kpiWithdrawals" class="text-2xl font-bold text-white">$0.00</p>
+          <p class="text-xs text-gray-500 mt-1">Retiros de efectivo</p>
+        </div>
+
+        <div class="bg-gray-900/80 border border-gray-800 rounded-xl p-5 card-hover">
+          <div class="flex items-center justify-between mb-3">
+            <span class="text-gray-400 text-sm">Crypto Interest</span>
+            <div class="w-8 h-8 bg-yellow-500/20 rounded-lg flex items-center justify-center">
+              <i class="fas fa-bolt text-yellow-400 text-sm"></i>
+            </div>
+          </div>
+          <p id="kpiCryptoInterest" class="text-2xl font-bold text-white">$0.00</p>
+          <p class="text-xs text-gray-500 mt-1">Intereses crypto</p>
+        </div>
+
+        <div class="bg-gray-900/80 border border-gray-800 rounded-xl p-5 card-hover">
+          <div class="flex items-center justify-between mb-3">
+            <span class="text-gray-400 text-sm">Valor Neto</span>
+            <div class="w-8 h-8 bg-cyan-500/20 rounded-lg flex items-center justify-center">
+              <i class="fas fa-wallet text-cyan-400 text-sm"></i>
+            </div>
+          </div>
+          <p id="kpiNetValue" class="text-2xl font-bold text-white">$0.00</p>
+          <p class="text-xs text-gray-500 mt-1">Depósitos - Retiros + Ventas - Compras</p>
+        </div>
       </div>
 
       <!-- Charts Row -->
@@ -116,26 +183,30 @@
           <h3 class="text-lg font-semibold mb-4 flex items-center gap-2">
             <i class="fas fa-pie-chart text-blue-400"></i> Distribución por Clase de Activo
           </h3>
-          <canvas id="assetClassChart" height="200"></canvas>
+          <div style="position: relative; height: 250px;">
+            <canvas id="assetClassChart"></canvas>
+          </div>
         </div>
         <div class="bg-gray-900/80 border border-gray-800 rounded-xl p-6">
           <h3 class="text-lg font-semibold mb-4 flex items-center gap-2">
             <i class="fas fa-building text-purple-400"></i> Distribución por Plataforma
           </h3>
-          <canvas id="platformChart" height="200"></canvas>
+          <div style="position: relative; height: 250px;">
+            <canvas id="platformChart"></canvas>
+          </div>
         </div>
       </div>
 
       <!-- Tabs -->
       <div class="bg-gray-900/80 border border-gray-800 rounded-xl overflow-hidden">
         <div class="flex border-b border-gray-800 overflow-x-auto">
-          <button onclick="switchTab('assets')" id="tab-assets" class="tab-btn px-6 py-3 text-sm font-medium text-gray-400 hover:text-white transition-colors tab-active">
+          <button onclick="switchTab('assets')" id="tab-assets" class="tab-btn px-6 py-3 text-sm font-medium text-gray-400 hover:text-white transition-colors tab-active whitespace-nowrap">
             <i class="fas fa-cubes mr-2"></i>Mis Activos
           </button>
-          <button onclick="switchTab('transactions')" id="tab-transactions" class="tab-btn px-6 py-3 text-sm font-medium text-gray-400 hover:text-white transition-colors">
+          <button onclick="switchTab('transactions')" id="tab-transactions" class="tab-btn px-6 py-3 text-sm font-medium text-gray-400 hover:text-white transition-colors whitespace-nowrap">
             <i class="fas fa-list mr-2"></i>Transacciones
           </button>
-          <button onclick="switchTab('platforms')" id="tab-platforms" class="tab-btn px-6 py-3 text-sm font-medium text-gray-400 hover:text-white transition-colors">
+          <button onclick="switchTab('platforms')" id="tab-platforms" class="tab-btn px-6 py-3 text-sm font-medium text-gray-400 hover:text-white transition-colors whitespace-nowrap">
             <i class="fas fa-university mr-2"></i>Plataformas
           </button>
         </div>
@@ -188,11 +259,12 @@
                 <tr class="text-gray-400 border-b border-gray-800">
                   <th class="text-left py-3 px-2">Plataforma</th>
                   <th class="text-center py-3 px-2">Moneda</th>
-                  <th class="text-right py-3 px-2">Transacciones</th>
+                  <th class="text-right py-3 px-2">Trans.</th>
                   <th class="text-right py-3 px-2">Depositado</th>
                   <th class="text-right py-3 px-2">Invertido</th>
                   <th class="text-right py-3 px-2">Vendido</th>
                   <th class="text-right py-3 px-2">Dividendos</th>
+                  <th class="text-right py-3 px-2">Neto</th>
                 </tr>
               </thead>
               <tbody id="platformsTable" class="text-gray-300"></tbody>
@@ -204,287 +276,342 @@
   </main>
 
   <script>
-  // ============================================
-  // CONFIGURACIÓN - TU URL REAL DE APPS SCRIPT
-  // ============================================
-  const API_URL = "https://script.google.com/macros/s/AKfycbzljOCK6u9cCGViOPrAXdLxmznXTAHR8YTBFZ5TQNPnuwij5b6mHKsczAvQdz2_YFaj/exec";
-  
-  let charts = {};
-  let allData = null;
-
-  async function loadData() {
-    showLoading();
+    // ============================================
+    // CONFIGURACIÓN - TU URL REAL DE APPS SCRIPT
+    // ============================================
+    const API_URL = "https://script.google.com/macros/s/AKfycbzljOCK6u9cCGViOPrAXdLxmznXTAHR8YTBFZ5TQNPnuwij5b6mHKsczAvQdz2_YFaj/exec";
     
-    try {
-      const data = await fetchWithJSONP(API_URL + "?action=dashboard");
-      allData = data;
-      
-      if (data.error) {
-        throw new Error(data.error);
-      }
-      
-      renderDashboard(data);
-      document.getElementById('lastUpdate').textContent = 'Actualizado: ' + new Date().toLocaleString('es-ES');
-      showContent();
-    } catch (error) {
-      console.error("Error:", error);
-      showError('Error: ' + error.message);
-    }
-  }
+    let charts = {};
+    let allData = null;
 
-  // JSONP approach para evitar CORS con Google Apps Script
-  function fetchWithJSONP(url) {
-    return new Promise(function(resolve, reject) {
-      var scriptId = 'jsonp_' + Date.now();
-      var script = document.createElement('script');
+    async function loadData() {
+      showLoading();
       
-      // Crear función callback global
-      window[scriptId] = function(data) {
-        cleanup();
-        resolve(data);
-      };
-      
-      // Timeout
-      var timeout = setTimeout(function() {
-        cleanup();
-        reject(new Error('Timeout - La API no respondió en 15 segundos'));
-      }, 15000);
-      
-      function cleanup() {
-        clearTimeout(timeout);
-        if (script.parentNode) script.parentNode.removeChild(script);
-        delete window[scriptId];
-      }
-      
-      // Manejar error de carga
-      script.onerror = function() {
-        cleanup();
-        reject(new Error('No se pudo cargar el script. Verifica la URL de Apps Script.'));
-      };
-      
-      // Añadir callback parameter
-      var separator = url.indexOf('?') !== -1 ? '&' : '?';
-      script.src = url + separator + 'callback=' + scriptId;
-      
-      document.head.appendChild(script);
-    });
-  }
-
-  function renderDashboard(data) {
-    // KPIs
-    document.getElementById('kpiInvested').textContent = formatCurrency(data.metrics && data.metrics.totalInvested ? data.metrics.totalInvested : 0);
-    document.getElementById('kpiSold').textContent = formatCurrency(data.metrics && data.metrics.totalSold ? data.metrics.totalSold : 0);
-    document.getElementById('kpiDividends').textContent = formatCurrency(data.metrics && data.metrics.totalDividends ? data.metrics.totalDividends : 0);
-    document.getElementById('kpiAssets').textContent = data.metrics && data.metrics.currentAssets ? data.metrics.currentAssets : 0;
-
-    // Charts
-    renderAssetClassChart(data.byAssetClass || []);
-    renderPlatformChart(data.byPlatform || []);
-
-    // Tables
-    renderAssetsTable(data.currentAssets || []);
-    renderTransactionsTable(data.recentTransactions || []);
-    
-    // Load platforms
-    loadPlatforms();
-  }
-
-  async function loadPlatforms() {
-    try {
-      const data = await fetchWithJSONP(API_URL + "?action=platforms");
-      renderPlatformsTable(data.platforms || []);
-    } catch (e) {
-      console.error("Error loading platforms:", e);
-    }
-  }
-
-  function renderAssetClassChart(data) {
-    var ctx = document.getElementById('assetClassChart').getContext('2d');
-    if (charts.assetClass) charts.assetClass.destroy();
-    
-    if (!data || data.length === 0) {
-      ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
-      return;
-    }
-    
-    charts.assetClass = new Chart(ctx, {
-      type: 'doughnut',
-      data: {
-        labels: data.map(function(d) { return d.class || 'Desconocido'; }),
-        datasets: [{
-          data: data.map(function(d) { return d.count || 0; }),
-          backgroundColor: ['#3b82f6', '#8b5cf6', '#10b981', '#f59e0b', '#ef4444', '#ec4899', '#06b6d4'],
-          borderWidth: 0
-        }]
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: {
-          legend: { 
-            position: 'bottom', 
-            labels: { color: '#9ca3af', padding: 15, usePointStyle: true } 
-          }
+      try {
+        const data = await fetchWithJSONP(API_URL + "?action=dashboard");
+        allData = data;
+        
+        if (data.error) {
+          throw new Error(data.error);
         }
+        
+        renderDashboard(data);
+        document.getElementById('lastUpdate').textContent = 'Actualizado: ' + new Date().toLocaleString('es-ES');
+        showContent();
+      } catch (error) {
+        console.error("Error:", error);
+        showError('Error: ' + error.message);
       }
-    });
-  }
-
-  function renderPlatformChart(data) {
-    var ctx = document.getElementById('platformChart').getContext('2d');
-    if (charts.platform) charts.platform.destroy();
-    
-    if (!data || data.length === 0) {
-      ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
-      return;
     }
-    
-    charts.platform = new Chart(ctx, {
-      type: 'bar',
-      data: {
-        labels: data.map(function(d) { return d.platform || 'Desconocido'; }),
-        datasets: [{
-          label: 'Invertido ($)',
-          data: data.map(function(d) { return d.invested || 0; }),
-          backgroundColor: ['#3b82f6', '#8b5cf6', '#10b981', '#f59e0b'],
-          borderRadius: 6,
-          borderSkipped: false
-        }]
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: {
-          legend: { display: false }
+
+    // JSONP approach para evitar CORS con Google Apps Script
+    function fetchWithJSONP(url) {
+      return new Promise(function(resolve, reject) {
+        var scriptId = 'jsonp_' + Date.now();
+        var script = document.createElement('script');
+        
+        window[scriptId] = function(data) {
+          cleanup();
+          resolve(data);
+        };
+        
+        var timeout = setTimeout(function() {
+          cleanup();
+          reject(new Error('Timeout - La API no respondió en 15 segundos'));
+        }, 15000);
+        
+        function cleanup() {
+          clearTimeout(timeout);
+          if (script.parentNode) script.parentNode.removeChild(script);
+          delete window[scriptId];
+        }
+        
+        script.onerror = function() {
+          cleanup();
+          reject(new Error('No se pudo cargar el script. Verifica la URL de Apps Script.'));
+        };
+        
+        var separator = url.indexOf('?') !== -1 ? '&' : '?';
+        script.src = url + separator + 'callback=' + scriptId;
+        
+        document.head.appendChild(script);
+      });
+    }
+
+    function renderDashboard(data) {
+      // KPIs
+      document.getElementById('kpiInvested').textContent = formatCurrency(data.metrics && data.metrics.totalInvested ? data.metrics.totalInvested : 0);
+      document.getElementById('kpiSold').textContent = formatCurrency(data.metrics && data.metrics.totalSold ? data.metrics.totalSold : 0);
+      document.getElementById('kpiDividends').textContent = formatCurrency(data.metrics && data.metrics.totalDividends ? data.metrics.totalDividends : 0);
+      document.getElementById('kpiAssets').textContent = data.metrics && data.metrics.currentAssets ? data.metrics.currentAssets : 0;
+      document.getElementById('kpiDeposits').textContent = formatCurrency(data.metrics && data.metrics.totalDeposits ? data.metrics.totalDeposits : 0);
+      document.getElementById('kpiWithdrawals').textContent = formatCurrency(data.metrics && data.metrics.totalWithdrawals ? data.metrics.totalWithdrawals : 0);
+      document.getElementById('kpiCryptoInterest').textContent = formatCurrency(data.metrics && data.metrics.totalCryptoInterest ? data.metrics.totalCryptoInterest : 0);
+      document.getElementById('kpiNetValue').textContent = formatCurrency(data.metrics && data.metrics.totalPortfolioValue ? data.metrics.totalPortfolioValue : 0);
+
+      // Charts
+      renderAssetClassChart(data.byAssetClass || []);
+      renderPlatformChart(data.byPlatform || []);
+
+      // Tables
+      renderAssetsTable(data.currentAssets || []);
+      renderTransactionsTable(data.recentTransactions || []);
+      
+      // Load platforms
+      loadPlatforms();
+    }
+
+    async function loadPlatforms() {
+      try {
+        const data = await fetchWithJSONP(API_URL + "?action=platforms");
+        renderPlatformsTable(data.platforms || []);
+      } catch (e) {
+        console.error("Error loading platforms:", e);
+      }
+    }
+
+    function renderAssetClassChart(data) {
+      var ctx = document.getElementById('assetClassChart').getContext('2d');
+      if (charts.assetClass) charts.assetClass.destroy();
+      
+      if (!data || data.length === 0) {
+        ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+        return;
+      }
+      
+      var colors = ['#3b82f6', '#8b5cf6', '#10b981', '#f59e0b', '#ef4444', '#ec4899', '#06b6d4', '#84cc16', '#f97316'];
+      
+      charts.assetClass = new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+          labels: data.map(function(d) { return d.class || 'Desconocido'; }),
+          datasets: [{
+            data: data.map(function(d) { return d.count || 0; }),
+            backgroundColor: colors,
+            borderWidth: 0,
+            hoverOffset: 4
+          }]
         },
-        scales: {
-          y: { 
-            grid: { color: '#374151' }, 
-            ticks: { 
-              color: '#9ca3af', 
-              callback: function(v) { 
-                return '$' + (v >= 1000 ? (v/1000).toFixed(1) + 'k' : v); 
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { 
+              position: 'bottom', 
+              labels: { 
+                color: '#9ca3af', 
+                padding: 10, 
+                usePointStyle: true,
+                font: { size: 11 }
               } 
-            } 
+            },
+            tooltip: {
+              backgroundColor: 'rgba(17, 24, 39, 0.95)',
+              titleColor: '#fff',
+              bodyColor: '#9ca3af',
+              borderColor: '#374151',
+              borderWidth: 1,
+              padding: 10,
+              cornerRadius: 8,
+              displayColors: true,
+              callbacks: {
+                label: function(context) {
+                  var label = context.label || '';
+                  var value = context.parsed || 0;
+                  var total = context.dataset.data.reduce(function(a, b) { return a + b; }, 0);
+                  var percentage = total > 0 ? ((value / total) * 100).toFixed(1) : 0;
+                  return label + ': ' + value + ' trans. (' + percentage + '%)';
+                }
+              }
+            }
           },
-          x: { 
-            grid: { display: false }, 
-            ticks: { color: '#9ca3af' } 
+          layout: {
+            padding: 10
           }
         }
+      });
+    }
+
+    function renderPlatformChart(data) {
+      var ctx = document.getElementById('platformChart').getContext('2d');
+      if (charts.platform) charts.platform.destroy();
+      
+      if (!data || data.length === 0) {
+        ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+        return;
       }
-    });
-  }
-
-  function renderAssetsTable(assets) {
-    var tbody = document.getElementById('assetsTable');
-    if (!assets || assets.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="7" class="py-8 text-center text-gray-500">No hay activos en cartera</td></tr>';
-      return;
+      
+      var colors = ['#3b82f6', '#8b5cf6', '#10b981', '#f59e0b', '#ef4444'];
+      
+      charts.platform = new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: data.map(function(d) { return d.platform || 'Desconocido'; }),
+          datasets: [{
+            label: 'Invertido ($)',
+            data: data.map(function(d) { return d.invested || 0; }),
+            backgroundColor: colors,
+            borderRadius: 6,
+            borderSkipped: false
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              backgroundColor: 'rgba(17, 24, 39, 0.95)',
+              titleColor: '#fff',
+              bodyColor: '#9ca3af',
+              borderColor: '#374151',
+              borderWidth: 1,
+              padding: 10,
+              cornerRadius: 8,
+              callbacks: {
+                label: function(context) {
+                  return 'Invertido: ' + formatCurrency(context.parsed.y);
+                }
+              }
+            }
+          },
+          scales: {
+            y: { 
+              grid: { color: '#374151' }, 
+              ticks: { 
+                color: '#9ca3af', 
+                callback: function(v) { 
+                  return '$' + (v >= 1000 ? (v/1000).toFixed(1) + 'k' : v); 
+                } 
+              } 
+            },
+            x: { 
+              grid: { display: false }, 
+              ticks: { color: '#9ca3af' } 
+            }
+          },
+          layout: {
+            padding: 10
+          }
+        }
+      });
     }
-    
-    tbody.innerHTML = assets.map(function(a) {
-      return '<tr class="border-b border-gray-800/50 hover:bg-gray-800/30 transition-colors">' +
-        '<td class="py-3 px-2 font-mono font-semibold text-blue-400">' + (a.ticker || '-') + '</td>' +
-        '<td class="py-3 px-2">' + (a.name || '-') + '</td>' +
-        '<td class="py-3 px-2"><span class="px-2 py-1 bg-gray-800 rounded text-xs">' + (a.class || '-') + '</span></td>' +
-        '<td class="py-3 px-2 text-gray-400">' + (a.sector || '-') + '</td>' +
-        '<td class="py-3 px-2 text-right font-mono">' + ((a.quantity || 0).toFixed(4)) + '</td>' +
-        '<td class="py-3 px-2 text-right font-mono text-gray-400">' + formatCurrency(a.costBasis) + '</td>' +
-        '<td class="py-3 px-2 text-center"><span class="px-2 py-1 bg-gray-800 rounded text-xs">' + (a.platform || '-') + '</span></td>' +
-      '</tr>';
-    }).join('');
-  }
 
-  function renderTransactionsTable(transactions) {
-    var tbody = document.getElementById('transactionsTable');
-    if (!transactions || transactions.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="7" class="py-8 text-center text-gray-500">No hay transacciones</td></tr>';
-      return;
+    function renderAssetsTable(assets) {
+      var tbody = document.getElementById('assetsTable');
+      if (!assets || assets.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="7" class="py-8 text-center text-gray-500">No hay activos en cartera</td></tr>';
+        return;
+      }
+      
+      tbody.innerHTML = assets.map(function(a) {
+        return '<tr class="border-b border-gray-800/50 hover:bg-gray-800/30 transition-colors">' +
+          '<td class="py-3 px-2 font-mono font-semibold text-blue-400">' + (a.ticker || '-') + '</td>' +
+          '<td class="py-3 px-2">' + (a.name || '-') + '</td>' +
+          '<td class="py-3 px-2"><span class="px-2 py-1 bg-gray-800 rounded text-xs">' + (a.class || '-') + '</span></td>' +
+          '<td class="py-3 px-2 text-gray-400">' + (a.sector || '-') + '</td>' +
+          '<td class="py-3 px-2 text-right font-mono">' + ((a.quantity || 0).toFixed(4)) + '</td>' +
+          '<td class="py-3 px-2 text-right font-mono text-gray-400">' + formatCurrency(a.costBasis) + '</td>' +
+          '<td class="py-3 px-2 text-center"><span class="px-2 py-1 bg-gray-800 rounded text-xs">' + (a.platform || '-') + '</span></td>' +
+        '</tr>';
+      }).join('');
     }
-    
-    tbody.innerHTML = transactions.map(function(t) {
-      return '<tr class="border-b border-gray-800/50 hover:bg-gray-800/30 transition-colors">' +
-        '<td class="py-3 px-2 text-gray-400">' + (t.date || '-') + '</td>' +
-        '<td class="py-3 px-2 font-medium">' + (t.ticker || t.assetName || '-') + '</td>' +
-        '<td class="py-3 px-2 text-center">' + getActionBadge(t.action) + '</td>' +
-        '<td class="py-3 px-2 text-right font-mono">' + (t.quantity || 0) + '</td>' +
-        '<td class="py-3 px-2 text-right font-mono text-gray-400">' + formatCurrency(t.price) + '</td>' +
-        '<td class="py-3 px-2 text-right font-mono">' + formatCurrency(Math.abs(t.total || 0)) + '</td>' +
-        '<td class="py-3 px-2 text-center text-gray-400">' + (t.platform || '-') + '</td>' +
-      '</tr>';
-    }).join('');
-  }
 
-  function renderPlatformsTable(platforms) {
-    var tbody = document.getElementById('platformsTable');
-    if (!platforms || platforms.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="7" class="py-8 text-center text-gray-500">No hay plataformas</td></tr>';
-      return;
+    function renderTransactionsTable(transactions) {
+      var tbody = document.getElementById('transactionsTable');
+      if (!transactions || transactions.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="7" class="py-8 text-center text-gray-500">No hay transacciones</td></tr>';
+        return;
+      }
+      
+      tbody.innerHTML = transactions.map(function(t) {
+        return '<tr class="border-b border-gray-800/50 hover:bg-gray-800/30 transition-colors">' +
+          '<td class="py-3 px-2 text-gray-400">' + (t.date || '-') + '</td>' +
+          '<td class="py-3 px-2 font-medium">' + (t.ticker || t.assetName || '-') + '</td>' +
+          '<td class="py-3 px-2 text-center">' + getActionBadge(t.action) + '</td>' +
+          '<td class="py-3 px-2 text-right font-mono">' + (t.quantity || 0) + '</td>' +
+          '<td class="py-3 px-2 text-right font-mono text-gray-400">' + formatCurrency(t.price) + '</td>' +
+          '<td class="py-3 px-2 text-right font-mono">' + formatCurrency(Math.abs(t.total || 0)) + '</td>' +
+          '<td class="py-3 px-2 text-center text-gray-400">' + (t.platform || '-') + '</td>' +
+        '</tr>';
+      }).join('');
     }
-    
-    tbody.innerHTML = platforms.map(function(p) {
-      return '<tr class="border-b border-gray-800/50 hover:bg-gray-800/30 transition-colors">' +
-        '<td class="py-3 px-2 font-medium">' + (p.platform || '-') + '</td>' +
-        '<td class="py-3 px-2 text-center"><span class="px-2 py-1 bg-gray-800 rounded text-xs">' + (p.currency || '-') + '</span></td>' +
-        '<td class="py-3 px-2 text-right font-mono">' + (p.transactions || 0) + '</td>' +
-        '<td class="py-3 px-2 text-right font-mono text-green-400">' + formatCurrency(p.totalDeposits) + '</td>' +
-        '<td class="py-3 px-2 text-right font-mono text-blue-400">' + formatCurrency(p.totalInvested) + '</td>' +
-        '<td class="py-3 px-2 text-right font-mono text-orange-400">' + formatCurrency(p.totalSold) + '</td>' +
-        '<td class="py-3 px-2 text-right font-mono text-purple-400">' + formatCurrency(p.totalDividends) + '</td>' +
-      '</tr>';
-    }).join('');
-  }
 
-  function getActionBadge(action) {
-    var badges = {
-      'Buy': '<span class="px-2 py-1 bg-blue-500/20 text-blue-400 rounded text-xs font-medium">COMPRA</span>',
-      'Sell': '<span class="px-2 py-1 bg-green-500/20 text-green-400 rounded text-xs font-medium">VENTA</span>',
-      'Cash Deposit': '<span class="px-2 py-1 bg-gray-500/20 text-gray-400 rounded text-xs font-medium">DEPÓSITO</span>',
-      'Dividend': '<span class="px-2 py-1 bg-purple-500/20 text-purple-400 rounded text-xs font-medium">DIVIDENDO</span>'
-    };
-    return badges[action] || '<span class="px-2 py-1 bg-gray-800 rounded text-xs">' + (action || '-') + '</span>';
-  }
+    function renderPlatformsTable(platforms) {
+      var tbody = document.getElementById('platformsTable');
+      if (!platforms || platforms.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="8" class="py-8 text-center text-gray-500">No hay plataformas</td></tr>';
+        return;
+      }
+      
+      tbody.innerHTML = platforms.map(function(p) {
+        return '<tr class="border-b border-gray-800/50 hover:bg-gray-800/30 transition-colors">' +
+          '<td class="py-3 px-2 font-medium">' + (p.platform || '-') + '</td>' +
+          '<td class="py-3 px-2 text-center"><span class="px-2 py-1 bg-gray-800 rounded text-xs">' + (p.currency || '-') + '</span></td>' +
+          '<td class="py-3 px-2 text-right font-mono">' + (p.transactions || 0) + '</td>' +
+          '<td class="py-3 px-2 text-right font-mono text-emerald-400">' + formatCurrency(p.totalDeposits) + '</td>' +
+          '<td class="py-3 px-2 text-right font-mono text-blue-400">' + formatCurrency(p.totalInvested) + '</td>' +
+          '<td class="py-3 px-2 text-right font-mono text-green-400">' + formatCurrency(p.totalSold) + '</td>' +
+          '<td class="py-3 px-2 text-right font-mono text-purple-400">' + formatCurrency(p.totalDividends) + '</td>' +
+          '<td class="py-3 px-2 text-right font-mono text-cyan-400">' + formatCurrency(p.netFlow) + '</td>' +
+        '</tr>';
+      }).join('');
+    }
 
-  function formatCurrency(value) {
-    if (value === undefined || value === null || isNaN(value)) return '$0.00';
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
-      minimumFractionDigits: 2
-    }).format(value);
-  }
+    function getActionBadge(action) {
+      var badges = {
+        'Buy': '<span class="px-2 py-1 bg-blue-500/20 text-blue-400 rounded text-xs font-medium">COMPRA</span>',
+        'Sell': '<span class="px-2 py-1 bg-green-500/20 text-green-400 rounded text-xs font-medium">VENTA</span>',
+        'Cash Deposit': '<span class="px-2 py-1 bg-emerald-500/20 text-emerald-400 rounded text-xs font-medium">DEPÓSITO</span>',
+        'Cash Withdrawal': '<span class="px-2 py-1 bg-red-500/20 text-red-400 rounded text-xs font-medium">RETIRO</span>',
+        'Transfer Send': '<span class="px-2 py-1 bg-orange-500/20 text-orange-400 rounded text-xs font-medium">TRANSFER OUT</span>',
+        'Transfer Deposit': '<span class="px-2 py-1 bg-teal-500/20 text-teal-400 rounded text-xs font-medium">TRANSFER IN</span>',
+        'Dividend': '<span class="px-2 py-1 bg-purple-500/20 text-purple-400 rounded text-xs font-medium">DIVIDENDO</span>',
+        'DRIP': '<span class="px-2 py-1 bg-indigo-500/20 text-indigo-400 rounded text-xs font-medium">DRIP</span>',
+        'Crypto Interest': '<span class="px-2 py-1 bg-yellow-500/20 text-yellow-400 rounded text-xs font-medium">INTERÉS</span>'
+      };
+      return badges[action] || '<span class="px-2 py-1 bg-gray-800 rounded text-xs">' + (action || '-') + '</span>';
+    }
 
-  function switchTab(tab) {
-    var tabs = ['assets', 'transactions', 'platforms'];
-    tabs.forEach(function(t) {
-      document.getElementById('panel-' + t).classList.add('hidden');
-      document.getElementById('tab-' + t).classList.remove('tab-active');
-    });
-    document.getElementById('panel-' + tab).classList.remove('hidden');
-    document.getElementById('tab-' + tab).classList.add('tab-active');
-  }
+    function formatCurrency(value) {
+      if (value === undefined || value === null || isNaN(value)) return '$0.00';
+      return new Intl.NumberFormat('en-US', {
+        style: 'currency',
+        currency: 'USD',
+        minimumFractionDigits: 2
+      }).format(value);
+    }
 
-  function showLoading() {
-    document.getElementById('loadingState').classList.remove('hidden');
-    document.getElementById('errorState').classList.add('hidden');
-    document.getElementById('content').classList.add('hidden');
-  }
+    function switchTab(tab) {
+      var tabs = ['assets', 'transactions', 'platforms'];
+      tabs.forEach(function(t) {
+        document.getElementById('panel-' + t).classList.add('hidden');
+        document.getElementById('tab-' + t).classList.remove('tab-active');
+      });
+      document.getElementById('panel-' + tab).classList.remove('hidden');
+      document.getElementById('tab-' + tab).classList.add('tab-active');
+    }
 
-  function showContent() {
-    document.getElementById('loadingState').classList.add('hidden');
-    document.getElementById('errorState').classList.add('hidden');
-    document.getElementById('content').classList.remove('hidden');
-  }
+    function showLoading() {
+      document.getElementById('loadingState').classList.remove('hidden');
+      document.getElementById('errorState').classList.add('hidden');
+      document.getElementById('content').classList.add('hidden');
+    }
 
-  function showError(msg) {
-    document.getElementById('loadingState').classList.add('hidden');
-    document.getElementById('errorState').classList.remove('hidden');
-    document.getElementById('errorMessage').textContent = msg;
-  }
+    function showContent() {
+      document.getElementById('loadingState').classList.add('hidden');
+      document.getElementById('errorState').classList.add('hidden');
+      document.getElementById('content').classList.remove('hidden');
+    }
 
-  // Load on page load
-  loadData();
-</script>
+    function showError(msg) {
+      document.getElementById('loadingState').classList.add('hidden');
+      document.getElementById('errorState').classList.remove('hidden');
+      document.getElementById('errorMessage').textContent = msg;
+    }
+
+    // Load on page load
+    loadData();
+  </script>
 </body>
 </html>
