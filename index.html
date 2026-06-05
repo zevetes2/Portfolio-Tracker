@@ -204,203 +204,286 @@
   </main>
 
   <script>
-    // ============================================
-    // CONFIGURACIÓN - REEMPLAZA CON TU URL
-    // ============================================
-    const API_URL = "https://script.google.com/macros/s/AKfycbzljOCK6u9cCGViOPrAXdLxmznXTAHR8YTBFZ5TQNPnuwij5b6mHKsczAvQdz2_YFaj/exec";
+  // ============================================
+  // CONFIGURACIÓN - PEGA TU URL REAL AQUÍ
+  // ============================================
+  const API_URL = "https://script.google.com/macros/s/TU_URL_AQUI/exec";
+  
+  // Fallback: si no hay URL configurada, muestra datos de demo
+  const USE_DEMO = API_URL.includes("TU_URL_AQUI");
+  
+  let charts = {};
+  let allData = null;
+
+  async function loadData() {
+    showLoading();
     
-    let charts = {};
-
-    async function loadData() {
-      showLoading();
-      try {
-        const response = await fetch(`${API_URL}?action=dashboard`);
-        if (!response.ok) throw new Error(`HTTP ${response.status}`);
-        const data = await response.json();
-        
-        renderDashboard(data);
-        document.getElementById('lastUpdate').textContent = `Actualizado: ${new Date().toLocaleString('es-ES')}`;
-        showContent();
-      } catch (error) {
-        showError(error.message);
-      }
+    if (USE_DEMO) {
+      showError("⚠️ Configuración pendiente: Reemplaza API_URL en el código con tu URL de Apps Script");
+      return;
     }
-
-    function renderDashboard(data) {
-      // KPIs
-      document.getElementById('kpiInvested').textContent = formatCurrency(data.metrics.totalInvested);
-      document.getElementById('kpiSold').textContent = formatCurrency(data.metrics.totalSold);
-      document.getElementById('kpiDividends').textContent = formatCurrency(data.metrics.totalDividends);
-      document.getElementById('kpiAssets').textContent = data.metrics.currentAssets;
-
-      // Charts
-      renderAssetClassChart(data.byAssetClass);
-      renderPlatformChart(data.byPlatform);
-
-      // Tables
-      renderAssetsTable(data.currentAssets);
-      renderTransactionsTable(data.recentTransactions);
+    
+    try {
+      // Usar JSONP para evitar problemas de CORS con Google Apps Script
+      const data = await fetchWithJSONP(`${API_URL}?action=dashboard`);
+      allData = data;
       
-      // Load platforms data
-      loadPlatforms();
+      renderDashboard(data);
+      document.getElementById('lastUpdate').textContent = `Actualizado: ${new Date().toLocaleString('es-ES')}`;
+      showContent();
+    } catch (error) {
+      console.error("Error:", error);
+      showError(`Error: ${error.message}. Verifica que la URL de Apps Script sea correcta y esté desplegada como "Cualquiera".`);
     }
+  }
 
-    async function loadPlatforms() {
-      try {
-        const response = await fetch(`${API_URL}?action=platforms`);
-        const data = await response.json();
-        renderPlatformsTable(data.platforms);
-      } catch (e) {
-        console.error("Error loading platforms:", e);
-      }
-    }
-
-    function renderAssetClassChart(data) {
-      const ctx = document.getElementById('assetClassChart').getContext('2d');
-      if (charts.assetClass) charts.assetClass.destroy();
+  // JSONP approach para evitar CORS con Google Apps Script
+  function fetchWithJSONP(url) {
+    return new Promise((resolve, reject) => {
+      const scriptId = 'jsonp_' + Date.now();
+      const script = document.createElement('script');
       
-      charts.assetClass = new Chart(ctx, {
-        type: 'doughnut',
-        data: {
-          labels: data.map(d => d.class),
-          datasets: [{
-            data: data.map(d => d.count),
-            backgroundColor: ['#3b82f6', '#8b5cf6', '#10b981', '#f59e0b', '#ef4444', '#ec4899'],
-            borderWidth: 0
-          }]
-        },
-        options: {
-          responsive: true,
-          plugins: {
-            legend: { position: 'bottom', labels: { color: '#9ca3af', padding: 15 } }
-          }
-        }
-      });
-    }
-
-    function renderPlatformChart(data) {
-      const ctx = document.getElementById('platformChart').getContext('2d');
-      if (charts.platform) charts.platform.destroy();
-      
-      charts.platform = new Chart(ctx, {
-        type: 'bar',
-        data: {
-          labels: data.map(d => d.platform),
-          datasets: [{
-            label: 'Invertido ($)',
-            data: data.map(d => d.invested),
-            backgroundColor: ['#3b82f6', '#8b5cf6', '#10b981'],
-            borderRadius: 6
-          }]
-        },
-        options: {
-          responsive: true,
-          plugins: {
-            legend: { display: false }
-          },
-          scales: {
-            y: { grid: { color: '#374151' }, ticks: { color: '#9ca3af' } },
-            x: { grid: { display: false }, ticks: { color: '#9ca3af' } }
-          }
-        }
-      });
-    }
-
-    function renderAssetsTable(assets) {
-      const tbody = document.getElementById('assetsTable');
-      tbody.innerHTML = assets.map(a => `
-        <tr class="border-b border-gray-800/50 hover:bg-gray-800/30 transition-colors">
-          <td class="py-3 px-2 font-mono font-semibold text-blue-400">${a.ticker}</td>
-          <td class="py-3 px-2">${a.name}</td>
-          <td class="py-3 px-2"><span class="px-2 py-1 bg-gray-800 rounded text-xs">${a.class}</span></td>
-          <td class="py-3 px-2 text-gray-400">${a.sector || '-'}</td>
-          <td class="py-3 px-2 text-right font-mono">${a.quantity.toFixed(4)}</td>
-          <td class="py-3 px-2 text-right font-mono text-gray-400">${formatCurrency(a.costBasis)}</td>
-          <td class="py-3 px-2 text-center"><span class="px-2 py-1 bg-gray-800 rounded text-xs">${a.platform}</span></td>
-        </tr>
-      `).join('');
-    }
-
-    function renderTransactionsTable(transactions) {
-      const tbody = document.getElementById('transactionsTable');
-      tbody.innerHTML = transactions.map(t => `
-        <tr class="border-b border-gray-800/50 hover:bg-gray-800/30 transition-colors">
-          <td class="py-3 px-2 text-gray-400">${t.date}</td>
-          <td class="py-3 px-2 font-medium">${t.ticker || t.assetName}</td>
-          <td class="py-3 px-2 text-center">${getActionBadge(t.action)}</td>
-          <td class="py-3 px-2 text-right font-mono">${t.quantity}</td>
-          <td class="py-3 px-2 text-right font-mono text-gray-400">${formatCurrency(t.price)}</td>
-          <td class="py-3 px-2 text-right font-mono">${formatCurrency(Math.abs(t.total))}</td>
-          <td class="py-3 px-2 text-center text-gray-400">${t.platform}</td>
-        </tr>
-      `).join('');
-    }
-
-    function renderPlatformsTable(platforms) {
-      const tbody = document.getElementById('platformsTable');
-      tbody.innerHTML = platforms.map(p => `
-        <tr class="border-b border-gray-800/50 hover:bg-gray-800/30 transition-colors">
-          <td class="py-3 px-2 font-medium">${p.platform}</td>
-          <td class="py-3 px-2 text-center"><span class="px-2 py-1 bg-gray-800 rounded text-xs">${p.currency}</span></td>
-          <td class="py-3 px-2 text-right font-mono">${p.transactions}</td>
-          <td class="py-3 px-2 text-right font-mono text-green-400">${formatCurrency(p.totalDeposits)}</td>
-          <td class="py-3 px-2 text-right font-mono text-blue-400">${formatCurrency(p.totalInvested)}</td>
-          <td class="py-3 px-2 text-right font-mono text-orange-400">${formatCurrency(p.totalSold)}</td>
-          <td class="py-3 px-2 text-right font-mono text-purple-400">${formatCurrency(p.totalDividends)}</td>
-        </tr>
-      `).join('');
-    }
-
-    function getActionBadge(action) {
-      const badges = {
-        'Buy': '<span class="px-2 py-1 bg-blue-500/20 text-blue-400 rounded text-xs font-medium">COMPRA</span>',
-        'Sell': '<span class="px-2 py-1 bg-green-500/20 text-green-400 rounded text-xs font-medium">VENTA</span>',
-        'Cash Deposit': '<span class="px-2 py-1 bg-gray-500/20 text-gray-400 rounded text-xs font-medium">DEPÓSITO</span>',
-        'Dividend': '<span class="px-2 py-1 bg-purple-500/20 text-purple-400 rounded text-xs font-medium">DIVIDENDO</span>'
+      // Crear función callback global
+      window[scriptId] = function(data) {
+        cleanup();
+        resolve(data);
       };
-      return badges[action] || `<span class="px-2 py-1 bg-gray-800 rounded text-xs">${action}</span>`;
-    }
+      
+      // Timeout
+      const timeout = setTimeout(() => {
+        cleanup();
+        reject(new Error('Timeout - La API no respondió en 10 segundos'));
+      }, 10000);
+      
+      function cleanup() {
+        clearTimeout(timeout);
+        if (script.parentNode) script.parentNode.removeChild(script);
+        delete window[scriptId];
+      }
+      
+      // Manejar error de carga
+      script.onerror = () => {
+        cleanup();
+        reject(new Error('No se pudo cargar el script. Verifica la URL.'));
+      };
+      
+      // Añadir callback parameter
+      const separator = url.includes('?') ? '&' : '?';
+      script.src = `${url}${separator}callback=${scriptId}`;
+      
+      document.head.appendChild(script);
+    });
+  }
 
-    function formatCurrency(value) {
-      if (value === undefined || value === null) return '$0.00';
-      return new Intl.NumberFormat('en-US', {
-        style: 'currency',
-        currency: 'USD',
-        minimumFractionDigits: 2
-      }).format(value);
-    }
+  function renderDashboard(data) {
+    // KPIs
+    document.getElementById('kpiInvested').textContent = formatCurrency(data.metrics?.totalInvested || 0);
+    document.getElementById('kpiSold').textContent = formatCurrency(data.metrics?.totalSold || 0);
+    document.getElementById('kpiDividends').textContent = formatCurrency(data.metrics?.totalDividends || 0);
+    document.getElementById('kpiAssets').textContent = data.metrics?.currentAssets || 0;
 
-    function switchTab(tab) {
-      // Hide all panels
-      ['assets', 'transactions', 'platforms'].forEach(t => {
-        document.getElementById(`panel-${t}`).classList.add('hidden');
-        document.getElementById(`tab-${t}`).classList.remove('tab-active');
-      });
-      // Show selected
-      document.getElementById(`panel-${tab}`).classList.remove('hidden');
-      document.getElementById(`tab-${tab}`).classList.add('tab-active');
-    }
+    // Charts
+    renderAssetClassChart(data.byAssetClass || []);
+    renderPlatformChart(data.byPlatform || []);
 
-    function showLoading() {
-      document.getElementById('loadingState').classList.remove('hidden');
-      document.getElementById('errorState').classList.add('hidden');
-      document.getElementById('content').classList.add('hidden');
-    }
+    // Tables
+    renderAssetsTable(data.currentAssets || []);
+    renderTransactionsTable(data.recentTransactions || []);
+    
+    // Load platforms
+    loadPlatforms();
+  }
 
-    function showContent() {
-      document.getElementById('loadingState').classList.add('hidden');
-      document.getElementById('errorState').classList.add('hidden');
-      document.getElementById('content').classList.remove('hidden');
+  async function loadPlatforms() {
+    try {
+      const data = await fetchWithJSONP(`${API_URL}?action=platforms`);
+      renderPlatformsTable(data.platforms || []);
+    } catch (e) {
+      console.error("Error loading platforms:", e);
     }
+  }
 
-    function showError(msg) {
-      document.getElementById('loadingState').classList.add('hidden');
-      document.getElementById('errorState').classList.remove('hidden');
-      document.getElementById('errorMessage').textContent = msg;
+  function renderAssetClassChart(data) {
+    const ctx = document.getElementById('assetClassChart').getContext('2d');
+    if (charts.assetClass) charts.assetClass.destroy();
+    
+    if (!data || data.length === 0) {
+      ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+      return;
     }
+    
+    charts.assetClass = new Chart(ctx, {
+      type: 'doughnut',
+      data: {
+        labels: data.map(d => d.class || 'Desconocido'),
+        datasets: [{
+          data: data.map(d => d.count || 0),
+          backgroundColor: ['#3b82f6', '#8b5cf6', '#10b981', '#f59e0b', '#ef4444', '#ec4899', '#06b6d4'],
+          borderWidth: 0
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { 
+            position: 'bottom', 
+            labels: { color: '#9ca3af', padding: 15, usePointStyle: true } 
+          }
+        }
+      }
+    });
+  }
 
-    // Load on page load
-    loadData();
-  </script>
+  function renderPlatformChart(data) {
+    const ctx = document.getElementById('platformChart').getContext('2d');
+    if (charts.platform) charts.platform.destroy();
+    
+    if (!data || data.length === 0) {
+      ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+      return;
+    }
+    
+    charts.platform = new Chart(ctx, {
+      type: 'bar',
+      data: {
+        labels: data.map(d => d.platform || 'Desconocido'),
+        datasets: [{
+          label: 'Invertido ($)',
+          data: data.map(d => d.invested || 0),
+          backgroundColor: ['#3b82f6', '#8b5cf6', '#10b981', '#f59e0b'],
+          borderRadius: 6,
+          borderSkipped: false
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false }
+        },
+        scales: {
+          y: { 
+            grid: { color: '#374151' }, 
+            ticks: { color: '#9ca3af', callback: v => '$' + (v >= 1000 ? (v/1000).toFixed(1) + 'k' : v) } 
+          },
+          x: { 
+            grid: { display: false }, 
+            ticks: { color: '#9ca3af' } 
+          }
+        }
+      }
+    });
+  }
+
+  function renderAssetsTable(assets) {
+    const tbody = document.getElementById('assetsTable');
+    if (!assets || assets.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="7" class="py-8 text-center text-gray-500">No hay activos en cartera</td></tr>';
+      return;
+    }
+    
+    tbody.innerHTML = assets.map(a => `
+      <tr class="border-b border-gray-800/50 hover:bg-gray-800/30 transition-colors">
+        <td class="py-3 px-2 font-mono font-semibold text-blue-400">${a.ticker || '-'}</td>
+        <td class="py-3 px-2">${a.name || '-'}</td>
+        <td class="py-3 px-2"><span class="px-2 py-1 bg-gray-800 rounded text-xs">${a.class || '-'}</span></td>
+        <td class="py-3 px-2 text-gray-400">${a.sector || '-'}</td>
+        <td class="py-3 px-2 text-right font-mono">${(a.quantity || 0).toFixed(4)}</td>
+        <td class="py-3 px-2 text-right font-mono text-gray-400">${formatCurrency(a.costBasis)}</td>
+        <td class="py-3 px-2 text-center"><span class="px-2 py-1 bg-gray-800 rounded text-xs">${a.platform || '-'}</span></td>
+      </tr>
+    `).join('');
+  }
+
+  function renderTransactionsTable(transactions) {
+    const tbody = document.getElementById('transactionsTable');
+    if (!transactions || transactions.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="7" class="py-8 text-center text-gray-500">No hay transacciones</td></tr>';
+      return;
+    }
+    
+    tbody.innerHTML = transactions.map(t => `
+      <tr class="border-b border-gray-800/50 hover:bg-gray-800/30 transition-colors">
+        <td class="py-3 px-2 text-gray-400">${t.date || '-'}</td>
+        <td class="py-3 px-2 font-medium">${t.ticker || t.assetName || '-'}</td>
+        <td class="py-3 px-2 text-center">${getActionBadge(t.action)}</td>
+        <td class="py-3 px-2 text-right font-mono">${t.quantity || 0}</td>
+        <td class="py-3 px-2 text-right font-mono text-gray-400">${formatCurrency(t.price)}</td>
+        <td class="py-3 px-2 text-right font-mono">${formatCurrency(Math.abs(t.total || 0))}</td>
+        <td class="py-3 px-2 text-center text-gray-400">${t.platform || '-'}</td>
+      </tr>
+    `).join('');
+  }
+
+  function renderPlatformsTable(platforms) {
+    const tbody = document.getElementById('platformsTable');
+    if (!platforms || platforms.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="7" class="py-8 text-center text-gray-500">No hay plataformas</td></tr>';
+      return;
+    }
+    
+    tbody.innerHTML = platforms.map(p => `
+      <tr class="border-b border-gray-800/50 hover:bg-gray-800/30 transition-colors">
+        <td class="py-3 px-2 font-medium">${p.platform || '-'}</td>
+        <td class="py-3 px-2 text-center"><span class="px-2 py-1 bg-gray-800 rounded text-xs">${p.currency || '-'}</span></td>
+        <td class="py-3 px-2 text-right font-mono">${p.transactions || 0}</td>
+        <td class="py-3 px-2 text-right font-mono text-green-400">${formatCurrency(p.totalDeposits)}</td>
+        <td class="py-3 px-2 text-right font-mono text-blue-400">${formatCurrency(p.totalInvested)}</td>
+        <td class="py-3 px-2 text-right font-mono text-orange-400">${formatCurrency(p.totalSold)}</td>
+        <td class="py-3 px-2 text-right font-mono text-purple-400">${formatCurrency(p.totalDividends)}</td>
+      </tr>
+    `).join('');
+  }
+
+  function getActionBadge(action) {
+    const badges = {
+      'Buy': '<span class="px-2 py-1 bg-blue-500/20 text-blue-400 rounded text-xs font-medium">COMPRA</span>',
+      'Sell': '<span class="px-2 py-1 bg-green-500/20 text-green-400 rounded text-xs font-medium">VENTA</span>',
+      'Cash Deposit': '<span class="px-2 py-1 bg-gray-500/20 text-gray-400 rounded text-xs font-medium">DEPÓSITO</span>',
+      'Dividend': '<span class="px-2 py-1 bg-purple-500/20 text-purple-400 rounded text-xs font-medium">DIVIDENDO</span>'
+    };
+    return badges[action] || `<span class="px-2 py-1 bg-gray-800 rounded text-xs">${action || '-'}</span>`;
+  }
+
+  function formatCurrency(value) {
+    if (value === undefined || value === null || isNaN(value)) return '$0.00';
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD',
+      minimumFractionDigits: 2
+    }).format(value);
+  }
+
+  function switchTab(tab) {
+    ['assets', 'transactions', 'platforms'].forEach(t => {
+      document.getElementById(`panel-${t}`).classList.add('hidden');
+      document.getElementById(`tab-${t}`).classList.remove('tab-active');
+    });
+    document.getElementById(`panel-${tab}`).classList.remove('hidden');
+    document.getElementById(`tab-${tab}`).classList.add('tab-active');
+  }
+
+  function showLoading() {
+    document.getElementById('loadingState').classList.remove('hidden');
+    document.getElementById('errorState').classList.add('hidden');
+    document.getElementById('content').classList.add('hidden');
+  }
+
+  function showContent() {
+    document.getElementById('loadingState').classList.add('hidden');
+    document.getElementById('errorState').classList.add('hidden');
+    document.getElementById('content').classList.remove('hidden');
+  }
+
+  function showError(msg) {
+    document.getElementById('loadingState').classList.add('hidden');
+    document.getElementById('errorState').classList.remove('hidden');
+    document.getElementById('errorMessage').textContent = msg;
+  }
+
+  // Load on page load
+  loadData();
+</script>
 </body>
 </html>
