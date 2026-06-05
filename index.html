@@ -2,389 +2,606 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Portfolio Tracker</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Portfolio Tracker Pro</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: { sans: ['Inter', 'sans-serif'] },
+          colors: {
+            brand: { 400: '#60a5fa', 500: '#3b82f6', 600: '#2563eb' }
+          }
+        }
+      }
+    }
+  </script>
   <style>
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
-    body { font-family: 'Inter', sans-serif; }
-    .glass { background: rgba(17, 24, 39, 0.7); backdrop-filter: blur(10px); }
-    .card-hover { transition: all 0.3s ease; }
-    .card-hover:hover { transform: translateY(-2px); box-shadow: 0 20px 40px rgba(0,0,0,0.3); }
-    .gradient-text { background: linear-gradient(135deg, #60a5fa, #a78bfa); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
-    .animate-fade-in { animation: fadeIn 0.6s ease-out; }
-    @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-    .tab-active { border-bottom: 2px solid #60a5fa; color: #60a5fa; }
-    .loading { display: inline-block; width: 20px; height: 20px; border: 2px solid #374151; border-top: 2px solid #60a5fa; border-radius: 50%; animation: spin 1s linear infinite; }
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+
+    body { font-family: 'Inter', sans-serif; -webkit-tap-highlight-color: transparent; }
+
+    /* Efectos Fintech / Glassmorphism */
+    .glass-header { background: rgba(15, 23, 42, 0.85); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); border-bottom: 1px solid rgba(51, 65, 85, 0.5); }
+    .glass-card { background: rgba(30, 41, 59, 0.4); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border: 1px solid rgba(51, 65, 85, 0.5); box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06); transition: transform 0.2s ease, box-shadow 0.2s ease; }
+    .glass-card:hover { transform: translateY(-2px); box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3), 0 8px 10px -6px rgba(0, 0, 0, 0.1); border-color: rgba(71, 85, 105, 0.6); }
+
+    .gradient-text { background: linear-gradient(135deg, #60a5fa, #c084fc); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+    .animate-fade-in { animation: fadeIn 0.5s ease-out; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+
+    /* Pestañas */
+    .tab-active { border-bottom: 2px solid #3b82f6; color: #60a5fa; background: linear-gradient(to top, rgba(59, 130, 246, 0.1) 0%, transparent 100%); }
+
+    /* Scrollbar estilizado */
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: #0f172a; }
+    ::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
+    ::-webkit-scrollbar-thumb:hover { background: #475569; }
+
+    /* Loader */
+    .spinner { border: 3px solid rgba(51, 65, 85, 0.5); border-top: 3px solid #3b82f6; border-radius: 50%; animation: spin 1s linear infinite; }
     @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-    .currency-btn { transition: all 0.2s; }
-    .currency-btn.active { background: #3b82f6; color: white; border-color: #3b82f6; }
-    ::-webkit-scrollbar { width: 8px; height: 8px; }
-    ::-webkit-scrollbar-track { background: #111827; }
-    ::-webkit-scrollbar-thumb { background: #374151; border-radius: 4px; }
-    ::-webkit-scrollbar-thumb:hover { background: #4b5563; }
-    .sortable { cursor: pointer; user-select: none; }
-    .sortable:hover { background: rgba(59, 130, 246, 0.1); }
-    .sort-icon { opacity: 0.5; font-size: 0.75em; margin-left: 4px; }
+
+    .sortable { cursor: pointer; user-select: none; transition: color 0.2s; }
+    .sortable:hover { color: #f8fafc; }
+    .sort-icon { opacity: 0.4; font-size: 0.7em; margin-left: 4px; }
+
+    /* ===== RESPONSIVE IMPROVEMENTS ===== */
+
+    /* Mobile cards for portfolio */
+    .mobile-card {
+      display: none;
+    }
+
+    /* Table horizontal scroll container */
+    .table-scroll-container {
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+      scrollbar-width: thin;
+    }
+
+    .table-scroll-container::-webkit-scrollbar {
+      height: 4px;
+    }
+
+    /* Smooth tab scrolling */
+    .tabs-scroll {
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+      scrollbar-width: none;
+      -ms-overflow-style: none;
+    }
+    .tabs-scroll::-webkit-scrollbar { display: none; }
+
+    /* View toggle button */
+    .view-toggle-btn {
+      padding: 6px 12px;
+      border-radius: 8px;
+      font-size: 11px;
+      font-weight: 600;
+      transition: all 0.2s;
+      border: 1px solid rgba(51, 65, 85, 0.5);
+      background: rgba(30, 41, 59, 0.6);
+      color: #94a3b8;
+      cursor: pointer;
+    }
+    .view-toggle-btn.active {
+      background: rgba(59, 130, 246, 0.2);
+      border-color: rgba(59, 130, 246, 0.5);
+      color: #60a5fa;
+    }
+
+    /* Mobile position card */
+    .position-mobile-card {
+      background: rgba(30, 41, 59, 0.6);
+      border: 1px solid rgba(51, 65, 85, 0.5);
+      border-radius: 16px;
+      padding: 16px;
+      margin-bottom: 12px;
+      transition: all 0.2s;
+    }
+    .position-mobile-card:active {
+      transform: scale(0.98);
+      background: rgba(30, 41, 59, 0.8);
+    }
+
+    /* Expandable card details */
+    .card-details {
+      max-height: 0;
+      overflow: hidden;
+      transition: max-height 0.3s ease-out, opacity 0.3s ease-out, padding 0.3s ease-out;
+      opacity: 0;
+    }
+    .card-details.expanded {
+      max-height: 500px;
+      opacity: 1;
+      padding-top: 12px;
+      margin-top: 12px;
+      border-top: 1px solid rgba(51, 65, 85, 0.3);
+    }
+
+    /* Mobile transaction card */
+    .tx-mobile-card {
+      background: rgba(30, 41, 59, 0.6);
+      border: 1px solid rgba(51, 65, 85, 0.5);
+      border-radius: 12px;
+      padding: 14px;
+      margin-bottom: 10px;
+    }
+
+    /* Platform mobile card */
+    .platform-mobile-card {
+      background: rgba(30, 41, 59, 0.6);
+      border: 1px solid rgba(51, 65, 85, 0.5);
+      border-radius: 14px;
+      padding: 16px;
+      margin-bottom: 10px;
+    }
+
+    /* Sticky summary on mobile */
+    @media (max-width: 1023px) {
+      .sticky-mobile-summary {
+        position: sticky;
+        top: 60px;
+        z-index: 40;
+        background: rgba(15, 23, 42, 0.95);
+        backdrop-filter: blur(12px);
+        margin: 0 -16px;
+        padding: 12px 16px;
+        border-bottom: 1px solid rgba(51, 65, 85, 0.3);
+      }
+    }
+
+    /* Hide table on small screens, show cards */
+    @media (max-width: 767px) {
+      .desktop-table { display: none !important; }
+      .mobile-card { display: block; }
+      .view-toggle-container { display: flex !important; }
+    }
+
+    /* Show table on larger screens */
+    @media (min-width: 768px) {
+      .desktop-table { display: block; }
+      .mobile-card { display: none !important; }
+      .view-toggle-container { display: none !important; }
+    }
+
+    /* Touch-friendly buttons */
+    .touch-btn {
+      min-height: 44px;
+      min-width: 44px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    /* Pull to refresh indicator */
+    .pull-indicator {
+      text-align: center;
+      padding: 8px;
+      color: #64748b;
+      font-size: 12px;
+      opacity: 0;
+      transition: opacity 0.3s;
+    }
+    .pull-indicator.visible {
+      opacity: 1;
+    }
+
+    /* Better number display on small screens */
+    .mobile-stat-value {
+      font-size: 1.5rem;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+    }
+
+    @media (max-width: 640px) {
+      .mobile-stat-value {
+        font-size: 1.25rem;
+      }
+    }
+
+    /* Horizontal snap scrolling for stats */
+    .stats-scroll {
+      display: flex;
+      gap: 12px;
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+      scrollbar-width: none;
+      padding-bottom: 4px;
+    }
+    .stats-scroll::-webkit-scrollbar { display: none; }
+    .stats-scroll > * {
+      flex-shrink: 0;
+    }
+
+    /* Asset class badge */
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      padding: 2px 8px;
+      border-radius: 6px;
+      font-size: 10px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    /* Progress bar for mobile */
+    .progress-bar-bg {
+      background: rgba(15, 23, 42, 0.8);
+      border-radius: 999px;
+      height: 6px;
+      overflow: hidden;
+    }
+    .progress-bar-fill {
+      height: 100%;
+      border-radius: 999px;
+      transition: width 0.5s ease;
+    }
   </style>
 <base target="_blank">
 </head>
-<body class="bg-gray-950 text-gray-100 min-h-screen">
+<body class="bg-slate-950 text-slate-200 min-h-screen selection:bg-brand-500/30">
 
-  <header class="glass sticky top-0 z-50 border-b border-gray-800">
-    <div class="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between flex-wrap gap-3">
+  <header class="glass-header sticky top-0 z-50">
+    <div class="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between flex-wrap gap-3">
       <div class="flex items-center gap-3">
-        <div class="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl flex items-center justify-center">
-          <i class="fas fa-chart-line text-white text-lg"></i>
+        <div class="w-9 h-9 sm:w-10 sm:h-10 bg-gradient-to-tr from-brand-600 to-purple-600 rounded-xl flex items-center justify-center shadow-lg shadow-brand-500/20">
+          <i class="fas fa-layer-group text-white text-sm sm:text-lg"></i>
         </div>
         <div>
-          <h1 class="text-xl font-bold gradient-text">Portfolio Tracker</h1>
-          <p class="text-xs text-gray-400" id="subtitle">Dashboard en tiempo real</p>
+          <h1 class="text-base sm:text-xl font-bold tracking-tight text-white">Capital <span class="text-brand-400">Tracker</span></h1>
+          <p class="text-[10px] text-slate-400 uppercase tracking-widest font-semibold hidden sm:block" id="subtitle">Dashboard en tiempo real</p>
         </div>
       </div>
 
-      <div class="flex items-center gap-3">
-        <div class="flex bg-gray-800 rounded-lg p-1 border border-gray-700">
-          <button onclick="setCurrency('USD')" id="btn-usd" class="currency-btn active px-3 py-1.5 rounded text-sm font-medium">
-            <i class="fas fa-dollar-sign mr-1"></i>USD
+      <div class="flex items-center gap-2 sm:gap-4">
+        <div class="flex bg-slate-900 rounded-lg p-1 border border-slate-700/50 shadow-inner">
+          <button onclick="setCurrency('USD')" id="btn-usd" class="px-2.5 sm:px-3 py-1.5 rounded-md text-[11px] sm:text-xs font-semibold transition-all bg-brand-500 text-white shadow-sm touch-btn">
+            USD
           </button>
-          <button onclick="setCurrency('DOP')" id="btn-dop" class="currency-btn px-3 py-1.5 rounded text-sm font-medium text-gray-400 hover:text-white">
-            <i class="fas fa-coins mr-1"></i>DOP
+          <button onclick="setCurrency('DOP')" id="btn-dop" class="px-2.5 sm:px-3 py-1.5 rounded-md text-[11px] sm:text-xs font-semibold transition-all text-slate-400 hover:text-slate-200 touch-btn">
+            DOP
           </button>
         </div>
 
-        <span id="lastUpdate" class="text-xs text-gray-500 hidden sm:inline">Actualizando...</span>
-        <button onclick="loadData()" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg text-sm font-medium transition-colors flex items-center gap-2">
-          <i class="fas fa-sync-alt"></i> <span class="hidden sm:inline">Actualizar</span>
-        </button>
+        <div class="flex items-center gap-2 sm:gap-3">
+          <div class="text-right hidden md:block">
+            <span class="block text-[10px] text-slate-500 uppercase tracking-wider">Última actualización</span>
+            <span id="lastUpdate" class="text-xs text-slate-300 font-medium">Actualizando...</span>
+          </div>
+          <button onclick="loadData()" class="w-9 h-9 touch-btn bg-slate-800 hover:bg-slate-700 border border-slate-600 rounded-lg text-slate-300 transition-colors">
+            <i class="fas fa-sync-alt text-sm"></i>
+          </button>
+        </div>
       </div>
     </div>
   </header>
 
-  <main class="max-w-7xl mx-auto px-4 py-6">
+  <main class="max-w-7xl mx-auto px-4 py-6 sm:py-8">
 
-    <div id="loadingState" class="flex flex-col items-center justify-center py-20">
-      <div class="loading mb-4 w-12 h-12"></div>
-      <p class="text-gray-400">Cargando datos del portfolio...</p>
+    <div id="loadingState" class="flex flex-col items-center justify-center py-24 sm:py-32 animate-fade-in">
+      <div class="spinner w-10 h-10 mb-6"></div>
+      <p class="text-slate-400 font-medium tracking-wide text-sm">Sincronizando con el portafolio...</p>
     </div>
 
-    <div id="errorState" class="hidden bg-red-900/30 border border-red-700 rounded-xl p-6 text-center">
-      <i class="fas fa-exclamation-triangle text-red-400 text-3xl mb-3"></i>
-      <h3 class="text-lg font-semibold text-red-300">Error al cargar datos</h3>
-      <p id="errorMessage" class="text-red-400 text-sm mt-1"></p>
-      <button onclick="loadData()" class="mt-4 px-4 py-2 bg-red-600 hover:bg-red-700 rounded-lg text-sm">Reintentar</button>
+    <div id="errorState" class="hidden glass-card !border-rose-500/30 !bg-rose-950/20 rounded-2xl p-6 sm:p-8 text-center max-w-lg mx-auto mt-12">
+      <div class="w-14 h-14 sm:w-16 sm:h-16 bg-rose-500/10 rounded-full flex items-center justify-center mx-auto mb-4">
+        <i class="fas fa-exclamation-triangle text-rose-400 text-xl sm:text-2xl"></i>
+      </div>
+      <h3 class="text-base sm:text-lg font-semibold text-rose-300 mb-2">Error de conexión</h3>
+      <p id="errorMessage" class="text-rose-400/80 text-xs sm:text-sm mb-6"></p>
+      <button onclick="loadData()" class="px-5 py-2.5 bg-rose-600/20 hover:bg-rose-600/30 text-rose-300 border border-rose-500/50 rounded-lg text-sm font-medium transition-colors touch-btn">
+        Reintentar conexión
+      </button>
     </div>
 
-    <div id="content" class="hidden space-y-6 animate-fade-in">
+    <div id="content" class="hidden space-y-6 sm:space-y-8 animate-fade-in">
 
-      <div id="rateInfo" class="hidden bg-gray-900/50 border border-gray-800 rounded-lg px-4 py-2 text-sm text-gray-400 flex items-center gap-2">
-        <i class="fas fa-exchange-alt text-blue-400"></i>
-        <span id="rateText"></span>
+      <div id="rateInfo" class="hidden bg-brand-900/20 border border-brand-500/20 rounded-lg px-4 py-2.5 text-xs text-brand-300 flex items-center gap-2 max-w-max">
+        <i class="fas fa-info-circle"></i>
+        <span id="rateText" class="font-medium"></span>
       </div>
 
-      <!-- PORTFOLIO SUMMARY -->
+      <!-- ===== RESUMEN DEL PORTAFOLIO ===== -->
       <div id="portfolioSummary">
-        <h2 class="text-lg font-semibold mb-3 flex items-center gap-2">
-          <i class="fas fa-briefcase text-blue-400"></i> Resumen de Portfolio
-        </h2>
-        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <div class="bg-gray-900/80 border border-gray-800 rounded-xl p-5 card-hover">
-            <div class="flex items-center justify-between mb-3">
-              <span class="text-gray-400 text-sm">Valor Actual</span>
-              <div class="w-8 h-8 bg-blue-500/20 rounded-lg flex items-center justify-center"><i class="fas fa-wallet text-blue-400 text-sm"></i></div>
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
+
+          <!-- Tarjeta principal: Patrimonio Total -->
+          <div class="glass-card lg:col-span-2 p-5 sm:p-8 rounded-2xl sm:rounded-3xl relative overflow-hidden flex flex-col justify-between">
+            <div class="absolute top-0 right-0 -mr-16 -mt-16 w-48 h-48 sm:w-64 sm:h-64 bg-brand-500/10 rounded-full blur-3xl pointer-events-none"></div>
+            <div class="absolute bottom-0 left-0 -ml-16 -mb-16 w-32 h-32 sm:w-48 sm:h-48 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none"></div>
+
+            <div>
+              <p class="text-slate-400 text-[10px] sm:text-xs font-semibold uppercase tracking-widest mb-2 flex items-center gap-2">
+                <i class="fas fa-wallet text-brand-400"></i> Patrimonio Total
+              </p>
+              <h2 id="pfTotalBalance" class="text-3xl sm:text-4xl lg:text-6xl font-extrabold text-white tracking-tight mb-3">$0.00</h2>
+
+              <!-- Stats scrollable en móvil -->
+              <div class="stats-scroll sm:inline-flex sm:bg-slate-900/60 sm:px-4 sm:py-2 sm:rounded-xl sm:border sm:border-slate-700/50 sm:backdrop-blur-md mb-4 sm:mb-6">
+                <div class="flex items-center gap-2 bg-slate-900/60 sm:bg-transparent px-3 py-2 rounded-xl border border-slate-700/50 sm:border-0 sm:px-0 sm:py-0">
+                  <i class="fas fa-chart-pie text-brand-400 text-xs"></i>
+                  <span class="text-[10px] sm:text-[11px] text-slate-400 whitespace-nowrap">Mercado: <span id="pfMarketValue" class="text-white font-bold">$0.00</span></span>
+                </div>
+                <div class="w-px h-4 bg-slate-600/60 hidden sm:block"></div>
+                <div class="flex items-center gap-2 bg-slate-900/60 sm:bg-transparent px-3 py-2 rounded-xl border border-slate-700/50 sm:border-0 sm:px-0 sm:py-0">
+                  <i class="fas fa-money-bill-wave text-emerald-400 text-xs"></i>
+                  <span class="text-[10px] sm:text-[11px] text-slate-400 whitespace-nowrap">Efectivo: <span id="pfTotalCash" class="text-white font-bold">$0.00</span></span>
+                </div>
+              </div>
             </div>
-            <p id="pfTotalValue" class="text-2xl font-bold text-white">$0.00</p>
-            <p class="text-xs text-gray-500 mt-1">Market value total</p>
+
+            <!-- Métricas scrollable en móvil -->
+            <div class="stats-scroll sm:flex-wrap sm:overflow-visible">
+              <div class="flex items-center gap-3 bg-slate-900/60 backdrop-blur-md px-3 sm:px-4 py-2.5 rounded-2xl border border-slate-700/50">
+                <div>
+                  <p class="text-[9px] sm:text-[10px] text-slate-400 uppercase tracking-wider font-semibold mb-0.5">Día</p>
+                  <p id="pfDailyChange" class="font-bold text-sm sm:text-base leading-none">$0.00</p>
+                </div>
+                <div id="pfDailyChangePctContainer" class="px-2 py-1 rounded-md bg-slate-800 text-[10px] sm:text-xs font-bold">
+                  <span id="pfDailyChangePct">0.00%</span>
+                </div>
+              </div>
+
+              <div class="flex items-center gap-3 bg-slate-900/60 backdrop-blur-md px-3 sm:px-4 py-2.5 rounded-2xl border border-slate-700/50">
+                <div>
+                  <p class="text-[9px] sm:text-[10px] text-slate-400 uppercase tracking-wider font-semibold mb-0.5">Retorno</p>
+                  <p id="pfUnrealizedPL" class="font-bold text-sm sm:text-base leading-none">$0.00</p>
+                </div>
+                <div id="pfUnrealizedROIContainer" class="px-2 py-1 rounded-md bg-slate-800 text-[10px] sm:text-xs font-bold">
+                  <span id="pfUnrealizedROI">0.00%</span>
+                </div>
+              </div>
+            </div>
           </div>
 
-          <div class="bg-gray-900/80 border border-gray-800 rounded-xl p-5 card-hover">
-            <div class="flex items-center justify-between mb-3">
-              <span class="text-gray-400 text-sm">Costo Base</span>
-              <div class="w-8 h-8 bg-gray-500/20 rounded-lg flex items-center justify-center"><i class="fas fa-receipt text-gray-400 text-sm"></i></div>
+          <!-- Grid de 4 métricas -->
+          <div class="grid grid-cols-2 gap-3 sm:gap-4">
+            <div class="glass-card p-4 sm:p-5 rounded-2xl flex flex-col justify-center">
+              <p class="text-slate-400 text-[9px] sm:text-[10px] font-bold uppercase tracking-widest mb-1">Capital Invertido</p>
+              <p id="pfTotalCost" class="mobile-stat-value text-white">$0.00</p>
             </div>
-            <p id="pfTotalCost" class="text-2xl font-bold text-white">$0.00</p>
-            <p class="text-xs text-gray-500 mt-1">Total invertido</p>
+            <div class="glass-card p-4 sm:p-5 rounded-2xl flex flex-col justify-center">
+              <p class="text-slate-400 text-[9px] sm:text-[10px] font-bold uppercase tracking-widest mb-1">Beneficio Cerrado</p>
+              <p id="pfRealizedPL" class="mobile-stat-value text-white">$0.00</p>
+              <p id="pfTotalPL" class="text-[9px] sm:text-[10px] text-slate-500 mt-1 truncate">Total: $0.00</p>
+            </div>
+            <div class="glass-card p-4 sm:p-5 rounded-2xl flex flex-col justify-center">
+              <p class="text-slate-400 text-[9px] sm:text-[10px] font-bold uppercase tracking-widest mb-1">Posiciones</p>
+              <p id="pfHoldings" class="mobile-stat-value text-white">0</p>
+              <p id="pfSold" class="text-[9px] sm:text-[10px] text-slate-500 mt-1">Activas vs Históricas</p>
+            </div>
+            <div class="glass-card p-3 sm:p-4 rounded-2xl flex flex-col justify-between">
+              <div class="flex justify-between items-center mb-1.5 sm:mb-2">
+                <span class="text-[9px] sm:text-[10px] font-bold text-emerald-400 uppercase"><i class="fas fa-caret-up"></i> Top</span>
+                <span id="pfBestPosition" class="text-xs sm:text-sm font-bold text-white">-</span>
+                <span id="pfBestROI" class="text-[10px] text-emerald-400 font-medium">0%</span>
+              </div>
+              <div class="w-full h-px bg-slate-700/50 my-1"></div>
+              <div class="flex justify-between items-center mt-1.5 sm:mt-2">
+                <span class="text-[9px] sm:text-[10px] font-bold text-rose-400 uppercase"><i class="fas fa-caret-down"></i> Low</span>
+                <span id="pfWorstPosition" class="text-xs sm:text-sm font-bold text-white">-</span>
+                <span id="pfWorstROI" class="text-[10px] text-rose-400 font-medium">0%</span>
+              </div>
+            </div>
           </div>
 
-          <div class="bg-gray-900/80 border border-gray-800 rounded-xl p-5 card-hover">
-            <div class="flex items-center justify-between mb-3">
-              <span class="text-gray-400 text-sm">P/L No Realizado</span>
-              <div class="w-8 h-8 bg-purple-500/20 rounded-lg flex items-center justify-center"><i class="fas fa-chart-area text-purple-400 text-sm"></i></div>
-            </div>
-            <p id="pfUnrealizedPL" class="text-2xl font-bold">$0.00</p>
-            <p id="pfUnrealizedROI" class="text-xs mt-1">0.00%</p>
-          </div>
+        </div>
+      </div>
 
-          <div class="bg-gray-900/80 border border-gray-800 rounded-xl p-5 card-hover">
-            <div class="flex items-center justify-between mb-3">
-              <span class="text-gray-400 text-sm">P/L Realizado</span>
-              <div class="w-8 h-8 bg-green-500/20 rounded-lg flex items-center justify-center"><i class="fas fa-hand-holding-usd text-green-400 text-sm"></i></div>
-            </div>
-            <p id="pfRealizedPL" class="text-2xl font-bold">$0.00</p>
-            <p id="pfTotalPL" class="text-xs text-gray-500 mt-1">P/L Total: $0.00</p>
+      <!-- ===== ASIGNACIÓN Y MOVIMIENTOS ===== -->
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
+        <div class="glass-card lg:col-span-2 rounded-2xl p-4 sm:p-6">
+          <div class="flex items-center justify-between mb-4 sm:mb-5">
+            <h3 class="text-xs sm:text-sm font-semibold text-slate-200 uppercase tracking-wider flex items-center gap-2">
+              <i class="fas fa-chart-pie text-brand-400"></i> Asignación Principal
+            </h3>
           </div>
+          <div id="largestPositionsList" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4"></div>
+        </div>
 
-          <div class="bg-gray-900/80 border border-gray-800 rounded-xl p-5 card-hover">
-            <div class="flex items-center justify-between mb-3">
-              <span class="text-gray-400 text-sm">Cambio Diario</span>
-              <div class="w-8 h-8 bg-yellow-500/20 rounded-lg flex items-center justify-center"><i class="fas fa-clock text-yellow-400 text-sm"></i></div>
-            </div>
-            <p id="pfDailyChange" class="text-2xl font-bold">$0.00</p>
-            <p id="pfDailyChangePct" class="text-xs text-gray-500 mt-1">0.00%</p>
+        <div class="glass-card rounded-2xl p-0 overflow-hidden flex flex-col">
+          <div class="border-b border-slate-700/50 p-3 sm:p-4 bg-slate-800/20">
+            <h3 class="text-xs sm:text-sm font-semibold text-slate-200 uppercase tracking-wider flex items-center gap-2">
+              <i class="fas fa-fire text-orange-400"></i> Movimientos
+            </h3>
           </div>
-
-          <div class="bg-gray-900/80 border border-gray-800 rounded-xl p-5 card-hover">
-            <div class="flex items-center justify-between mb-3">
-              <span class="text-gray-400 text-sm">Posiciones</span>
-              <div class="w-8 h-8 bg-emerald-500/20 rounded-lg flex items-center justify-center"><i class="fas fa-layer-group text-emerald-400 text-sm"></i></div>
+          <div class="p-3 sm:p-4 space-y-3 sm:space-y-4 flex-1">
+            <div>
+              <p class="text-[9px] sm:text-[10px] text-slate-500 uppercase font-bold mb-2">Ganadoras</p>
+              <div id="topGainersList" class="space-y-2"></div>
             </div>
-            <p id="pfHoldings" class="text-2xl font-bold text-white">0</p>
-            <p id="pfSold" class="text-xs text-gray-500 mt-1">Vendidas: 0</p>
-          </div>
-
-          <div class="bg-gray-900/80 border border-gray-800 rounded-xl p-5 card-hover">
-            <div class="flex items-center justify-between mb-3">
-              <span class="text-gray-400 text-sm">Mejor Posicion</span>
-              <div class="w-8 h-8 bg-green-500/20 rounded-lg flex items-center justify-center"><i class="fas fa-arrow-trend-up text-green-400 text-sm"></i></div>
+            <div class="w-full h-px bg-slate-700/30"></div>
+            <div>
+              <p class="text-[9px] sm:text-[10px] text-slate-500 uppercase font-bold mb-2">Perdedoras</p>
+              <div id="topLosersList" class="space-y-2"></div>
             </div>
-            <p id="pfBestPosition" class="text-lg font-bold text-green-400">-</p>
-            <p id="pfBestROI" class="text-xs text-green-400 mt-1">+0.00%</p>
-          </div>
-
-          <div class="bg-gray-900/80 border border-gray-800 rounded-xl p-5 card-hover">
-            <div class="flex items-center justify-between mb-3">
-              <span class="text-gray-400 text-sm">Peor Posicion</span>
-              <div class="w-8 h-8 bg-red-500/20 rounded-lg flex items-center justify-center"><i class="fas fa-arrow-trend-down text-red-400 text-sm"></i></div>
-            </div>
-            <p id="pfWorstPosition" class="text-lg font-bold text-red-400">-</p>
-            <p id="pfWorstROI" class="text-xs text-red-400 mt-1">-0.00%</p>
           </div>
         </div>
       </div>
 
-      <!-- TOP POSITIONS -->
-      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div class="bg-gray-900/80 border border-gray-800 rounded-xl p-6">
-          <h3 class="text-lg font-semibold mb-4 flex items-center gap-2">
-            <i class="fas fa-trophy text-yellow-400"></i> Top 5 Ganadoras
+      <!-- ===== GRÁFICOS ===== -->
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
+        <div class="glass-card rounded-2xl p-4 sm:p-6">
+          <h3 class="text-xs sm:text-sm font-semibold text-slate-300 uppercase tracking-wider mb-4 sm:mb-6 flex items-center gap-2">
+            <i class="fas fa-cube text-indigo-400"></i> Distribución por Activo
           </h3>
-          <div id="topGainersList" class="space-y-3"></div>
-        </div>
-        <div class="bg-gray-900/80 border border-gray-800 rounded-xl p-6">
-          <h3 class="text-lg font-semibold mb-4 flex items-center gap-2">
-            <i class="fas fa-fire text-red-400"></i> Top 5 Perdedoras
-          </h3>
-          <div id="topLosersList" class="space-y-3"></div>
-        </div>
-      </div>
-
-      <!-- LARGEST POSITIONS -->
-      <div class="bg-gray-900/80 border border-gray-800 rounded-xl p-6">
-        <h3 class="text-lg font-semibold mb-4 flex items-center gap-2">
-          <i class="fas fa-crown text-purple-400"></i> Posiciones mas Grandes
-        </h3>
-        <div id="largestPositionsList" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4"></div>
-      </div>
-
-      <!-- PORTFOLIO CHARTS -->
-      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div class="bg-gray-900/80 border border-gray-800 rounded-xl p-6">
-          <h3 class="text-lg font-semibold mb-4 flex items-center gap-2">
-            <i class="fas fa-pie-chart text-blue-400"></i> Distribucion por Clase de Activo
-          </h3>
-          <div style="position: relative; height: 300px;">
+          <div class="relative h-[220px] sm:h-[280px]">
             <canvas id="portfolioAssetClassChart"></canvas>
           </div>
         </div>
-        <div class="bg-gray-900/80 border border-gray-800 rounded-xl p-6">
-          <h3 class="text-lg font-semibold mb-4 flex items-center gap-2">
-            <i class="fas fa-building text-purple-400"></i> Distribucion por Sector
+        <div class="glass-card rounded-2xl p-4 sm:p-6">
+          <h3 class="text-xs sm:text-sm font-semibold text-slate-300 uppercase tracking-wider mb-4 sm:mb-6 flex items-center gap-2">
+            <i class="fas fa-building text-brand-400"></i> Exposición Sectorial
           </h3>
-          <div style="position: relative; height: 300px;">
+          <div class="relative h-[220px] sm:h-[280px]">
             <canvas id="portfolioSectorChart"></canvas>
           </div>
         </div>
       </div>
 
-      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div class="bg-gray-900/80 border border-gray-800 rounded-xl p-6">
-          <h3 class="text-lg font-semibold mb-4 flex items-center gap-2">
-            <i class="fas fa-gem text-yellow-400"></i> Distribucion por Marketcap
-          </h3>
-          <div style="position: relative; height: 300px;">
-            <canvas id="portfolioMarketcapChart"></canvas>
-          </div>
-        </div>
-        <div class="bg-gray-900/80 border border-gray-800 rounded-xl p-6">
-          <h3 class="text-lg font-semibold mb-4 flex items-center gap-2">
-            <i class="fas fa-chart-bar text-green-400"></i> Distribucion de Rendimiento
-          </h3>
-          <div style="position: relative; height: 300px;">
-            <canvas id="performanceDistChart"></canvas>
-          </div>
-        </div>
-      </div>
-
-      <!-- TRANSACTIONS SUMMARY (Simplified) -->
-      <div>
-        <h2 class="text-lg font-semibold mb-3 flex items-center gap-2">
-          <i class="fas fa-exchange-alt text-purple-400"></i> Resumen de Transacciones
-        </h2>
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div class="bg-gray-900/80 border border-gray-800 rounded-xl p-5 card-hover">
-            <div class="flex items-center justify-between mb-3">
-              <span class="text-gray-400 text-sm">Total Transacciones</span>
-              <div class="w-8 h-8 bg-gray-500/20 rounded-lg flex items-center justify-center"><i class="fas fa-list text-gray-400 text-sm"></i></div>
-            </div>
-            <p id="kpiTotalTx" class="text-2xl font-bold text-white">0</p>
-            <p class="text-xs text-gray-500 mt-1">Registros totales</p>
-          </div>
-
-          <div class="bg-gray-900/80 border border-gray-800 rounded-xl p-5 card-hover">
-            <div class="flex items-center justify-between mb-3">
-              <span class="text-gray-400 text-sm">Dividendos</span>
-              <div class="w-8 h-8 bg-purple-500/20 rounded-lg flex items-center justify-center"><i class="fas fa-coins text-purple-400 text-sm"></i></div>
-            </div>
-            <p id="kpiDividends" class="text-2xl font-bold text-white">$0.00</p>
-            <p class="text-xs text-gray-500 mt-1">Ingresos pasivos</p>
-          </div>
-        </div>
-      </div>
-
-      <!-- TABS -->
-      <div class="bg-gray-900/80 border border-gray-800 rounded-xl overflow-hidden">
-        <div class="flex border-b border-gray-800 overflow-x-auto">
-          <button onclick="switchTab('portfolio')" id="tab-portfolio" class="tab-btn px-6 py-3 text-sm font-medium text-gray-400 hover:text-white transition-colors tab-active whitespace-nowrap">
-            <i class="fas fa-briefcase mr-2"></i>Portfolio
+      <!-- ===== TABS Y TABLAS ===== -->
+      <div class="glass-card rounded-2xl overflow-hidden mt-6 sm:mt-8">
+        <div class="tabs-scroll flex border-b border-slate-700/50 bg-slate-900/50">
+          <button onclick="switchTab('portfolio')" id="tab-portfolio" class="tab-btn px-4 sm:px-6 py-3 sm:py-4 text-[11px] sm:text-xs font-semibold text-slate-400 hover:text-slate-200 transition-all tab-active whitespace-nowrap tracking-wider uppercase touch-btn">
+            Portafolio
           </button>
-          <button onclick="switchTab('assets')" id="tab-assets" class="tab-btn px-6 py-3 text-sm font-medium text-gray-400 hover:text-white transition-colors whitespace-nowrap">
-            <i class="fas fa-cubes mr-2"></i>Mis Activos
+          <button onclick="switchTab('assets')" id="tab-assets" class="tab-btn px-4 sm:px-6 py-3 sm:py-4 text-[11px] sm:text-xs font-semibold text-slate-400 hover:text-slate-200 transition-all whitespace-nowrap tracking-wider uppercase touch-btn">
+            Activos
           </button>
-          <button onclick="switchTab('transactions')" id="tab-transactions" class="tab-btn px-6 py-3 text-sm font-medium text-gray-400 hover:text-white transition-colors whitespace-nowrap">
-            <i class="fas fa-list mr-2"></i>Transacciones
+          <button onclick="switchTab('transactions')" id="tab-transactions" class="tab-btn px-4 sm:px-6 py-3 sm:py-4 text-[11px] sm:text-xs font-semibold text-slate-400 hover:text-slate-200 transition-all whitespace-nowrap tracking-wider uppercase touch-btn">
+            Órdenes
           </button>
-          <button onclick="switchTab('platforms')" id="tab-platforms" class="tab-btn px-6 py-3 text-sm font-medium text-gray-400 hover:text-white transition-colors whitespace-nowrap">
-            <i class="fas fa-university mr-2"></i>Plataformas
+          <button onclick="switchTab('platforms')" id="tab-platforms" class="tab-btn px-4 sm:px-6 py-3 sm:py-4 text-[11px] sm:text-xs font-semibold text-slate-400 hover:text-slate-200 transition-all whitespace-nowrap tracking-wider uppercase touch-btn">
+            Brókers
           </button>
         </div>
 
-        <!-- Tab: Portfolio -->
-        <div id="panel-portfolio" class="p-6">
-          <div class="flex items-center justify-between mb-4 flex-wrap gap-2">
+        <!-- ===== PANEL PORTAFOLIO ===== -->
+        <div id="panel-portfolio" class="p-0">
+          <div class="p-3 sm:p-4 border-b border-slate-700/50 bg-slate-800/20 flex items-center justify-between flex-wrap gap-3">
             <div class="flex items-center gap-3">
-              <p class="text-sm text-gray-400">Mostrando <span id="pfCount" class="text-white font-bold">0</span> posiciones</p>
-              <label class="flex items-center gap-2 text-sm text-gray-400 cursor-pointer">
-                <input type="checkbox" id="showSold" onchange="toggleSoldPositions()" class="rounded bg-gray-800 border-gray-600">
-                Mostrar vendidas
+              <span class="px-2.5 py-1 bg-slate-800 text-slate-300 text-[11px] font-bold rounded-md border border-slate-700"><span id="pfCount">0</span> POS.</span>
+              <label class="flex items-center gap-2 text-[11px] font-medium text-slate-400 cursor-pointer hover:text-slate-200 transition-colors">
+                <input type="checkbox" id="showSold" onchange="toggleSoldPositions()" class="rounded bg-slate-800 border-slate-600 text-brand-500 focus:ring-brand-500/50 cursor-pointer w-4 h-4">
+                <span class="hidden sm:inline">Incluir Históricas</span>
+                <span class="sm:hidden">Históricas</span>
               </label>
             </div>
-            <div class="flex gap-2">
-              <input type="text" id="pfSearch" placeholder="Buscar ticker..." oninput="filterPortfolio()" 
-                class="px-3 py-1.5 bg-gray-800 border border-gray-700 rounded-lg text-sm text-white placeholder-gray-500 focus:outline-none focus:border-blue-500">
+            <div class="flex items-center gap-2">
+              <!-- View toggle (mobile only) -->
+              <div class="view-toggle-container hidden items-center gap-1 mr-2">
+                <button onclick="setMobileView('cards')" id="view-cards" class="view-toggle-btn active touch-btn">
+                  <i class="fas fa-th-large mr-1"></i>Cards
+                </button>
+                <button onclick="setMobileView('table')" id="view-table" class="view-toggle-btn touch-btn">
+                  <i class="fas fa-list mr-1"></i>Tabla
+                </button>
+              </div>
+              <div class="relative">
+                <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 text-xs"></i>
+                <input type="text" id="pfSearch" placeholder="Filtrar ticker..." oninput="filterPortfolio()" 
+                  class="pl-9 pr-4 py-2 bg-slate-900/80 border border-slate-700 rounded-lg text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 transition-all w-40 sm:w-48 md:w-64">
+              </div>
             </div>
           </div>
-          <div class="overflow-x-auto">
-            <table class="w-full text-sm">
-              <thead>
-                <tr class="text-gray-400 border-b border-gray-800">
-                  <th class="text-left py-3 px-2 sortable" onclick="sortPortfolio('ticker')">Ticker <span class="sort-icon">&#8645;</span></th>
-                  <th class="text-left py-3 px-2 sortable" onclick="sortPortfolio('assetName')">Nombre <span class="sort-icon">&#8645;</span></th>
-                  <th class="text-left py-3 px-2 sortable" onclick="sortPortfolio('assetClass')">Clase <span class="sort-icon">&#8645;</span></th>
-                  <th class="text-left py-3 px-2 sortable" onclick="sortPortfolio('sector')">Sector <span class="sort-icon">&#8645;</span></th>
-                  <th class="text-center py-3 px-2 sortable" onclick="sortPortfolio('marketcap')">Marketcap <span class="sort-icon">&#8645;</span></th>
-                  <th class="text-right py-3 px-2 sortable" onclick="sortPortfolio('quantityNum')">Cantidad <span class="sort-icon">&#8645;</span></th>
-                  <th class="text-right py-3 px-2 sortable" onclick="sortPortfolio('avgPurchasePrice')">Precio Medio <span class="sort-icon">&#8645;</span></th>
-                  <th class="text-right py-3 px-2 sortable" onclick="sortPortfolio('currentPrice')">Precio Actual <span class="sort-icon">&#8645;</span></th>
-                  <th class="text-right py-3 px-2 sortable" onclick="sortPortfolio('cost')">Costo <span class="sort-icon">&#8645;</span></th>
-                  <th class="text-right py-3 px-2 sortable" onclick="sortPortfolio('currentValue')">Valor Actual <span class="sort-icon">&#8645;</span></th>
-                  <th class="text-right py-3 px-2 sortable" onclick="sortPortfolio('unrealizedROI')">ROI <span class="sort-icon">&#8645;</span></th>
-                  <th class="text-right py-3 px-2 sortable" onclick="sortPortfolio('unrealizedPL')">P/L <span class="sort-icon">&#8645;</span></th>
-                  <th class="text-right py-3 px-2 sortable" onclick="sortPortfolio('dailyChange')">Diario <span class="sort-icon">&#8645;</span></th>
-                  <th class="text-center py-3 px-2">Moneda</th>
+
+          <!-- Desktop Table -->
+          <div class="desktop-table table-scroll-container">
+            <table class="w-full text-[11px] sm:text-xs text-left whitespace-nowrap">
+              <thead class="bg-slate-900/60 text-slate-400 uppercase tracking-wider font-semibold">
+                <tr>
+                  <th class="py-3 px-3 sm:px-4 sortable" onclick="sortPortfolio('ticker')">Símbolo <span class="sort-icon">&#8645;</span></th>
+                  <th class="py-3 px-3 sm:px-4 sortable" onclick="sortPortfolio('assetName')">Activo <span class="sort-icon">&#8645;</span></th>
+                  <th class="py-3 px-3 sm:px-4 sortable" onclick="sortPortfolio('assetClass')">Clase <span class="sort-icon">&#8645;</span></th>
+                  <th class="py-3 px-3 sm:px-4 sortable hidden lg:table-cell" onclick="sortPortfolio('sector')">Sector <span class="sort-icon">&#8645;</span></th>
+                  <th class="py-3 px-3 sm:px-4 text-right sortable" onclick="sortPortfolio('quantityNum')">Cant. <span class="sort-icon">&#8645;</span></th>
+                  <th class="py-3 px-3 sm:px-4 text-right sortable" onclick="sortPortfolio('avgPurchasePrice')">Precio Prom. <span class="sort-icon">&#8645;</span></th>
+                  <th class="py-3 px-3 sm:px-4 text-right sortable" onclick="sortPortfolio('currentPrice')">Mercado <span class="sort-icon">&#8645;</span></th>
+                  <th class="py-3 px-3 sm:px-4 text-right sortable" onclick="sortPortfolio('cost')">Costo <span class="sort-icon">&#8645;</span></th>
+                  <th class="py-3 px-3 sm:px-4 text-right sortable" onclick="sortPortfolio('currentValue')">Valor <span class="sort-icon">&#8645;</span></th>
+                  <th class="py-3 px-3 sm:px-4 text-right sortable" onclick="sortPortfolio('unrealizedROI')">ROI <span class="sort-icon">&#8645;</span></th>
+                  <th class="py-3 px-3 sm:px-4 text-right sortable" onclick="sortPortfolio('unrealizedPL')">P/L <span class="sort-icon">&#8645;</span></th>
+                  <th class="py-3 px-3 sm:px-4 text-right sortable" onclick="sortPortfolio('dailyChange')">Día <span class="sort-icon">&#8645;</span></th>
                 </tr>
               </thead>
-              <tbody id="portfolioTable" class="text-gray-300"></tbody>
+              <tbody id="portfolioTable" class="divide-y divide-slate-800/50"></tbody>
             </table>
           </div>
+
+          <!-- Mobile Cards -->
+          <div id="portfolioMobileCards" class="mobile-card p-3 sm:p-4 space-y-3"></div>
         </div>
 
-        <!-- Tab: Assets -->
-        <div id="panel-assets" class="hidden p-6">
-          <div class="overflow-x-auto">
-            <table class="w-full text-sm">
-              <thead>
-                <tr class="text-gray-400 border-b border-gray-800">
-                  <th class="text-left py-3 px-2">Ticker</th>
-                  <th class="text-left py-3 px-2">Nombre</th>
-                  <th class="text-left py-3 px-2">Clase</th>
-                  <th class="text-left py-3 px-2">Sector</th>
-                  <th class="text-right py-3 px-2">Cantidad</th>
-                  <th class="text-right py-3 px-2">Costo Base</th>
-                  <th class="text-center py-3 px-2">Moneda Orig.</th>
-                  <th class="text-center py-3 px-2">Plataforma</th>
+        <!-- ===== PANEL ACTIVOS ===== -->
+        <div id="panel-assets" class="hidden p-0">
+          <!-- Desktop Table -->
+          <div class="desktop-table table-scroll-container">
+            <table class="w-full text-[11px] sm:text-xs text-left whitespace-nowrap">
+              <thead class="bg-slate-900/60 text-slate-400 uppercase tracking-wider font-semibold">
+                <tr>
+                  <th class="py-3 px-3 sm:px-4">Símbolo</th>
+                  <th class="py-3 px-3 sm:px-4">Nombre</th>
+                  <th class="py-3 px-3 sm:px-4">Clase</th>
+                  <th class="py-3 px-3 sm:px-4">Sector</th>
+                  <th class="py-3 px-3 sm:px-4 text-right">Cantidad</th>
+                  <th class="py-3 px-3 sm:px-4 text-right">Costo Base</th>
+                  <th class="py-3 px-3 sm:px-4 text-center">Moneda</th>
+                  <th class="py-3 px-3 sm:px-4 text-center">Plataforma</th>
                 </tr>
               </thead>
-              <tbody id="assetsTable" class="text-gray-300"></tbody>
+              <tbody id="assetsTable" class="divide-y divide-slate-800/50"></tbody>
             </table>
           </div>
+          <!-- Mobile Cards -->
+          <div id="assetsMobileCards" class="mobile-card p-3 sm:p-4 space-y-3"></div>
         </div>
 
-        <!-- Tab: Transactions -->
-        <div id="panel-transactions" class="hidden p-6">
-          <div class="flex items-center justify-between mb-4">
-            <p class="text-sm text-gray-400">Mostrando <span id="txCount" class="text-white font-bold">0</span> transacciones</p>
+        <!-- ===== PANEL TRANSACCIONES ===== -->
+        <div id="panel-transactions" class="hidden p-0">
+          <div class="p-3 sm:p-4 border-b border-slate-700/50 bg-slate-800/20 flex items-center justify-between flex-wrap gap-3">
+            <span class="px-2.5 py-1 bg-slate-800 text-slate-300 text-[11px] font-bold rounded-md border border-slate-700"><span id="txCount">0</span> REGISTROS</span>
             <div class="flex gap-2">
-              <button onclick="changeTxPage(-1)" id="txPrev" class="px-3 py-1 bg-gray-800 hover:bg-gray-700 rounded text-sm disabled:opacity-50" disabled>Anterior</button>
-              <span id="txPage" class="px-3 py-1 text-sm text-gray-400">Pagina 1</span>
-              <button onclick="changeTxPage(1)" id="txNext" class="px-3 py-1 bg-gray-800 hover:bg-gray-700 rounded text-sm disabled:opacity-50" disabled>Siguiente</button>
+              <button onclick="changeTxPage(-1)" id="txPrev" class="px-3 py-2 touch-btn bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-md text-xs font-medium text-slate-300 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"><i class="fas fa-chevron-left"></i></button>
+              <span id="txPage" class="px-3 py-2 text-xs text-slate-400 font-medium flex items-center">Pág. 1</span>
+              <button onclick="changeTxPage(1)" id="txNext" class="px-3 py-2 touch-btn bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-md text-xs font-medium text-slate-300 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"><i class="fas fa-chevron-right"></i></button>
             </div>
           </div>
-          <div class="overflow-x-auto">
-            <table class="w-full text-sm">
-              <thead>
-                <tr class="text-gray-400 border-b border-gray-800">
-                  <th class="text-left py-3 px-2">Fecha</th>
-                  <th class="text-left py-3 px-2">Activo</th>
-                  <th class="text-center py-3 px-2">Accion</th>
-                  <th class="text-right py-3 px-2">Cantidad</th>
-                  <th class="text-right py-3 px-2">Precio</th>
-                  <th class="text-right py-3 px-2">Total</th>
-                  <th class="text-center py-3 px-2">Moneda</th>
-                  <th class="text-center py-3 px-2">Plataforma</th>
+          <!-- Desktop Table -->
+          <div class="desktop-table table-scroll-container">
+            <table class="w-full text-[11px] sm:text-xs text-left whitespace-nowrap">
+              <thead class="bg-slate-900/60 text-slate-400 uppercase tracking-wider font-semibold">
+                <tr>
+                  <th class="py-3 px-3 sm:px-4">Fecha</th>
+                  <th class="py-3 px-3 sm:px-4">Activo</th>
+                  <th class="py-3 px-3 sm:px-4 text-center">Acción</th>
+                  <th class="py-3 px-3 sm:px-4 text-right">Cantidad</th>
+                  <th class="py-3 px-3 sm:px-4 text-right">Precio</th>
+                  <th class="py-3 px-3 sm:px-4 text-right">Total</th>
+                  <th class="py-3 px-3 sm:px-4 text-center">Bróker</th>
                 </tr>
               </thead>
-              <tbody id="transactionsTable" class="text-gray-300"></tbody>
+              <tbody id="transactionsTable" class="divide-y divide-slate-800/50"></tbody>
             </table>
           </div>
+          <!-- Mobile Cards -->
+          <div id="transactionsMobileCards" class="mobile-card p-3 sm:p-4 space-y-3"></div>
         </div>
 
-        <!-- Tab: Platforms -->
-        <div id="panel-platforms" class="hidden p-6">
-          <div class="overflow-x-auto">
-            <table class="w-full text-sm">
-              <thead>
-                <tr class="text-gray-400 border-b border-gray-800">
-                  <th class="text-left py-3 px-2">Plataforma</th>
-                  <th class="text-center py-3 px-2">Moneda Orig.</th>
-                  <th class="text-right py-3 px-2">Trans.</th>
-                  <th class="text-right py-3 px-2">Depositado</th>
-                  <th class="text-right py-3 px-2">Invertido</th>
-                  <th class="text-right py-3 px-2">Vendido</th>
-                  <th class="text-right py-3 px-2">Dividendos</th>
-                  <th class="text-right py-3 px-2">Neto</th>
+        <!-- ===== PANEL PLATAFORMAS ===== -->
+        <div id="panel-platforms" class="hidden p-0">
+          <!-- Desktop Table -->
+          <div class="desktop-table table-scroll-container">
+            <table class="w-full text-[11px] sm:text-xs text-left whitespace-nowrap">
+              <thead class="bg-slate-900/60 text-slate-400 uppercase tracking-wider font-semibold">
+                <tr>
+                  <th class="py-3 px-3 sm:px-4">Plataforma</th>
+                  <th class="py-3 px-3 sm:px-4 text-center">Moneda</th>
+                  <th class="py-3 px-3 sm:px-4 text-right">Órdenes</th>
+                  <th class="py-3 px-3 sm:px-4 text-right">Fondeo</th>
+                  <th class="py-3 px-3 sm:px-4 text-right">Invertido</th>
+                  <th class="py-3 px-3 sm:px-4 text-right">Retornos</th>
+                  <th class="py-3 px-3 sm:px-4 text-right">Flujo Neto</th>
                 </tr>
               </thead>
-              <tbody id="platformsTable" class="text-gray-300"></tbody>
+              <tbody id="platformsTable" class="divide-y divide-slate-800/50"></tbody>
             </table>
           </div>
+          <!-- Mobile Cards -->
+          <div id="platformsMobileCards" class="mobile-card p-3 sm:p-4 space-y-3"></div>
         </div>
       </div>
     </div>
   </main>
 
   <script>
+
     const API_URL = "https://script.google.com/macros/s/AKfycbzljOCK6u9cCGViOPrAXdLxmznXTAHR8YTBFZ5TQNPnuwij5b6mHKsczAvQdz2_YFaj/exec";
 
     let charts = {};
@@ -398,17 +615,51 @@
     let showSoldPositionsFlag = false;
     let portfolioSort = { field: 'currentValue', dir: 'desc' };
     let portfolioFilter = '';
+    let mobileViewMode = 'cards'; // 'cards' or 'table'
+
+    Chart.defaults.color = '#94a3b8'; 
+    Chart.defaults.font.family = "'Inter', sans-serif";
+    const chartTooltipConfig = {
+      backgroundColor: 'rgba(15, 23, 42, 0.95)',
+      titleColor: '#f8fafc',
+      bodyColor: '#cbd5e1',
+      borderColor: '#334155',
+      borderWidth: 1,
+      padding: 12,
+      cornerRadius: 8,
+      boxPadding: 4
+    };
 
     function setCurrency(currency) {
       if (currency === currentCurrency) return;
       currentCurrency = currency;
 
-      document.getElementById('btn-usd').classList.toggle('active', currency === 'USD');
-      document.getElementById('btn-usd').classList.toggle('text-gray-400', currency !== 'USD');
-      document.getElementById('btn-dop').classList.toggle('active', currency === 'DOP');
-      document.getElementById('btn-dop').classList.toggle('text-gray-400', currency !== 'DOP');
+      document.getElementById('btn-usd').className = currency === 'USD' 
+        ? "px-2.5 sm:px-3 py-1.5 rounded-md text-[11px] sm:text-xs font-semibold transition-all bg-brand-500 text-white shadow-sm touch-btn" 
+        : "px-2.5 sm:px-3 py-1.5 rounded-md text-[11px] sm:text-xs font-semibold transition-all text-slate-400 hover:text-slate-200 touch-btn";
+
+      document.getElementById('btn-dop').className = currency === 'DOP' 
+        ? "px-2.5 sm:px-3 py-1.5 rounded-md text-[11px] sm:text-xs font-semibold transition-all bg-brand-500 text-white shadow-sm touch-btn" 
+        : "px-2.5 sm:px-3 py-1.5 rounded-md text-[11px] sm:text-xs font-semibold transition-all text-slate-400 hover:text-slate-200 touch-btn";
 
       loadData();
+    }
+
+    function setMobileView(mode) {
+      mobileViewMode = mode;
+      document.getElementById('view-cards').classList.toggle('active', mode === 'cards');
+      document.getElementById('view-table').classList.toggle('active', mode === 'table');
+
+      const tableEl = document.querySelector('#panel-portfolio .desktop-table');
+      const cardsEl = document.getElementById('portfolioMobileCards');
+
+      if (mode === 'cards') {
+        if (tableEl) tableEl.style.display = 'none';
+        cardsEl.style.display = 'block';
+      } else {
+        if (tableEl) tableEl.style.display = 'block';
+        cardsEl.style.display = 'none';
+      }
     }
 
     async function loadData() {
@@ -422,13 +673,8 @@
 
         const data = await fetchWithJSONP(url);
 
-        if (data.error) {
-          throw new Error(data.error);
-        }
-
-        if (data.meta && data.meta.exchangeRate) {
-          currentRate = data.meta.exchangeRate;
-        }
+        if (data.error) throw new Error(data.error);
+        if (data.meta && data.meta.exchangeRate) currentRate = data.meta.exchangeRate;
 
         allTransactions = data.allTransactions || [];
         txPage = 0;
@@ -439,11 +685,11 @@
         }
 
         renderDashboard(data);
-        document.getElementById('lastUpdate').textContent = 'Actualizado: ' + new Date().toLocaleString('es-ES');
+        document.getElementById('lastUpdate').textContent = new Date().toLocaleTimeString('es-DO', { hour: '2-digit', minute: '2-digit' });
         showContent();
       } catch (error) {
         console.error("Error:", error);
-        showError('Error: ' + error.message);
+        showError(error.message);
       }
     }
 
@@ -459,7 +705,7 @@
 
         var timeout = setTimeout(function() {
           cleanup();
-          reject(new Error('Timeout - La API no respondio en 30 segundos'));
+          reject(new Error('Timeout - La API no respondió en 30s.'));
         }, 30000);
 
         function cleanup() {
@@ -470,7 +716,7 @@
 
         script.onerror = function() {
           cleanup();
-          reject(new Error('No se pudo cargar el script. Verifica la URL.'));
+          reject(new Error('Fallo de red al intentar contactar Google Apps Script.'));
         };
 
         var separator = url.indexOf('?') !== -1 ? '&' : '?';
@@ -486,66 +732,60 @@
 
       if (currentCurrency === 'DOP' && currentRate) {
         rateInfo.classList.remove('hidden');
-        rateText.textContent = 'Tasa de cambio: 1 USD = ' + currentRate.toFixed(2) + ' DOP';
+        rateText.textContent = '1 USD = ' + currentRate.toFixed(2) + ' DOP';
       } else {
         rateInfo.classList.add('hidden');
       }
 
-      document.getElementById('subtitle').textContent = 'Dashboard en ' + currentCurrency;
-
-      // Portfolio Summary
       if (data.portfolio && data.portfolio.summary) {
-        renderPortfolioSummary(data.portfolio.summary);
+        renderPortfolioSummary(data.portfolio.summary, data.metrics);
         renderPortfolioCharts(data.portfolio.summary);
         renderTopPositions(data.portfolio.summary);
         renderLargestPositions(data.portfolio.summary);
       }
 
-      // Transaction KPIs (Simplified: only Total Transactions and Dividends)
-      document.getElementById('kpiTotalTx').textContent = data.metrics && data.metrics.totalTransactions ? data.metrics.totalTransactions : 0;
-      document.getElementById('kpiDividends').textContent = formatCurrency(data.metrics && data.metrics.totalDividends ? data.metrics.totalDividends : 0);
-
-      // Tables
-      if (data.portfolio && data.portfolio.portfolio) {
-        renderPortfolioTable(data.portfolio.portfolio);
-      }
+      if (data.portfolio && data.portfolio.portfolio) renderPortfolioTable(data.portfolio.portfolio);
       renderAssetsTable(data.currentAssets || []);
       renderTransactionsTable();
       loadPlatforms();
     }
 
-    function renderPortfolioSummary(summary) {
-      document.getElementById('pfTotalValue').textContent = formatCurrency(summary.totalCurrentValue || 0);
+    function renderPortfolioSummary(summary, metrics) {
+      var marketValue = summary.totalCurrentValue || 0;
+      var totalCash = metrics ? (metrics.totalPortfolioValue || 0) : 0; 
+      var totalBalance = marketValue + totalCash;
+
+      document.getElementById('pfTotalBalance').textContent = formatCurrency(totalBalance);
+      document.getElementById('pfMarketValue').textContent = formatCurrency(marketValue);
+      document.getElementById('pfTotalCash').textContent = formatCurrency(totalCash);
+
       document.getElementById('pfTotalCost').textContent = formatCurrency(summary.totalCost || 0);
 
       var unrealizedPL = summary.totalUnrealizedPL || 0;
-      var unrealizedEl = document.getElementById('pfUnrealizedPL');
-      unrealizedEl.textContent = (unrealizedPL >= 0 ? '+' : '') + formatCurrency(unrealizedPL);
-      unrealizedEl.className = 'text-2xl font-bold ' + (unrealizedPL >= 0 ? 'text-green-400' : 'text-red-400');
+      document.getElementById('pfUnrealizedPL').textContent = (unrealizedPL >= 0 ? '+' : '') + formatCurrency(unrealizedPL);
+      document.getElementById('pfUnrealizedPL').className = 'font-bold text-sm sm:text-base leading-none ' + (unrealizedPL >= 0 ? 'text-emerald-400' : 'text-rose-400');
 
-      var roi = summary.overallUnrealizedROI || 0;
+      var roi = (summary.overallUnrealizedROI || 0);
       document.getElementById('pfUnrealizedROI').textContent = (roi >= 0 ? '+' : '') + roi.toFixed(2) + '%';
-      document.getElementById('pfUnrealizedROI').className = 'text-xs mt-1 ' + (roi >= 0 ? 'text-green-400' : 'text-red-400');
+      document.getElementById('pfUnrealizedROIContainer').className = 'px-2 py-1 rounded-md text-[10px] sm:text-xs font-bold ' + (roi >= 0 ? 'bg-emerald-500/20 text-emerald-400' : 'bg-rose-500/20 text-rose-400');
 
       var realizedPL = summary.totalRealizedPL || 0;
-      var realizedEl = document.getElementById('pfRealizedPL');
-      realizedEl.textContent = (realizedPL >= 0 ? '+' : '') + formatCurrency(realizedPL);
-      realizedEl.className = 'text-2xl font-bold ' + (realizedPL >= 0 ? 'text-green-400' : 'text-red-400');
+      document.getElementById('pfRealizedPL').textContent = (realizedPL >= 0 ? '+' : '') + formatCurrency(realizedPL);
+      document.getElementById('pfRealizedPL').className = 'mobile-stat-value ' + (realizedPL >= 0 ? 'text-emerald-400' : 'text-rose-400');
 
       var totalPL = summary.totalPL || 0;
-      document.getElementById('pfTotalPL').textContent = 'P/L Total: ' + (totalPL >= 0 ? '+' : '') + formatCurrency(totalPL);
+      document.getElementById('pfTotalPL').textContent = 'P/L Histórico: ' + (totalPL >= 0 ? '+' : '') + formatCurrency(totalPL);
 
       var dailyChange = summary.totalDailyChange || 0;
-      var dailyEl = document.getElementById('pfDailyChange');
-      dailyEl.textContent = (dailyChange >= 0 ? '+' : '') + formatCurrency(dailyChange);
-      dailyEl.className = 'text-2xl font-bold ' + (dailyChange >= 0 ? 'text-green-400' : 'text-red-400');
+      document.getElementById('pfDailyChange').textContent = (dailyChange >= 0 ? '+' : '') + formatCurrency(dailyChange);
+      document.getElementById('pfDailyChange').className = 'font-bold text-sm sm:text-base leading-none ' + (dailyChange >= 0 ? 'text-emerald-400' : 'text-rose-400');
 
       var dailyPct = summary.overallDailyChangePct || 0;
       document.getElementById('pfDailyChangePct').textContent = (dailyPct >= 0 ? '+' : '') + dailyPct.toFixed(2) + '%';
-      document.getElementById('pfDailyChangePct').className = 'text-xs mt-1 ' + (dailyPct >= 0 ? 'text-green-400' : 'text-red-400');
+      document.getElementById('pfDailyChangePctContainer').className = 'px-2 py-1 rounded-md text-[10px] sm:text-xs font-bold ' + (dailyPct >= 0 ? 'bg-emerald-500/20 text-emerald-400' : 'bg-rose-500/20 text-rose-400');
 
       document.getElementById('pfHoldings').textContent = summary.currentHoldings || 0;
-      document.getElementById('pfSold').textContent = 'Vendidas: ' + (summary.soldPositions || 0) + ' | Total: ' + (summary.totalPositions || 0);
+      document.getElementById('pfSold').textContent = 'Liquidadas: ' + (summary.soldPositions || 0) + ' | Total: ' + (summary.totalPositions || 0);
 
       if (summary.topGainers && summary.topGainers.length > 0) {
         var best = summary.topGainers[0];
@@ -565,37 +805,31 @@
 
       if (summary.topGainers && summary.topGainers.length > 0) {
         gainersEl.innerHTML = summary.topGainers.map(function(p) {
-          return '<div class="flex items-center justify-between p-3 bg-gray-800/50 rounded-lg">' +
-            '<div class="flex items-center gap-3">' +
-              '<div class="w-8 h-8 bg-green-500/20 rounded-lg flex items-center justify-center"><i class="fas fa-arrow-up text-green-400 text-xs"></i></div>' +
-              '<div><p class="font-semibold text-sm">' + p.ticker + '</p><p class="text-xs text-gray-400">' + (p.assetName || '') + '</p></div>' +
+          return '<div class="flex items-center justify-between group">' +
+            '<div class="flex items-center gap-2.5">' +
+              '<div class="w-2 h-2 rounded-full bg-emerald-500"></div>' +
+              '<div><p class="font-bold text-xs text-slate-200">' + p.ticker + '</p></div>' +
             '</div>' +
             '<div class="text-right">' +
-              '<p class="font-bold text-green-400">+' + (p.unrealizedROI || 0).toFixed(2) + '%</p>' +
-              '<p class="text-xs text-gray-400">' + formatCurrency(p.unrealizedPL) + '</p>' +
+              '<p class="font-bold text-xs text-emerald-400">+' + (p.unrealizedROI || 0).toFixed(2) + '%</p>' +
             '</div>' +
           '</div>';
         }).join('');
-      } else {
-        gainersEl.innerHTML = '<p class="text-gray-500 text-sm">No hay datos</p>';
-      }
+      } else { gainersEl.innerHTML = '<p class="text-slate-600 text-xs italic">N/A</p>'; }
 
       if (summary.topLosers && summary.topLosers.length > 0) {
         losersEl.innerHTML = summary.topLosers.map(function(p) {
-          return '<div class="flex items-center justify-between p-3 bg-gray-800/50 rounded-lg">' +
-            '<div class="flex items-center gap-3">' +
-              '<div class="w-8 h-8 bg-red-500/20 rounded-lg flex items-center justify-center"><i class="fas fa-arrow-down text-red-400 text-xs"></i></div>' +
-              '<div><p class="font-semibold text-sm">' + p.ticker + '</p><p class="text-xs text-gray-400">' + (p.assetName || '') + '</p></div>' +
+          return '<div class="flex items-center justify-between group">' +
+            '<div class="flex items-center gap-2.5">' +
+              '<div class="w-2 h-2 rounded-full bg-rose-500"></div>' +
+              '<div><p class="font-bold text-xs text-slate-200">' + p.ticker + '</p></div>' +
             '</div>' +
             '<div class="text-right">' +
-              '<p class="font-bold text-red-400">' + (p.unrealizedROI || 0).toFixed(2) + '%</p>' +
-              '<p class="text-xs text-gray-400">' + formatCurrency(p.unrealizedPL) + '</p>' +
+              '<p class="font-bold text-xs text-rose-400">' + (p.unrealizedROI || 0).toFixed(2) + '%</p>' +
             '</div>' +
           '</div>';
         }).join('');
-      } else {
-        losersEl.innerHTML = '<p class="text-gray-500 text-sm">No hay datos</p>';
-      }
+      } else { losersEl.innerHTML = '<p class="text-slate-600 text-xs italic">N/A</p>'; }
     }
 
     function renderLargestPositions(summary) {
@@ -603,196 +837,88 @@
       if (summary.largestPositions && summary.largestPositions.length > 0) {
         el.innerHTML = summary.largestPositions.map(function(p) {
           var weight = summary.totalCurrentValue > 0 ? ((p.currentValue || 0) / summary.totalCurrentValue * 100).toFixed(1) : 0;
-          return '<div class="bg-gray-800/50 rounded-lg p-4">' +
-            '<div class="flex items-center justify-between mb-2">' +
-              '<span class="font-semibold text-sm">' + p.ticker + '</span>' +
-              '<span class="text-xs text-gray-400">' + weight + '%</span>' +
+          return '<div class="bg-slate-800/40 rounded-xl p-3 border border-slate-700/50 hover:bg-slate-800/60 transition-colors">' +
+            '<div class="flex items-center justify-between mb-1.5">' +
+              '<span class="font-bold text-sm text-slate-200">' + p.ticker + '</span>' +
+              '<span class="text-[10px] font-medium text-slate-400 bg-slate-900 px-1.5 py-0.5 rounded">' + weight + '%</span>' +
             '</div>' +
-            '<p class="text-lg font-bold">' + formatCurrency(p.currentValue) + '</p>' +
-            '<div class="w-full bg-gray-700 rounded-full h-1.5 mt-2">' +
-              '<div class="bg-blue-500 h-1.5 rounded-full" style="width:' + weight + '%"></div>' +
+            '<p class="text-sm font-semibold text-slate-300 mb-2">' + formatCurrency(p.currentValue) + '</p>' +
+            '<div class="w-full bg-slate-900 rounded-full h-1 overflow-hidden">' +
+              '<div class="bg-brand-500 h-1 rounded-full" style="width:' + weight + '%"></div>' +
             '</div>' +
           '</div>';
         }).join('');
-      } else {
-        el.innerHTML = '<p class="text-gray-500 text-sm col-span-full">No hay datos</p>';
-      }
+      } else { el.innerHTML = '<p class="text-slate-500 text-sm col-span-full">Sin datos de exposición</p>'; }
     }
 
     function renderPortfolioCharts(summary) {
-      // Asset Class Chart
+      var palette = ['#3b82f6', '#8b5cf6', '#10b981', '#f59e0b', '#f43f5e', '#0ea5e9', '#6366f1'];
+
       if (summary.byAssetClass && summary.byAssetClass.length > 0) {
         var ctx = document.getElementById('portfolioAssetClassChart').getContext('2d');
         if (charts.portfolioAssetClass) charts.portfolioAssetClass.destroy();
-        var colors = ['#3b82f6', '#8b5cf6', '#10b981', '#f59e0b', '#ef4444', '#ec4899', '#06b6d4'];
         charts.portfolioAssetClass = new Chart(ctx, {
           type: 'doughnut',
           data: {
             labels: summary.byAssetClass.map(function(d) { return d.name; }),
             datasets: [{
               data: summary.byAssetClass.map(function(d) { return d.value; }),
-              backgroundColor: colors,
+              backgroundColor: palette,
               borderWidth: 0,
-              hoverOffset: 4
+              hoverOffset: 6
             }]
           },
           options: {
-            responsive: true,
-            maintainAspectRatio: false,
+            responsive: true, 
+            maintainAspectRatio: false, 
+            cutout: '70%',
             plugins: {
-              legend: { position: 'bottom', labels: { color: '#9ca3af', padding: 10, usePointStyle: true, font: { size: 11 } } },
-              tooltip: {
-                backgroundColor: 'rgba(17, 24, 39, 0.95)',
-                titleColor: '#fff',
-                bodyColor: '#9ca3af',
-                borderColor: '#374151',
-                borderWidth: 1,
-                padding: 10,
-                cornerRadius: 8,
-                callbacks: {
-                  label: function(context) {
-                    var label = context.label || '';
-                    var value = context.parsed || 0;
-                    var total = context.dataset.data.reduce(function(a, b) { return a + b; }, 0);
-                    var percentage = total > 0 ? ((value / total) * 100).toFixed(1) : 0;
-                    return label + ': ' + formatCurrency(value) + ' (' + percentage + '%)';
-                  }
-                }
-              }
+              legend: { 
+                position: window.innerWidth < 640 ? 'bottom' : 'right', 
+                labels: { 
+                  usePointStyle: true, 
+                  pointStyle: 'circle', 
+                  font: { size: window.innerWidth < 640 ? 10 : 11 },
+                  padding: window.innerWidth < 640 ? 10 : 16,
+                  boxWidth: window.innerWidth < 640 ? 8 : 10
+                } 
+              },
+              tooltip: chartTooltipConfig
             }
           }
         });
       }
 
-      // Sector Chart
       if (summary.bySector && summary.bySector.length > 0) {
         var ctx = document.getElementById('portfolioSectorChart').getContext('2d');
         if (charts.portfolioSector) charts.portfolioSector.destroy();
-        var colors = ['#3b82f6', '#8b5cf6', '#10b981', '#f59e0b', '#ef4444', '#ec4899', '#06b6d4', '#84cc16'];
         charts.portfolioSector = new Chart(ctx, {
           type: 'doughnut',
           data: {
             labels: summary.bySector.map(function(d) { return d.name; }),
             datasets: [{
               data: summary.bySector.map(function(d) { return d.value; }),
-              backgroundColor: colors,
+              backgroundColor: palette.slice().reverse(),
               borderWidth: 0,
-              hoverOffset: 4
+              hoverOffset: 6
             }]
           },
           options: {
-            responsive: true,
-            maintainAspectRatio: false,
+            responsive: true, 
+            maintainAspectRatio: false, 
+            cutout: '70%',
             plugins: {
-              legend: { position: 'bottom', labels: { color: '#9ca3af', padding: 10, usePointStyle: true, font: { size: 10 } } },
-              tooltip: {
-                backgroundColor: 'rgba(17, 24, 39, 0.95)',
-                titleColor: '#fff',
-                bodyColor: '#9ca3af',
-                borderColor: '#374151',
-                borderWidth: 1,
-                padding: 10,
-                cornerRadius: 8,
-                callbacks: {
-                  label: function(context) {
-                    var label = context.label || '';
-                    var value = context.parsed || 0;
-                    var total = context.dataset.data.reduce(function(a, b) { return a + b; }, 0);
-                    var percentage = total > 0 ? ((value / total) * 100).toFixed(1) : 0;
-                    return label + ': ' + formatCurrency(value) + ' (' + percentage + '%)';
-                  }
-                }
-              }
-            }
-          }
-        });
-      }
-
-      // Marketcap Chart
-      if (summary.byMarketcap && summary.byMarketcap.length > 0) {
-        var ctx = document.getElementById('portfolioMarketcapChart').getContext('2d');
-        if (charts.portfolioMarketcap) charts.portfolioMarketcap.destroy();
-        var colors = ['#fbbf24', '#3b82f6', '#10b981', '#f59e0b', '#6b7280'];
-        charts.portfolioMarketcap = new Chart(ctx, {
-          type: 'pie',
-          data: {
-            labels: summary.byMarketcap.map(function(d) { return d.name; }),
-            datasets: [{
-              data: summary.byMarketcap.map(function(d) { return d.value; }),
-              backgroundColor: colors,
-              borderWidth: 0,
-              hoverOffset: 4
-            }]
-          },
-          options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-              legend: { position: 'bottom', labels: { color: '#9ca3af', padding: 10, usePointStyle: true, font: { size: 10 } } },
-              tooltip: {
-                backgroundColor: 'rgba(17, 24, 39, 0.95)',
-                titleColor: '#fff',
-                bodyColor: '#9ca3af',
-                borderColor: '#374151',
-                borderWidth: 1,
-                padding: 10,
-                cornerRadius: 8,
-                callbacks: {
-                  label: function(context) {
-                    var label = context.label || '';
-                    var value = context.parsed || 0;
-                    var total = context.dataset.data.reduce(function(a, b) { return a + b; }, 0);
-                    var percentage = total > 0 ? ((value / total) * 100).toFixed(1) : 0;
-                    return label + ': ' + formatCurrency(value) + ' (' + percentage + '%)';
-                  }
-                }
-              }
-            }
-          }
-        });
-      }
-
-      // Performance Distribution Chart
-      if (summary.performanceDistribution) {
-        var ctx = document.getElementById('performanceDistChart').getContext('2d');
-        if (charts.performanceDist) charts.performanceDist.destroy();
-        var dist = summary.performanceDistribution;
-        charts.performanceDist = new Chart(ctx, {
-          type: 'bar',
-          data: {
-            labels: ['Excelente (>=50%)', 'Bueno (10-50%)', 'Neutral (-10-10%)', 'Malo (-30--10%)', 'Terrible (<-30%)'],
-            datasets: [{
-              label: 'Valor ($)',
-              data: [dist.excellent, dist.good, dist.neutral, dist.bad, dist.terrible],
-              backgroundColor: ['#10b981', '#3b82f6', '#6b7280', '#f59e0b', '#ef4444'],
-              borderRadius: 6,
-              borderSkipped: false
-            }]
-          },
-          options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-              legend: { display: false },
-              tooltip: {
-                backgroundColor: 'rgba(17, 24, 39, 0.95)',
-                titleColor: '#fff',
-                bodyColor: '#9ca3af',
-                borderColor: '#374151',
-                borderWidth: 1,
-                padding: 10,
-                cornerRadius: 8,
-                callbacks: {
-                  label: function(context) {
-                    var counts = [dist.excellentCount, dist.goodCount, dist.neutralCount, dist.badCount, dist.terribleCount];
-                    return 'Valor: ' + formatCurrency(context.parsed.y) + ' (' + counts[context.dataIndex] + ' posiciones)';
-                  }
-                }
-              }
-            },
-            scales: {
-              y: { grid: { color: '#374151' }, ticks: { color: '#9ca3af', callback: function(v) { return formatCompact(v); } } },
-              x: { grid: { display: false }, ticks: { color: '#9ca3af', font: { size: 10 } } }
+              legend: { 
+                position: window.innerWidth < 640 ? 'bottom' : 'right', 
+                labels: { 
+                  usePointStyle: true, 
+                  pointStyle: 'circle', 
+                  font: { size: window.innerWidth < 640 ? 10 : 11 },
+                  padding: window.innerWidth < 640 ? 10 : 16,
+                  boxWidth: window.innerWidth < 640 ? 8 : 10
+                } 
+              },
+              tooltip: chartTooltipConfig
             }
           }
         });
@@ -801,10 +927,12 @@
 
     function renderPortfolioTable(portfolio) {
       var tbody = document.getElementById('portfolioTable');
+      var mobileContainer = document.getElementById('portfolioMobileCards');
       var countSpan = document.getElementById('pfCount');
 
       if (!portfolio || portfolio.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="14" class="py-8 text-center text-gray-500">No hay datos de portfolio</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="12" class="py-12 text-center text-slate-500 text-sm">No hay activos registrados en el portafolio.</td></tr>';
+        mobileContainer.innerHTML = '<p class="text-slate-500 text-sm text-center py-8">No hay activos registrados.</p>';
         countSpan.textContent = '0';
         return;
       }
@@ -826,39 +954,78 @@
         if (typeof vb === 'string') vb = vb.toLowerCase();
         if (va === null || va === undefined) va = -Infinity;
         if (vb === null || vb === undefined) vb = -Infinity;
-
-        if (portfolioSort.dir === 'asc') {
-          return va > vb ? 1 : va < vb ? -1 : 0;
-        } else {
-          return va < vb ? 1 : va > vb ? -1 : 0;
-        }
+        return portfolioSort.dir === 'asc' ? (va > vb ? 1 : va < vb ? -1 : 0) : (va < vb ? 1 : va > vb ? -1 : 0);
       });
 
       countSpan.textContent = filtered.length;
 
+      // Desktop table
       tbody.innerHTML = filtered.map(function(p) {
-        var roiClass = p.unrealizedROI > 0 ? 'text-green-400' : p.unrealizedROI < 0 ? 'text-red-400' : 'text-gray-400';
-        var plClass = p.unrealizedPL > 0 ? 'text-green-400' : p.unrealizedPL < 0 ? 'text-red-400' : 'text-gray-400';
-        var dailyClass = p.dailyChange > 0 ? 'text-green-400' : p.dailyChange < 0 ? 'text-red-400' : 'text-gray-400';
-        var soldBadge = p.isSold ? '<span class="ml-1 px-1.5 py-0.5 bg-red-500/20 text-red-400 rounded text-xs">VENDIDO</span>' : '';
+        var roiClass = p.unrealizedROI > 0 ? 'text-emerald-400' : p.unrealizedROI < 0 ? 'text-rose-400' : 'text-slate-400';
+        var plClass = p.unrealizedPL > 0 ? 'text-emerald-400' : p.unrealizedPL < 0 ? 'text-rose-400' : 'text-slate-400';
+        var dailyClass = p.dailyChange > 0 ? 'text-emerald-400' : p.dailyChange < 0 ? 'text-rose-400' : 'text-slate-400';
+        var soldBadge = p.isSold ? '<span class="ml-2 px-1.5 py-0.5 bg-slate-800 text-slate-500 rounded text-[9px] font-bold tracking-wider">CERRADA</span>' : '';
 
-        return '<tr class="border-b border-gray-800/50 hover:bg-gray-800/30 transition-colors">' +
-          '<td class="py-3 px-2 font-mono font-semibold text-blue-400">' + (p.ticker || '-') + soldBadge + '</td>' +
-          '<td class="py-3 px-2">' + (p.assetName || '-') + '</td>' +
-          '<td class="py-3 px-2"><span class="px-2 py-1 bg-gray-800 rounded text-xs">' + (p.assetClass || '-') + '</span></td>' +
-          '<td class="py-3 px-2 text-gray-400">' + (p.sector || '-') + '</td>' +
-          '<td class="py-3 px-2 text-center text-xs">' + (p.marketcap || '-') + '</td>' +
-          '<td class="py-3 px-2 text-right font-mono">' + (p.isSold ? '<span class="text-gray-500">Sold All</span>' : (p.quantityNum || 0).toFixed(4)) + '</td>' +
-          '<td class="py-3 px-2 text-right font-mono text-gray-400">' + formatCurrency(p.avgPurchasePrice) + '</td>' +
-          '<td class="py-3 px-2 text-right font-mono">' + formatCurrency(p.currentPrice) + '</td>' +
-          '<td class="py-3 px-2 text-right font-mono text-gray-400">' + formatCurrency(p.cost) + '</td>' +
-          '<td class="py-3 px-2 text-right font-mono font-semibold">' + formatCurrency(p.currentValue) + '</td>' +
-          '<td class="py-3 px-2 text-right font-mono ' + roiClass + '">' + (p.unrealizedROI !== null ? (p.unrealizedROI > 0 ? '+' : '') + p.unrealizedROI.toFixed(2) + '%' : '-') + '</td>' +
-          '<td class="py-3 px-2 text-right font-mono ' + plClass + '">' + (p.unrealizedPL !== null ? (p.unrealizedPL > 0 ? '+' : '') + formatCurrency(p.unrealizedPL) : '-') + '</td>' +
-          '<td class="py-3 px-2 text-right font-mono ' + dailyClass + '">' + (p.dailyChange !== null ? (p.dailyChange > 0 ? '+' : '') + formatCurrency(p.dailyChange) : '-') + '</td>' +
-          '<td class="py-3 px-2 text-center"><span class="px-2 py-1 bg-gray-800 rounded text-xs">' + (p.currency || '-') + '</span></td>' +
+        return '<tr class="hover:bg-slate-800/40 transition-colors group">' +
+          '<td class="py-3 px-3 sm:px-4 font-bold text-brand-400">' + (p.ticker || '-') + soldBadge + '</td>' +
+          '<td class="py-3 px-3 sm:px-4 text-slate-300 truncate max-w-[120px] sm:max-w-[150px]">' + (p.assetName || '-') + '</td>' +
+          '<td class="py-3 px-3 sm:px-4"><span class="badge bg-slate-800 border-slate-700/50 text-slate-400">' + (p.assetClass || '-') + '</span></td>' +
+          '<td class="py-3 px-3 sm:px-4 text-slate-500 hidden lg:table-cell text-[11px]">' + (p.sector || '-') + '</td>' +
+          '<td class="py-3 px-3 sm:px-4 text-right font-mono text-slate-300">' + (p.isSold ? '<span class="text-slate-600">0.0000</span>' : (p.quantityNum || 0).toFixed(4)) + '</td>' +
+          '<td class="py-3 px-3 sm:px-4 text-right font-mono text-slate-400">' + formatCurrency(p.avgPurchasePrice) + '</td>' +
+          '<td class="py-3 px-3 sm:px-4 text-right font-mono text-slate-200">' + formatCurrency(p.currentPrice) + '</td>' +
+          '<td class="py-3 px-3 sm:px-4 text-right font-mono text-slate-400">' + formatCurrency(p.cost) + '</td>' +
+          '<td class="py-3 px-3 sm:px-4 text-right font-mono font-bold text-white">' + formatCurrency(p.currentValue) + '</td>' +
+          '<td class="py-3 px-3 sm:px-4 text-right font-mono font-medium ' + roiClass + '">' + (p.unrealizedROI !== null ? (p.unrealizedROI > 0 ? '+' : '') + p.unrealizedROI.toFixed(2) + '%' : '-') + '</td>' +
+          '<td class="py-3 px-3 sm:px-4 text-right font-mono font-medium ' + plClass + '">' + (p.unrealizedPL !== null ? (p.unrealizedPL > 0 ? '+' : '') + formatCurrency(p.unrealizedPL) : '-') + '</td>' +
+          '<td class="py-3 px-3 sm:px-4 text-right font-mono font-medium ' + dailyClass + '">' + (p.dailyChange !== null ? (p.dailyChange > 0 ? '+' : '') + formatCurrency(p.dailyChange) : '-') + '</td>' +
         '</tr>';
       }).join('');
+
+      // Mobile cards
+      mobileContainer.innerHTML = filtered.map(function(p, idx) {
+        var roiClass = p.unrealizedROI > 0 ? 'text-emerald-400' : p.unrealizedROI < 0 ? 'text-rose-400' : 'text-slate-400';
+        var plClass = p.unrealizedPL > 0 ? 'text-emerald-400' : p.unrealizedPL < 0 ? 'text-rose-400' : 'text-slate-400';
+        var dailyClass = p.dailyChange > 0 ? 'text-emerald-400' : p.dailyChange < 0 ? 'text-rose-400' : 'text-slate-400';
+        var soldBadge = p.isSold ? '<span class="ml-2 px-1.5 py-0.5 bg-slate-800 text-slate-500 rounded text-[9px] font-bold tracking-wider">CERRADA</span>' : '';
+
+        return '<div class="position-mobile-card" onclick="toggleCardDetails(this)">' +
+          '<div class="flex items-center justify-between">' +
+            '<div class="flex items-center gap-2">' +
+              '<span class="font-bold text-sm text-brand-400">' + (p.ticker || '-') + '</span>' + soldBadge +
+              '<span class="badge bg-slate-800 border-slate-700/50 text-slate-400">' + (p.assetClass || '-') + '</span>' +
+            '</div>' +
+            '<div class="text-right">' +
+              '<p class="font-bold text-sm text-white">' + formatCurrency(p.currentValue) + '</p>' +
+              '<p class="text-[10px] font-mono ' + roiClass + '">' + (p.unrealizedROI !== null ? (p.unrealizedROI > 0 ? '+' : '') + p.unrealizedROI.toFixed(2) + '%' : '-') + '</p>' +
+            '</div>' +
+          '</div>' +
+          '<div class="card-details">' +
+            '<div class="grid grid-cols-2 gap-3 text-xs">' +
+              '<div><p class="text-[10px] text-slate-500 uppercase">Activo</p><p class="text-slate-300 font-medium truncate">' + (p.assetName || '-') + '</p></div>' +
+              '<div><p class="text-[10px] text-slate-500 uppercase">Sector</p><p class="text-slate-300 font-medium">' + (p.sector || '-') + '</p></div>' +
+              '<div><p class="text-[10px] text-slate-500 uppercase">Cantidad</p><p class="text-slate-300 font-mono">' + (p.isSold ? '0.0000' : (p.quantityNum || 0).toFixed(4)) + '</p></div>' +
+              '<div><p class="text-[10px] text-slate-500 uppercase">Precio Prom.</p><p class="text-slate-300 font-mono">' + formatCurrency(p.avgPurchasePrice) + '</p></div>' +
+              '<div><p class="text-[10px] text-slate-500 uppercase">Precio Mercado</p><p class="text-slate-300 font-mono">' + formatCurrency(p.currentPrice) + '</p></div>' +
+              '<div><p class="text-[10px] text-slate-500 uppercase">Costo</p><p class="text-slate-300 font-mono">' + formatCurrency(p.cost) + '</p></div>' +
+              '<div><p class="text-[10px] text-slate-500 uppercase">P/L</p><p class="font-mono font-medium ' + plClass + '">' + (p.unrealizedPL !== null ? (p.unrealizedPL > 0 ? '+' : '') + formatCurrency(p.unrealizedPL) : '-') + '</p></div>' +
+              '<div><p class="text-[10px] text-slate-500 uppercase">Día</p><p class="font-mono font-medium ' + dailyClass + '">' + (p.dailyChange !== null ? (p.dailyChange > 0 ? '+' : '') + formatCurrency(p.dailyChange) : '-') + '</p></div>' +
+            '</div>' +
+          '</div>' +
+        '</div>';
+      }).join('');
+    }
+
+    function toggleCardDetails(card) {
+      var details = card.querySelector('.card-details');
+      var isExpanded = details.classList.contains('expanded');
+
+      // Close all other cards
+      document.querySelectorAll('.card-details.expanded').forEach(function(el) {
+        if (el !== details) el.classList.remove('expanded');
+      });
+
+      details.classList.toggle('expanded', !isExpanded);
     }
 
     function sortPortfolio(field) {
@@ -884,14 +1051,10 @@
     async function loadPlatforms() {
       try {
         var url = API_URL + "?action=platforms&currency=" + currentCurrency;
-        if (currentCurrency !== "USD" && currentRate) {
-          url += "&rate=" + currentRate;
-        }
+        if (currentCurrency !== "USD" && currentRate) url += "&rate=" + currentRate;
         const data = await fetchWithJSONP(url);
         renderPlatformsTable(data.platforms || []);
-      } catch (e) {
-        console.error("Error loading platforms:", e);
-      }
+      } catch (e) { console.error(e); }
     }
 
     function changeTxPage(delta) {
@@ -902,13 +1065,15 @@
 
     function renderTransactionsTable() {
       var tbody = document.getElementById('transactionsTable');
+      var mobileContainer = document.getElementById('transactionsMobileCards');
       var countSpan = document.getElementById('txCount');
       var pageSpan = document.getElementById('txPage');
       var prevBtn = document.getElementById('txPrev');
       var nextBtn = document.getElementById('txNext');
 
       if (!allTransactions || allTransactions.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="8" class="py-8 text-center text-gray-500">No hay transacciones</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="7" class="py-12 text-center text-slate-500 text-sm">No hay transacciones registradas</td></tr>';
+        mobileContainer.innerHTML = '<p class="text-slate-500 text-sm text-center py-8">No hay transacciones registradas.</p>';
         countSpan.textContent = '0';
         return;
       }
@@ -919,79 +1084,150 @@
       var end = Math.min(start + TX_PER_PAGE, allTransactions.length);
       var pageTransactions = allTransactions.slice(start, end);
 
-      pageSpan.textContent = 'Pagina ' + (txPage + 1) + ' de ' + Math.ceil(allTransactions.length / TX_PER_PAGE);
+      pageSpan.textContent = 'Pág. ' + (txPage + 1) + ' / ' + Math.ceil(allTransactions.length / TX_PER_PAGE);
       prevBtn.disabled = txPage === 0;
       nextBtn.disabled = end >= allTransactions.length;
 
+      // Desktop table
       tbody.innerHTML = pageTransactions.map(function(t) {
-        return '<tr class="border-b border-gray-800/50 hover:bg-gray-800/30 transition-colors">' +
-          '<td class="py-3 px-2 text-gray-400">' + (t.date || '-') + '</td>' +
-          '<td class="py-3 px-2 font-medium">' + (t.ticker || t.assetName || '-') + '</td>' +
-          '<td class="py-3 px-2 text-center">' + getActionBadge(t.action) + '</td>' +
-          '<td class="py-3 px-2 text-right font-mono">' + (t.quantity || 0) + '</td>' +
-          '<td class="py-3 px-2 text-right font-mono text-gray-400">' + formatCurrency(t.displayPrice || t.price) + '</td>' +
-          '<td class="py-3 px-2 text-right font-mono">' + formatCurrency(Math.abs(t.displayTotal || t.totalUSD || t.total || 0)) + '</td>' +
-          '<td class="py-3 px-2 text-center"><span class="px-2 py-1 bg-gray-800 rounded text-xs">' + (t.currency || '-') + '</span></td>' +
-          '<td class="py-3 px-2 text-center text-gray-400">' + (t.platform || '-') + '</td>' +
+        return '<tr class="hover:bg-slate-800/40 transition-colors">' +
+          '<td class="py-3 px-3 sm:px-4 text-slate-400 text-[11px] font-mono">' + (t.date || '-') + '</td>' +
+          '<td class="py-3 px-3 sm:px-4 font-bold text-slate-200">' + (t.ticker || t.assetName || '-') + '</td>' +
+          '<td class="py-3 px-3 sm:px-4 text-center">' + getActionBadge(t.action) + '</td>' +
+          '<td class="py-3 px-3 sm:px-4 text-right font-mono text-slate-300">' + (t.quantity || 0) + '</td>' +
+          '<td class="py-3 px-3 sm:px-4 text-right font-mono text-slate-400">' + formatCurrency(t.displayPrice || t.price) + '</td>' +
+          '<td class="py-3 px-3 sm:px-4 text-right font-mono font-semibold text-white">' + formatCurrency(Math.abs(t.displayTotal || t.totalUSD || t.total || 0)) + '</td>' +
+          '<td class="py-3 px-3 sm:px-4 text-center text-slate-500 text-[11px]">' + (t.platform || '-') + '</td>' +
         '</tr>';
+      }).join('');
+
+      // Mobile cards
+      mobileContainer.innerHTML = pageTransactions.map(function(t) {
+        return '<div class="tx-mobile-card">' +
+          '<div class="flex items-center justify-between mb-2">' +
+            '<div class="flex items-center gap-2">' +
+              '<span class="font-bold text-sm text-slate-200">' + (t.ticker || t.assetName || '-') + '</span>' +
+              getActionBadge(t.action) +
+            '</div>' +
+            '<span class="text-[10px] text-slate-500 font-mono">' + (t.date || '-') + '</span>' +
+          '</div>' +
+          '<div class="grid grid-cols-3 gap-2 text-xs">' +
+            '<div><p class="text-[10px] text-slate-500 uppercase">Cantidad</p><p class="text-slate-300 font-mono">' + (t.quantity || 0) + '</p></div>' +
+            '<div><p class="text-[10px] text-slate-500 uppercase">Precio</p><p class="text-slate-300 font-mono">' + formatCurrency(t.displayPrice || t.price) + '</p></div>' +
+            '<div class="text-right"><p class="text-[10px] text-slate-500 uppercase">Total</p><p class="text-white font-mono font-semibold">' + formatCurrency(Math.abs(t.displayTotal || t.totalUSD || t.total || 0)) + '</p></div>' +
+          '</div>' +
+          '<div class="mt-2 pt-2 border-t border-slate-700/30 flex justify-between items-center">' +
+            '<span class="text-[10px] text-slate-500">' + (t.platform || '-') + '</span>' +
+            '<span class="text-[10px] text-slate-500 font-mono">' + (t.currency || 'USD') + '</span>' +
+          '</div>' +
+        '</div>';
       }).join('');
     }
 
     function renderAssetsTable(assets) {
       var tbody = document.getElementById('assetsTable');
+      var mobileContainer = document.getElementById('assetsMobileCards');
+
       if (!assets || assets.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="8" class="py-8 text-center text-gray-500">No hay activos en cartera</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="8" class="py-12 text-center text-slate-500 text-sm">No hay activos en cartera</td></tr>';
+        mobileContainer.innerHTML = '<p class="text-slate-500 text-sm text-center py-8">No hay activos en cartera.</p>';
         return;
       }
 
+      // Desktop table
       tbody.innerHTML = assets.map(function(a) {
-        return '<tr class="border-b border-gray-800/50 hover:bg-gray-800/30 transition-colors">' +
-          '<td class="py-3 px-2 font-mono font-semibold text-blue-400">' + (a.ticker || '-') + '</td>' +
-          '<td class="py-3 px-2">' + (a.name || '-') + '</td>' +
-          '<td class="py-3 px-2"><span class="px-2 py-1 bg-gray-800 rounded text-xs">' + (a.class || '-') + '</span></td>' +
-          '<td class="py-3 px-2 text-gray-400">' + (a.sector || '-') + '</td>' +
-          '<td class="py-3 px-2 text-right font-mono">' + ((a.quantity || 0).toFixed(4)) + '</td>' +
-          '<td class="py-3 px-2 text-right font-mono text-gray-400">' + formatCurrency(a.costBasis) + '</td>' +
-          '<td class="py-3 px-2 text-center"><span class="px-2 py-1 bg-gray-800 rounded text-xs">' + (a.originalCurrency || a.currency || '-') + '</span></td>' +
-          '<td class="py-3 px-2 text-center"><span class="px-2 py-1 bg-gray-800 rounded text-xs">' + (a.platform || '-') + '</span></td>' +
+        return '<tr class="hover:bg-slate-800/40 transition-colors">' +
+          '<td class="py-3 px-3 sm:px-4 font-bold text-brand-400">' + (a.ticker || '-') + '</td>' +
+          '<td class="py-3 px-3 sm:px-4 text-slate-300">' + (a.name || '-') + '</td>' +
+          '<td class="py-3 px-3 sm:px-4"><span class="badge bg-slate-800 border-slate-700/50 text-slate-400">' + (a.class || '-') + '</span></td>' +
+          '<td class="py-3 px-3 sm:px-4 text-slate-500 text-[11px]">' + (a.sector || '-') + '</td>' +
+          '<td class="py-3 px-3 sm:px-4 text-right font-mono text-slate-200">' + ((a.quantity || 0).toFixed(4)) + '</td>' +
+          '<td class="py-3 px-3 sm:px-4 text-right font-mono text-slate-400">' + formatCurrency(a.costBasis) + '</td>' +
+          '<td class="py-3 px-3 sm:px-4 text-center font-mono text-[10px] text-slate-500">' + (a.originalCurrency || a.currency || '-') + '</td>' +
+          '<td class="py-3 px-3 sm:px-4 text-center text-slate-400 text-[11px]">' + (a.platform || '-') + '</td>' +
         '</tr>';
+      }).join('');
+
+      // Mobile cards
+      mobileContainer.innerHTML = assets.map(function(a) {
+        return '<div class="position-mobile-card">' +
+          '<div class="flex items-center justify-between mb-2">' +
+            '<div class="flex items-center gap-2">' +
+              '<span class="font-bold text-sm text-brand-400">' + (a.ticker || '-') + '</span>' +
+              '<span class="badge bg-slate-800 border-slate-700/50 text-slate-400">' + (a.class || '-') + '</span>' +
+            '</div>' +
+            '<span class="text-[10px] text-slate-500 font-mono">' + (a.originalCurrency || a.currency || '-') + '</span>' +
+          '</div>' +
+          '<p class="text-xs text-slate-300 mb-2 truncate">' + (a.name || '-') + '</p>' +
+          '<div class="grid grid-cols-2 gap-2 text-xs">' +
+            '<div><p class="text-[10px] text-slate-500 uppercase">Cantidad</p><p class="text-slate-300 font-mono">' + ((a.quantity || 0).toFixed(4)) + '</p></div>' +
+            '<div><p class="text-[10px] text-slate-500 uppercase">Costo Base</p><p class="text-slate-300 font-mono">' + formatCurrency(a.costBasis) + '</p></div>' +
+            '<div><p class="text-[10px] text-slate-500 uppercase">Sector</p><p class="text-slate-300">' + (a.sector || '-') + '</p></div>' +
+            '<div><p class="text-[10px] text-slate-500 uppercase">Plataforma</p><p class="text-slate-300">' + (a.platform || '-') + '</p></div>' +
+          '</div>' +
+        '</div>';
       }).join('');
     }
 
     function renderPlatformsTable(platforms) {
       var tbody = document.getElementById('platformsTable');
+      var mobileContainer = document.getElementById('platformsMobileCards');
+
       if (!platforms || platforms.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="8" class="py-8 text-center text-gray-500">No hay plataformas</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="7" class="py-12 text-center text-slate-500 text-sm">No hay plataformas registradas</td></tr>';
+        mobileContainer.innerHTML = '<p class="text-slate-500 text-sm text-center py-8">No hay plataformas registradas.</p>';
         return;
       }
 
+      // Desktop table
       tbody.innerHTML = platforms.map(function(p) {
-        return '<tr class="border-b border-gray-800/50 hover:bg-gray-800/30 transition-colors">' +
-          '<td class="py-3 px-2 font-medium">' + (p.platform || '-') + '</td>' +
-          '<td class="py-3 px-2 text-center"><span class="px-2 py-1 bg-gray-800 rounded text-xs">' + (p.originalCurrency || p.currency || '-') + '</span></td>' +
-          '<td class="py-3 px-2 text-right font-mono">' + (p.transactions || 0) + '</td>' +
-          '<td class="py-3 px-2 text-right font-mono text-emerald-400">' + formatCurrency(p.totalDeposits) + '</td>' +
-          '<td class="py-3 px-2 text-right font-mono text-blue-400">' + formatCurrency(p.totalInvested) + '</td>' +
-          '<td class="py-3 px-2 text-right font-mono text-green-400">' + formatCurrency(p.totalSold) + '</td>' +
-          '<td class="py-3 px-2 text-right font-mono text-purple-400">' + formatCurrency(p.totalDividends) + '</td>' +
-          '<td class="py-3 px-2 text-right font-mono text-cyan-400">' + formatCurrency(p.netFlow) + '</td>' +
+        return '<tr class="hover:bg-slate-800/40 transition-colors">' +
+          '<td class="py-3 px-3 sm:px-4 font-bold text-slate-200">' + (p.platform || '-') + '</td>' +
+          '<td class="py-3 px-3 sm:px-4 text-center font-mono text-[10px] text-slate-500">' + (p.originalCurrency || p.currency || '-') + '</td>' +
+          '<td class="py-3 px-3 sm:px-4 text-right font-mono text-slate-300">' + (p.transactions || 0) + '</td>' +
+          '<td class="py-3 px-3 sm:px-4 text-right font-mono text-emerald-400/80">' + formatCurrency(p.totalDeposits) + '</td>' +
+          '<td class="py-3 px-3 sm:px-4 text-right font-mono text-brand-400/80">' + formatCurrency(p.totalInvested) + '</td>' +
+          '<td class="py-3 px-3 sm:px-4 text-right font-mono text-purple-400/80">' + formatCurrency(p.totalSold + p.totalDividends) + '</td>' +
+          '<td class="py-3 px-3 sm:px-4 text-right font-mono font-bold text-white">' + formatCurrency(p.netFlow) + '</td>' +
         '</tr>';
+      }).join('');
+
+      // Mobile cards
+      mobileContainer.innerHTML = platforms.map(function(p) {
+        var netFlowClass = p.netFlow >= 0 ? 'text-emerald-400' : 'text-rose-400';
+        return '<div class="platform-mobile-card">' +
+          '<div class="flex items-center justify-between mb-3">' +
+            '<span class="font-bold text-sm text-slate-200">' + (p.platform || '-') + '</span>' +
+            '<span class="text-[10px] text-slate-500 font-mono">' + (p.originalCurrency || p.currency || '-') + '</span>' +
+          '</div>' +
+          '<div class="grid grid-cols-2 gap-3 text-xs">' +
+            '<div><p class="text-[10px] text-slate-500 uppercase">Órdenes</p><p class="text-slate-300 font-mono">' + (p.transactions || 0) + '</p></div>' +
+            '<div><p class="text-[10px] text-slate-500 uppercase">Fondeo</p><p class="text-emerald-400/80 font-mono">' + formatCurrency(p.totalDeposits) + '</p></div>' +
+            '<div><p class="text-[10px] text-slate-500 uppercase">Invertido</p><p class="text-brand-400/80 font-mono">' + formatCurrency(p.totalInvested) + '</p></div>' +
+            '<div><p class="text-[10px] text-slate-500 uppercase">Retornos</p><p class="text-purple-400/80 font-mono">' + formatCurrency(p.totalSold + p.totalDividends) + '</p></div>' +
+          '</div>' +
+          '<div class="mt-3 pt-3 border-t border-slate-700/30 flex justify-between items-center">' +
+            '<span class="text-[10px] text-slate-500 uppercase">Flujo Neto</span>' +
+            '<span class="font-mono font-bold ' + netFlowClass + '">' + formatCurrency(p.netFlow) + '</span>' +
+          '</div>' +
+        '</div>';
       }).join('');
     }
 
     function getActionBadge(action) {
+      var b = 'px-2 py-0.5 rounded text-[10px] font-bold tracking-wider ';
       var badges = {
-        'Buy': '<span class="px-2 py-1 bg-blue-500/20 text-blue-400 rounded text-xs font-medium">COMPRA</span>',
-        'Sell': '<span class="px-2 py-1 bg-green-500/20 text-green-400 rounded text-xs font-medium">VENTA</span>',
-        'Cash Deposit': '<span class="px-2 py-1 bg-emerald-500/20 text-emerald-400 rounded text-xs font-medium">DEPOSITO</span>',
-        'Cash Withdrawal': '<span class="px-2 py-1 bg-red-500/20 text-red-400 rounded text-xs font-medium">RETIRO</span>',
-        'Transfer Send': '<span class="px-2 py-1 bg-orange-500/20 text-orange-400 rounded text-xs font-medium">TRANSFER OUT</span>',
-        'Transfer Deposit': '<span class="px-2 py-1 bg-teal-500/20 text-teal-400 rounded text-xs font-medium">TRANSFER IN</span>',
-        'Dividend': '<span class="px-2 py-1 bg-purple-500/20 text-purple-400 rounded text-xs font-medium">DIVIDENDO</span>',
-        'DRIP': '<span class="px-2 py-1 bg-indigo-500/20 text-indigo-400 rounded text-xs font-medium">DRIP</span>',
-        'Crypto Interest': '<span class="px-2 py-1 bg-yellow-500/20 text-yellow-400 rounded text-xs font-medium">INTERES</span>'
+        'Buy': '<span class="' + b + 'bg-brand-500/20 text-brand-400 border border-brand-500/30">COMPRA</span>',
+        'Sell': '<span class="' + b + 'bg-rose-500/20 text-rose-400 border border-rose-500/30">VENTA</span>',
+        'Cash Deposit': '<span class="' + b + 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">FONDEO</span>',
+        'Cash Withdrawal': '<span class="' + b + 'bg-orange-500/20 text-orange-400 border border-orange-500/30">RETIRO</span>',
+        'Transfer Send': '<span class="' + b + 'bg-slate-500/20 text-slate-400 border border-slate-500/30">TRF OUT</span>',
+        'Transfer Deposit': '<span class="' + b + 'bg-slate-500/20 text-slate-400 border border-slate-500/30">TRF IN</span>',
+        'Dividend': '<span class="' + b + 'bg-purple-500/20 text-purple-400 border border-purple-500/30">DIVIDENDO</span>',
+        'DRIP': '<span class="' + b + 'bg-indigo-500/20 text-indigo-400 border border-indigo-500/30">DRIP</span>',
+        'Crypto Interest': '<span class="' + b + 'bg-yellow-500/20 text-yellow-400 border border-yellow-500/30">YIELD</span>'
       };
-      return badges[action] || '<span class="px-2 py-1 bg-gray-800 rounded text-xs">' + (action || '-') + '</span>';
+      return badges[action] || '<span class="' + b + 'bg-slate-800 text-slate-400">' + (action || '-') + '</span>';
     }
 
     function formatCurrency(value) {
@@ -1005,21 +1241,21 @@
       }).format(value);
     }
 
-    function formatCompact(value) {
-      if (value === undefined || value === null || isNaN(value)) return currentCurrency === 'DOP' ? 'RD$0' : '$0';
-      if (value >= 1000000) return (currentCurrency === 'DOP' ? 'RD$' : '$') + (value/1000000).toFixed(1) + 'M';
-      if (value >= 1000) return (currentCurrency === 'DOP' ? 'RD$' : '$') + (value/1000).toFixed(1) + 'k';
-      return (currentCurrency === 'DOP' ? 'RD$' : '$') + value;
-    }
-
     function switchTab(tab) {
       var tabs = ['portfolio', 'assets', 'transactions', 'platforms'];
       tabs.forEach(function(t) {
         document.getElementById('panel-' + t).classList.add('hidden');
         document.getElementById('tab-' + t).classList.remove('tab-active');
+        document.getElementById('tab-' + t).classList.remove('text-brand-400');
       });
       document.getElementById('panel-' + tab).classList.remove('hidden');
       document.getElementById('tab-' + tab).classList.add('tab-active');
+      document.getElementById('tab-' + tab).classList.add('text-brand-400');
+
+      // Re-apply mobile view mode if on portfolio tab
+      if (tab === 'portfolio' && window.innerWidth < 768) {
+        setMobileView(mobileViewMode);
+      }
     }
 
     function showLoading() {
@@ -1039,6 +1275,17 @@
       document.getElementById('errorState').classList.remove('hidden');
       document.getElementById('errorMessage').textContent = msg;
     }
+
+    // Handle window resize for charts
+    var resizeTimeout;
+    window.addEventListener('resize', function() {
+      clearTimeout(resizeTimeout);
+      resizeTimeout = setTimeout(function() {
+        if (portfolioSummary && portfolioSummary.byAssetClass) {
+          renderPortfolioCharts(portfolioSummary);
+        }
+      }, 250);
+    });
 
     loadData();
   </script>
