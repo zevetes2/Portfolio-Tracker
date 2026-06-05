@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>📊 Portfolio Tracker</title>
+  <title>Portfolio Tracker</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -21,14 +21,20 @@
     @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
     .currency-btn { transition: all 0.2s; }
     .currency-btn.active { background: #3b82f6; color: white; border-color: #3b82f6; }
+    .roi-positive { color: #34d399; }
+    .roi-negative { color: #f87171; }
     ::-webkit-scrollbar { width: 8px; height: 8px; }
     ::-webkit-scrollbar-track { background: #111827; }
     ::-webkit-scrollbar-thumb { background: #374151; border-radius: 4px; }
     ::-webkit-scrollbar-thumb:hover { background: #4b5563; }
+    .sortable { cursor: pointer; user-select: none; }
+    .sortable:hover { background: rgba(59, 130, 246, 0.1); }
+    .sort-icon { opacity: 0.5; font-size: 0.75em; margin-left: 4px; }
   </style>
+<base target="_blank">
 </head>
 <body class="bg-gray-950 text-gray-100 min-h-screen">
-  
+
   <header class="glass sticky top-0 z-50 border-b border-gray-800">
     <div class="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between flex-wrap gap-3">
       <div class="flex items-center gap-3">
@@ -40,9 +46,8 @@
           <p class="text-xs text-gray-400" id="subtitle">Dashboard en tiempo real</p>
         </div>
       </div>
-      
+
       <div class="flex items-center gap-3">
-        <!-- Selector de Moneda -->
         <div class="flex bg-gray-800 rounded-lg p-1 border border-gray-700">
           <button onclick="setCurrency('USD')" id="btn-usd" class="currency-btn active px-3 py-1.5 rounded text-sm font-medium">
             <i class="fas fa-dollar-sign mr-1"></i>USD
@@ -51,7 +56,7 @@
             <i class="fas fa-coins mr-1"></i>DOP
           </button>
         </div>
-        
+
         <span id="lastUpdate" class="text-xs text-gray-500 hidden sm:inline">Actualizando...</span>
         <button onclick="loadData()" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg text-sm font-medium transition-colors flex items-center gap-2">
           <i class="fas fa-sync-alt"></i> <span class="hidden sm:inline">Actualizar</span>
@@ -61,7 +66,7 @@
   </header>
 
   <main class="max-w-7xl mx-auto px-4 py-6">
-    
+
     <div id="loadingState" class="flex flex-col items-center justify-center py-20">
       <div class="loading mb-4 w-12 h-12"></div>
       <p class="text-gray-400">Cargando datos del portfolio...</p>
@@ -75,109 +80,237 @@
     </div>
 
     <div id="content" class="hidden space-y-6 animate-fade-in">
-      
-      <!-- Info de tasa -->
+
       <div id="rateInfo" class="hidden bg-gray-900/50 border border-gray-800 rounded-lg px-4 py-2 text-sm text-gray-400 flex items-center gap-2">
         <i class="fas fa-exchange-alt text-blue-400"></i>
         <span id="rateText"></span>
       </div>
 
-      <!-- KPI Cards -->
-      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div class="bg-gray-900/80 border border-gray-800 rounded-xl p-5 card-hover">
-          <div class="flex items-center justify-between mb-3">
-            <span class="text-gray-400 text-sm">Total Transacciones</span>
-            <div class="w-8 h-8 bg-gray-500/20 rounded-lg flex items-center justify-center">
-              <i class="fas fa-list text-gray-400 text-sm"></i>
+      <!-- Portfolio Summary Cards -->
+      <div id="portfolioSummary">
+        <h2 class="text-lg font-semibold mb-3 flex items-center gap-2">
+          <i class="fas fa-briefcase text-blue-400"></i> Resumen de Portfolio
+        </h2>
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div class="bg-gray-900/80 border border-gray-800 rounded-xl p-5 card-hover">
+            <div class="flex items-center justify-between mb-3">
+              <span class="text-gray-400 text-sm">Valor Actual</span>
+              <div class="w-8 h-8 bg-blue-500/20 rounded-lg flex items-center justify-center">
+                <i class="fas fa-wallet text-blue-400 text-sm"></i>
+              </div>
             </div>
+            <p id="pfTotalValue" class="text-2xl font-bold text-white">$0.00</p>
+            <p class="text-xs text-gray-500 mt-1">Market value total</p>
           </div>
-          <p id="kpiTotalTx" class="text-2xl font-bold text-white">0</p>
-          <p class="text-xs text-gray-500 mt-1">Registros totales</p>
-        </div>
 
-        <div class="bg-gray-900/80 border border-gray-800 rounded-xl p-5 card-hover">
-          <div class="flex items-center justify-between mb-3">
-            <span class="text-gray-400 text-sm">Total Invertido</span>
-            <div class="w-8 h-8 bg-blue-500/20 rounded-lg flex items-center justify-center">
-              <i class="fas fa-arrow-down text-blue-400 text-sm"></i>
+          <div class="bg-gray-900/80 border border-gray-800 rounded-xl p-5 card-hover">
+            <div class="flex items-center justify-between mb-3">
+              <span class="text-gray-400 text-sm">Costo Base</span>
+              <div class="w-8 h-8 bg-gray-500/20 rounded-lg flex items-center justify-center">
+                <i class="fas fa-receipt text-gray-400 text-sm"></i>
+              </div>
             </div>
+            <p id="pfTotalCost" class="text-2xl font-bold text-white">$0.00</p>
+            <p class="text-xs text-gray-500 mt-1">Total invertido</p>
           </div>
-          <p id="kpiInvested" class="text-2xl font-bold text-white">$0.00</p>
-          <p class="text-xs text-gray-500 mt-1">Compras acumuladas</p>
-        </div>
 
-        <div class="bg-gray-900/80 border border-gray-800 rounded-xl p-5 card-hover">
-          <div class="flex items-center justify-between mb-3">
-            <span class="text-gray-400 text-sm">Total Vendido</span>
-            <div class="w-8 h-8 bg-green-500/20 rounded-lg flex items-center justify-center">
-              <i class="fas fa-arrow-up text-green-400 text-sm"></i>
+          <div class="bg-gray-900/80 border border-gray-800 rounded-xl p-5 card-hover">
+            <div class="flex items-center justify-between mb-3">
+              <span class="text-gray-400 text-sm">P/L No Realizado</span>
+              <div class="w-8 h-8 bg-purple-500/20 rounded-lg flex items-center justify-center">
+                <i class="fas fa-chart-area text-purple-400 text-sm"></i>
+              </div>
             </div>
+            <p id="pfUnrealizedPL" class="text-2xl font-bold">$0.00</p>
+            <p id="pfUnrealizedROI" class="text-xs mt-1">0.00%</p>
           </div>
-          <p id="kpiSold" class="text-2xl font-bold text-white">$0.00</p>
-          <p class="text-xs text-gray-500 mt-1">Ventas realizadas</p>
-        </div>
 
-        <div class="bg-gray-900/80 border border-gray-800 rounded-xl p-5 card-hover">
-          <div class="flex items-center justify-between mb-3">
-            <span class="text-gray-400 text-sm">Dividendos</span>
-            <div class="w-8 h-8 bg-purple-500/20 rounded-lg flex items-center justify-center">
-              <i class="fas fa-coins text-purple-400 text-sm"></i>
+          <div class="bg-gray-900/80 border border-gray-800 rounded-xl p-5 card-hover">
+            <div class="flex items-center justify-between mb-3">
+              <span class="text-gray-400 text-sm">P/L Realizado</span>
+              <div class="w-8 h-8 bg-green-500/20 rounded-lg flex items-center justify-center">
+                <i class="fas fa-hand-holding-usd text-green-400 text-sm"></i>
+              </div>
             </div>
+            <p id="pfRealizedPL" class="text-2xl font-bold">$0.00</p>
+            <p id="pfTotalPL" class="text-xs text-gray-500 mt-1">P/L Total: $0.00</p>
           </div>
-          <p id="kpiDividends" class="text-2xl font-bold text-white">$0.00</p>
-          <p class="text-xs text-gray-500 mt-1">Ingresos pasivos</p>
-        </div>
-        
-        <div class="bg-gray-900/80 border border-gray-800 rounded-xl p-5 card-hover">
-          <div class="flex items-center justify-between mb-3">
-            <span class="text-gray-400 text-sm">Depositado</span>
-            <div class="w-8 h-8 bg-emerald-500/20 rounded-lg flex items-center justify-center">
-              <i class="fas fa-university text-emerald-400 text-sm"></i>
-            </div>
-          </div>
-          <p id="kpiDeposits" class="text-2xl font-bold text-white">$0.00</p>
-          <p class="text-xs text-gray-500 mt-1">Depósitos + Transferencias</p>
-        </div>
 
-        <div class="bg-gray-900/80 border border-gray-800 rounded-xl p-5 card-hover">
-          <div class="flex items-center justify-between mb-3">
-            <span class="text-gray-400 text-sm">Retiros</span>
-            <div class="w-8 h-8 bg-red-500/20 rounded-lg flex items-center justify-center">
-              <i class="fas fa-money-bill-wave text-red-400 text-sm"></i>
+          <div class="bg-gray-900/80 border border-gray-800 rounded-xl p-5 card-hover">
+            <div class="flex items-center justify-between mb-3">
+              <span class="text-gray-400 text-sm">Cambio Diario</span>
+              <div class="w-8 h-8 bg-yellow-500/20 rounded-lg flex items-center justify-center">
+                <i class="fas fa-clock text-yellow-400 text-sm"></i>
+              </div>
             </div>
+            <p id="pfDailyChange" class="text-2xl font-bold">$0.00</p>
+            <p class="text-xs text-gray-500 mt-1">Variacion hoy</p>
           </div>
-          <p id="kpiWithdrawals" class="text-2xl font-bold text-white">$0.00</p>
-          <p class="text-xs text-gray-500 mt-1">Retiros de efectivo</p>
-        </div>
 
-        <div class="bg-gray-900/80 border border-gray-800 rounded-xl p-5 card-hover">
-          <div class="flex items-center justify-between mb-3">
-            <span class="text-gray-400 text-sm">Crypto Interest</span>
-            <div class="w-8 h-8 bg-yellow-500/20 rounded-lg flex items-center justify-center">
-              <i class="fas fa-bolt text-yellow-400 text-sm"></i>
+          <div class="bg-gray-900/80 border border-gray-800 rounded-xl p-5 card-hover">
+            <div class="flex items-center justify-between mb-3">
+              <span class="text-gray-400 text-sm">Posiciones Abiertas</span>
+              <div class="w-8 h-8 bg-emerald-500/20 rounded-lg flex items-center justify-center">
+                <i class="fas fa-layer-group text-emerald-400 text-sm"></i>
+              </div>
             </div>
+            <p id="pfHoldings" class="text-2xl font-bold text-white">0</p>
+            <p id="pfSold" class="text-xs text-gray-500 mt-1">Vendidas: 0</p>
           </div>
-          <p id="kpiCryptoInterest" class="text-2xl font-bold text-white">$0.00</p>
-          <p class="text-xs text-gray-500 mt-1">Intereses crypto</p>
-        </div>
 
-        <div class="bg-gray-900/80 border border-gray-800 rounded-xl p-5 card-hover">
-          <div class="flex items-center justify-between mb-3">
-            <span class="text-gray-400 text-sm">Activos Actuales</span>
-            <div class="w-8 h-8 bg-orange-500/20 rounded-lg flex items-center justify-center">
-              <i class="fas fa-layer-group text-orange-400 text-sm"></i>
+          <div class="bg-gray-900/80 border border-gray-800 rounded-xl p-5 card-hover">
+            <div class="flex items-center justify-between mb-3">
+              <span class="text-gray-400 text-sm">Mejor Posicion</span>
+              <div class="w-8 h-8 bg-green-500/20 rounded-lg flex items-center justify-center">
+                <i class="fas fa-arrow-trend-up text-green-400 text-sm"></i>
+              </div>
             </div>
+            <p id="pfBestPosition" class="text-lg font-bold text-green-400">-</p>
+            <p id="pfBestROI" class="text-xs text-green-400 mt-1">+0.00%</p>
           </div>
-          <p id="kpiAssets" class="text-2xl font-bold text-white">0</p>
-          <p class="text-xs text-gray-500 mt-1">Posiciones abiertas</p>
+
+          <div class="bg-gray-900/80 border border-gray-800 rounded-xl p-5 card-hover">
+            <div class="flex items-center justify-between mb-3">
+              <span class="text-gray-400 text-sm">Peor Posicion</span>
+              <div class="w-8 h-8 bg-red-500/20 rounded-lg flex items-center justify-center">
+                <i class="fas fa-arrow-trend-down text-red-400 text-sm"></i>
+              </div>
+            </div>
+            <p id="pfWorstPosition" class="text-lg font-bold text-red-400">-</p>
+            <p id="pfWorstROI" class="text-xs text-red-400 mt-1">-0.00%</p>
+          </div>
         </div>
       </div>
 
-      <!-- Charts Row -->
+      <!-- Transaction KPIs -->
+      <div>
+        <h2 class="text-lg font-semibold mb-3 flex items-center gap-2">
+          <i class="fas fa-exchange-alt text-purple-400"></i> Resumen de Transacciones
+        </h2>
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div class="bg-gray-900/80 border border-gray-800 rounded-xl p-5 card-hover">
+            <div class="flex items-center justify-between mb-3">
+              <span class="text-gray-400 text-sm">Total Transacciones</span>
+              <div class="w-8 h-8 bg-gray-500/20 rounded-lg flex items-center justify-center">
+                <i class="fas fa-list text-gray-400 text-sm"></i>
+              </div>
+            </div>
+            <p id="kpiTotalTx" class="text-2xl font-bold text-white">0</p>
+            <p class="text-xs text-gray-500 mt-1">Registros totales</p>
+          </div>
+
+          <div class="bg-gray-900/80 border border-gray-800 rounded-xl p-5 card-hover">
+            <div class="flex items-center justify-between mb-3">
+              <span class="text-gray-400 text-sm">Total Invertido</span>
+              <div class="w-8 h-8 bg-blue-500/20 rounded-lg flex items-center justify-center">
+                <i class="fas fa-arrow-down text-blue-400 text-sm"></i>
+              </div>
+            </div>
+            <p id="kpiInvested" class="text-2xl font-bold text-white">$0.00</p>
+            <p class="text-xs text-gray-500 mt-1">Compras acumuladas</p>
+          </div>
+
+          <div class="bg-gray-900/80 border border-gray-800 rounded-xl p-5 card-hover">
+            <div class="flex items-center justify-between mb-3">
+              <span class="text-gray-400 text-sm">Total Vendido</span>
+              <div class="w-8 h-8 bg-green-500/20 rounded-lg flex items-center justify-center">
+                <i class="fas fa-arrow-up text-green-400 text-sm"></i>
+              </div>
+            </div>
+            <p id="kpiSold" class="text-2xl font-bold text-white">$0.00</p>
+            <p class="text-xs text-gray-500 mt-1">Ventas realizadas</p>
+          </div>
+
+          <div class="bg-gray-900/80 border border-gray-800 rounded-xl p-5 card-hover">
+            <div class="flex items-center justify-between mb-3">
+              <span class="text-gray-400 text-sm">Dividendos</span>
+              <div class="w-8 h-8 bg-purple-500/20 rounded-lg flex items-center justify-center">
+                <i class="fas fa-coins text-purple-400 text-sm"></i>
+              </div>
+            </div>
+            <p id="kpiDividends" class="text-2xl font-bold text-white">$0.00</p>
+            <p class="text-xs text-gray-500 mt-1">Ingresos pasivos</p>
+          </div>
+
+          <div class="bg-gray-900/80 border border-gray-800 rounded-xl p-5 card-hover">
+            <div class="flex items-center justify-between mb-3">
+              <span class="text-gray-400 text-sm">Depositado</span>
+              <div class="w-8 h-8 bg-emerald-500/20 rounded-lg flex items-center justify-center">
+                <i class="fas fa-university text-emerald-400 text-sm"></i>
+              </div>
+            </div>
+            <p id="kpiDeposits" class="text-2xl font-bold text-white">$0.00</p>
+            <p class="text-xs text-gray-500 mt-1">Depositos + Transferencias</p>
+          </div>
+
+          <div class="bg-gray-900/80 border border-gray-800 rounded-xl p-5 card-hover">
+            <div class="flex items-center justify-between mb-3">
+              <span class="text-gray-400 text-sm">Retiros</span>
+              <div class="w-8 h-8 bg-red-500/20 rounded-lg flex items-center justify-center">
+                <i class="fas fa-money-bill-wave text-red-400 text-sm"></i>
+              </div>
+            </div>
+            <p id="kpiWithdrawals" class="text-2xl font-bold text-white">$0.00</p>
+            <p class="text-xs text-gray-500 mt-1">Retiros de efectivo</p>
+          </div>
+
+          <div class="bg-gray-900/80 border border-gray-800 rounded-xl p-5 card-hover">
+            <div class="flex items-center justify-between mb-3">
+              <span class="text-gray-400 text-sm">Crypto Interest</span>
+              <div class="w-8 h-8 bg-yellow-500/20 rounded-lg flex items-center justify-center">
+                <i class="fas fa-bolt text-yellow-400 text-sm"></i>
+              </div>
+            </div>
+            <p id="kpiCryptoInterest" class="text-2xl font-bold text-white">$0.00</p>
+            <p class="text-xs text-gray-500 mt-1">Intereses crypto</p>
+          </div>
+
+          <div class="bg-gray-900/80 border border-gray-800 rounded-xl p-5 card-hover">
+            <div class="flex items-center justify-between mb-3">
+              <span class="text-gray-400 text-sm">Activos Actuales</span>
+              <div class="w-8 h-8 bg-orange-500/20 rounded-lg flex items-center justify-center">
+                <i class="fas fa-layer-group text-orange-400 text-sm"></i>
+              </div>
+            </div>
+            <p id="kpiAssets" class="text-2xl font-bold text-white">0</p>
+            <p class="text-xs text-gray-500 mt-1">Posiciones abiertas</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Portfolio Charts Row -->
+      <div id="portfolioCharts" class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div class="bg-gray-900/80 border border-gray-800 rounded-xl p-6">
+          <h3 class="text-lg font-semibold mb-4 flex items-center gap-2">
+            <i class="fas fa-pie-chart text-blue-400"></i> Por Clase de Activo
+          </h3>
+          <div style="position: relative; height: 250px;">
+            <canvas id="portfolioAssetClassChart"></canvas>
+          </div>
+        </div>
+        <div class="bg-gray-900/80 border border-gray-800 rounded-xl p-6">
+          <h3 class="text-lg font-semibold mb-4 flex items-center gap-2">
+            <i class="fas fa-building text-purple-400"></i> Por Sector
+          </h3>
+          <div style="position: relative; height: 250px;">
+            <canvas id="portfolioSectorChart"></canvas>
+          </div>
+        </div>
+        <div class="bg-gray-900/80 border border-gray-800 rounded-xl p-6">
+          <h3 class="text-lg font-semibold mb-4 flex items-center gap-2">
+            <i class="fas fa-gem text-yellow-400"></i> Por Marketcap
+          </h3>
+          <div style="position: relative; height: 250px;">
+            <canvas id="portfolioMarketcapChart"></canvas>
+          </div>
+        </div>
+      </div>
+
+      <!-- Transaction Charts Row -->
       <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div class="bg-gray-900/80 border border-gray-800 rounded-xl p-6">
           <h3 class="text-lg font-semibold mb-4 flex items-center gap-2">
-            <i class="fas fa-pie-chart text-blue-400"></i> Distribución por Clase de Activo
+            <i class="fas fa-pie-chart text-blue-400"></i> Distribucion por Clase de Activo (Trans.)
           </h3>
           <div style="position: relative; height: 250px;">
             <canvas id="assetClassChart"></canvas>
@@ -185,7 +318,7 @@
         </div>
         <div class="bg-gray-900/80 border border-gray-800 rounded-xl p-6">
           <h3 class="text-lg font-semibold mb-4 flex items-center gap-2">
-            <i class="fas fa-building text-purple-400"></i> Distribución por Plataforma
+            <i class="fas fa-building text-purple-400"></i> Distribucion por Plataforma
           </h3>
           <div style="position: relative; height: 250px;">
             <canvas id="platformChart"></canvas>
@@ -196,7 +329,10 @@
       <!-- Tabs -->
       <div class="bg-gray-900/80 border border-gray-800 rounded-xl overflow-hidden">
         <div class="flex border-b border-gray-800 overflow-x-auto">
-          <button onclick="switchTab('assets')" id="tab-assets" class="tab-btn px-6 py-3 text-sm font-medium text-gray-400 hover:text-white transition-colors tab-active whitespace-nowrap">
+          <button onclick="switchTab('portfolio')" id="tab-portfolio" class="tab-btn px-6 py-3 text-sm font-medium text-gray-400 hover:text-white transition-colors tab-active whitespace-nowrap">
+            <i class="fas fa-briefcase mr-2"></i>Portfolio
+          </button>
+          <button onclick="switchTab('assets')" id="tab-assets" class="tab-btn px-6 py-3 text-sm font-medium text-gray-400 hover:text-white transition-colors whitespace-nowrap">
             <i class="fas fa-cubes mr-2"></i>Mis Activos
           </button>
           <button onclick="switchTab('transactions')" id="tab-transactions" class="tab-btn px-6 py-3 text-sm font-medium text-gray-400 hover:text-white transition-colors whitespace-nowrap">
@@ -207,8 +343,48 @@
           </button>
         </div>
 
+        <!-- Tab: Portfolio -->
+        <div id="panel-portfolio" class="p-6">
+          <div class="flex items-center justify-between mb-4 flex-wrap gap-2">
+            <div class="flex items-center gap-3">
+              <p class="text-sm text-gray-400">Mostrando <span id="pfCount" class="text-white font-bold">0</span> posiciones</p>
+              <label class="flex items-center gap-2 text-sm text-gray-400 cursor-pointer">
+                <input type="checkbox" id="showSold" onchange="toggleSoldPositions()" class="rounded bg-gray-800 border-gray-600">
+                Mostrar vendidas
+              </label>
+            </div>
+            <div class="flex gap-2">
+              <input type="text" id="pfSearch" placeholder="Buscar ticker..." oninput="filterPortfolio()" 
+                class="px-3 py-1.5 bg-gray-800 border border-gray-700 rounded-lg text-sm text-white placeholder-gray-500 focus:outline-none focus:border-blue-500">
+            </div>
+          </div>
+          <div class="overflow-x-auto">
+            <table class="w-full text-sm">
+              <thead>
+                <tr class="text-gray-400 border-b border-gray-800">
+                  <th class="text-left py-3 px-2 sortable" onclick="sortPortfolio('ticker')">Ticker <span class="sort-icon">&#8645;</span></th>
+                  <th class="text-left py-3 px-2 sortable" onclick="sortPortfolio('assetName')">Nombre <span class="sort-icon">&#8645;</span></th>
+                  <th class="text-left py-3 px-2 sortable" onclick="sortPortfolio('assetClass')">Clase <span class="sort-icon">&#8645;</span></th>
+                  <th class="text-left py-3 px-2 sortable" onclick="sortPortfolio('sector')">Sector <span class="sort-icon">&#8645;</span></th>
+                  <th class="text-center py-3 px-2 sortable" onclick="sortPortfolio('marketcap')">Marketcap <span class="sort-icon">&#8645;</span></th>
+                  <th class="text-right py-3 px-2 sortable" onclick="sortPortfolio('quantityNum')">Cantidad <span class="sort-icon">&#8645;</span></th>
+                  <th class="text-right py-3 px-2 sortable" onclick="sortPortfolio('avgPurchasePrice')">Precio Medio <span class="sort-icon">&#8645;</span></th>
+                  <th class="text-right py-3 px-2 sortable" onclick="sortPortfolio('currentPrice')">Precio Actual <span class="sort-icon">&#8645;</span></th>
+                  <th class="text-right py-3 px-2 sortable" onclick="sortPortfolio('cost')">Costo <span class="sort-icon">&#8645;</span></th>
+                  <th class="text-right py-3 px-2 sortable" onclick="sortPortfolio('currentValue')">Valor Actual <span class="sort-icon">&#8645;</span></th>
+                  <th class="text-right py-3 px-2 sortable" onclick="sortPortfolio('unrealizedROI')">ROI <span class="sort-icon">&#8645;</span></th>
+                  <th class="text-right py-3 px-2 sortable" onclick="sortPortfolio('unrealizedPL')">P/L <span class="sort-icon">&#8645;</span></th>
+                  <th class="text-right py-3 px-2 sortable" onclick="sortPortfolio('dailyChange')">Diario <span class="sort-icon">&#8645;</span></th>
+                  <th class="text-center py-3 px-2">Moneda</th>
+                </tr>
+              </thead>
+              <tbody id="portfolioTable" class="text-gray-300"></tbody>
+            </table>
+          </div>
+        </div>
+
         <!-- Tab: Assets -->
-        <div id="panel-assets" class="p-6">
+        <div id="panel-assets" class="hidden p-6">
           <div class="overflow-x-auto">
             <table class="w-full text-sm">
               <thead>
@@ -233,9 +409,9 @@
           <div class="flex items-center justify-between mb-4">
             <p class="text-sm text-gray-400">Mostrando <span id="txCount" class="text-white font-bold">0</span> transacciones</p>
             <div class="flex gap-2">
-              <button onclick="changeTxPage(-1)" id="txPrev" class="px-3 py-1 bg-gray-800 hover:bg-gray-700 rounded text-sm disabled:opacity-50" disabled>← Anterior</button>
-              <span id="txPage" class="px-3 py-1 text-sm text-gray-400">Página 1</span>
-              <button onclick="changeTxPage(1)" id="txNext" class="px-3 py-1 bg-gray-800 hover:bg-gray-700 rounded text-sm disabled:opacity-50" disabled>Siguiente →</button>
+              <button onclick="changeTxPage(-1)" id="txPrev" class="px-3 py-1 bg-gray-800 hover:bg-gray-700 rounded text-sm disabled:opacity-50" disabled>Anterior</button>
+              <span id="txPage" class="px-3 py-1 text-sm text-gray-400">Pagina 1</span>
+              <button onclick="changeTxPage(1)" id="txNext" class="px-3 py-1 bg-gray-800 hover:bg-gray-700 rounded text-sm disabled:opacity-50" disabled>Siguiente</button>
             </div>
           </div>
           <div class="overflow-x-auto">
@@ -244,7 +420,7 @@
                 <tr class="text-gray-400 border-b border-gray-800">
                   <th class="text-left py-3 px-2">Fecha</th>
                   <th class="text-left py-3 px-2">Activo</th>
-                  <th class="text-center py-3 px-2">Acción</th>
+                  <th class="text-center py-3 px-2">Accion</th>
                   <th class="text-right py-3 px-2">Cantidad</th>
                   <th class="text-right py-3 px-2">Precio</th>
                   <th class="text-right py-3 px-2">Total</th>
@@ -283,50 +459,58 @@
 
   <script>
     const API_URL = "https://script.google.com/macros/s/AKfycbzljOCK6u9cCGViOPrAXdLxmznXTAHR8YTBFZ5TQNPnuwij5b6mHKsczAvQdz2_YFaj/exec";
-    
+
     let charts = {};
     let allTransactions = [];
+    let portfolioData = [];
+    let portfolioSummary = {};
     let txPage = 0;
     const TX_PER_PAGE = 25;
     let currentCurrency = "USD";
     let currentRate = null;
+    let showSoldPositionsFlag = false;
+    let portfolioSort = { field: 'currentValue', dir: 'desc' };
+    let portfolioFilter = '';
 
     function setCurrency(currency) {
       if (currency === currentCurrency) return;
       currentCurrency = currency;
-      
-      // Actualizar botones
+
       document.getElementById('btn-usd').classList.toggle('active', currency === 'USD');
       document.getElementById('btn-usd').classList.toggle('text-gray-400', currency !== 'USD');
       document.getElementById('btn-dop').classList.toggle('active', currency === 'DOP');
       document.getElementById('btn-dop').classList.toggle('text-gray-400', currency !== 'DOP');
-      
+
       loadData();
     }
 
     async function loadData() {
       showLoading();
-      
+
       try {
         var url = API_URL + "?action=dashboard&currency=" + currentCurrency;
         if (currentCurrency !== "USD" && currentRate) {
           url += "&rate=" + currentRate;
         }
-        
+
         const data = await fetchWithJSONP(url);
-        
+
         if (data.error) {
           throw new Error(data.error);
         }
-        
-        // Guardar tasa si viene del servidor
+
         if (data.meta && data.meta.exchangeRate) {
           currentRate = data.meta.exchangeRate;
         }
-        
+
         allTransactions = data.allTransactions || [];
         txPage = 0;
-        
+
+        if (data.portfolio) {
+          portfolioData = data.portfolio.portfolio || [];
+          portfolioSummary = data.portfolio.summary || {};
+        }
+
         renderDashboard(data);
         document.getElementById('lastUpdate').textContent = 'Actualizado: ' + new Date().toLocaleString('es-ES');
         showContent();
@@ -340,51 +524,53 @@
       return new Promise(function(resolve, reject) {
         var scriptId = 'jsonp_' + Date.now();
         var script = document.createElement('script');
-        
+
         window[scriptId] = function(data) {
           cleanup();
           resolve(data);
         };
-        
+
         var timeout = setTimeout(function() {
           cleanup();
-          reject(new Error('Timeout - La API no respondió en 30 segundos'));
+          reject(new Error('Timeout - La API no respondio en 30 segundos'));
         }, 30000);
-        
+
         function cleanup() {
           clearTimeout(timeout);
           if (script.parentNode) script.parentNode.removeChild(script);
           delete window[scriptId];
         }
-        
+
         script.onerror = function() {
           cleanup();
           reject(new Error('No se pudo cargar el script. Verifica la URL.'));
         };
-        
+
         var separator = url.indexOf('?') !== -1 ? '&' : '?';
         script.src = url + separator + 'callback=' + scriptId;
-        
+
         document.head.appendChild(script);
       });
     }
 
     function renderDashboard(data) {
-      // Mostrar info de tasa si es DOP
       var rateInfo = document.getElementById('rateInfo');
       var rateText = document.getElementById('rateText');
-      
+
       if (currentCurrency === 'DOP' && currentRate) {
         rateInfo.classList.remove('hidden');
         rateText.textContent = 'Tasa de cambio: 1 USD = ' + currentRate.toFixed(2) + ' DOP';
       } else {
         rateInfo.classList.add('hidden');
       }
-      
-      // Actualizar subtítulo
+
       document.getElementById('subtitle').textContent = 'Dashboard en ' + currentCurrency;
 
-      // KPIs
+      if (data.portfolio && data.portfolio.summary) {
+        renderPortfolioSummary(data.portfolio.summary);
+        renderPortfolioCharts(data.portfolio.summary);
+      }
+
       document.getElementById('kpiTotalTx').textContent = data.metrics && data.metrics.totalTransactions ? data.metrics.totalTransactions : 0;
       document.getElementById('kpiInvested').textContent = formatCurrency(data.metrics && data.metrics.totalInvested ? data.metrics.totalInvested : 0);
       document.getElementById('kpiSold').textContent = formatCurrency(data.metrics && data.metrics.totalSold ? data.metrics.totalSold : 0);
@@ -394,16 +580,269 @@
       document.getElementById('kpiCryptoInterest').textContent = formatCurrency(data.metrics && data.metrics.totalCryptoInterest ? data.metrics.totalCryptoInterest : 0);
       document.getElementById('kpiAssets').textContent = data.metrics && data.metrics.currentAssets ? data.metrics.currentAssets : 0;
 
-      // Charts
       renderAssetClassChart(data.byAssetClass || []);
       renderPlatformChart(data.byPlatform || []);
 
-      // Tables
+      if (data.portfolio && data.portfolio.portfolio) {
+        renderPortfolioTable(data.portfolio.portfolio);
+      }
       renderAssetsTable(data.currentAssets || []);
       renderTransactionsTable();
-      
-      // Load platforms
       loadPlatforms();
+    }
+
+    function renderPortfolioSummary(summary) {
+      document.getElementById('pfTotalValue').textContent = formatCurrency(summary.totalCurrentValue || 0);
+      document.getElementById('pfTotalCost').textContent = formatCurrency(summary.totalCost || 0);
+
+      var unrealizedPL = summary.totalUnrealizedPL || 0;
+      var unrealizedEl = document.getElementById('pfUnrealizedPL');
+      unrealizedEl.textContent = (unrealizedPL >= 0 ? '+' : '') + formatCurrency(unrealizedPL);
+      unrealizedEl.className = 'text-2xl font-bold ' + (unrealizedPL >= 0 ? 'text-green-400' : 'text-red-400');
+
+      var roi = summary.overallUnrealizedROI || 0;
+      document.getElementById('pfUnrealizedROI').textContent = (roi >= 0 ? '+' : '') + roi.toFixed(2) + '%';
+      document.getElementById('pfUnrealizedROI').className = 'text-xs mt-1 ' + (roi >= 0 ? 'text-green-400' : 'text-red-400');
+
+      var realizedPL = summary.totalRealizedPL || 0;
+      var realizedEl = document.getElementById('pfRealizedPL');
+      realizedEl.textContent = (realizedPL >= 0 ? '+' : '') + formatCurrency(realizedPL);
+      realizedEl.className = 'text-2xl font-bold ' + (realizedPL >= 0 ? 'text-green-400' : 'text-red-400');
+
+      var totalPL = summary.totalPL || 0;
+      document.getElementById('pfTotalPL').textContent = 'P/L Total: ' + (totalPL >= 0 ? '+' : '') + formatCurrency(totalPL);
+
+      var dailyChange = summary.totalDailyChange || 0;
+      var dailyEl = document.getElementById('pfDailyChange');
+      dailyEl.textContent = (dailyChange >= 0 ? '+' : '') + formatCurrency(dailyChange);
+      dailyEl.className = 'text-2xl font-bold ' + (dailyChange >= 0 ? 'text-green-400' : 'text-red-400');
+
+      document.getElementById('pfHoldings').textContent = summary.currentHoldings || 0;
+      document.getElementById('pfSold').textContent = 'Vendidas: ' + (summary.soldPositions || 0);
+
+      if (summary.topGainers && summary.topGainers.length > 0) {
+        var best = summary.topGainers[0];
+        document.getElementById('pfBestPosition').textContent = best.ticker;
+        document.getElementById('pfBestROI').textContent = '+' + (best.unrealizedROI || 0).toFixed(2) + '%';
+      }
+      if (summary.topLosers && summary.topLosers.length > 0) {
+        var worst = summary.topLosers[0];
+        document.getElementById('pfWorstPosition').textContent = worst.ticker;
+        document.getElementById('pfWorstROI').textContent = (worst.unrealizedROI || 0).toFixed(2) + '%';
+      }
+    }
+
+    function renderPortfolioCharts(summary) {
+      if (summary.byAssetClass && summary.byAssetClass.length > 0) {
+        var ctx = document.getElementById('portfolioAssetClassChart').getContext('2d');
+        if (charts.portfolioAssetClass) charts.portfolioAssetClass.destroy();
+        var colors = ['#3b82f6', '#8b5cf6', '#10b981', '#f59e0b', '#ef4444', '#ec4899', '#06b6d4'];
+        charts.portfolioAssetClass = new Chart(ctx, {
+          type: 'doughnut',
+          data: {
+            labels: summary.byAssetClass.map(function(d) { return d.name; }),
+            datasets: [{
+              data: summary.byAssetClass.map(function(d) { return d.value; }),
+              backgroundColor: colors,
+              borderWidth: 0,
+              hoverOffset: 4
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: { position: 'bottom', labels: { color: '#9ca3af', padding: 10, usePointStyle: true, font: { size: 11 } } },
+              tooltip: {
+                backgroundColor: 'rgba(17, 24, 39, 0.95)',
+                titleColor: '#fff',
+                bodyColor: '#9ca3af',
+                borderColor: '#374151',
+                borderWidth: 1,
+                padding: 10,
+                cornerRadius: 8,
+                callbacks: {
+                  label: function(context) {
+                    var label = context.label || '';
+                    var value = context.parsed || 0;
+                    var total = context.dataset.data.reduce(function(a, b) { return a + b; }, 0);
+                    var percentage = total > 0 ? ((value / total) * 100).toFixed(1) : 0;
+                    return label + ': ' + formatCurrency(value) + ' (' + percentage + '%)';
+                  }
+                }
+              }
+            }
+          }
+        });
+      }
+
+      if (summary.bySector && summary.bySector.length > 0) {
+        var ctx = document.getElementById('portfolioSectorChart').getContext('2d');
+        if (charts.portfolioSector) charts.portfolioSector.destroy();
+        var colors = ['#3b82f6', '#8b5cf6', '#10b981', '#f59e0b', '#ef4444', '#ec4899', '#06b6d4', '#84cc16'];
+        charts.portfolioSector = new Chart(ctx, {
+          type: 'doughnut',
+          data: {
+            labels: summary.bySector.map(function(d) { return d.name; }),
+            datasets: [{
+              data: summary.bySector.map(function(d) { return d.value; }),
+              backgroundColor: colors,
+              borderWidth: 0,
+              hoverOffset: 4
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: { position: 'bottom', labels: { color: '#9ca3af', padding: 10, usePointStyle: true, font: { size: 10 } } },
+              tooltip: {
+                backgroundColor: 'rgba(17, 24, 39, 0.95)',
+                titleColor: '#fff',
+                bodyColor: '#9ca3af',
+                borderColor: '#374151',
+                borderWidth: 1,
+                padding: 10,
+                cornerRadius: 8,
+                callbacks: {
+                  label: function(context) {
+                    var label = context.label || '';
+                    var value = context.parsed || 0;
+                    var total = context.dataset.data.reduce(function(a, b) { return a + b; }, 0);
+                    var percentage = total > 0 ? ((value / total) * 100).toFixed(1) : 0;
+                    return label + ': ' + formatCurrency(value) + ' (' + percentage + '%)';
+                  }
+                }
+              }
+            }
+          }
+        });
+      }
+
+      if (summary.byMarketcap && summary.byMarketcap.length > 0) {
+        var ctx = document.getElementById('portfolioMarketcapChart').getContext('2d');
+        if (charts.portfolioMarketcap) charts.portfolioMarketcap.destroy();
+        var colors = ['#fbbf24', '#3b82f6', '#10b981', '#f59e0b', '#6b7280'];
+        charts.portfolioMarketcap = new Chart(ctx, {
+          type: 'pie',
+          data: {
+            labels: summary.byMarketcap.map(function(d) { return d.name; }),
+            datasets: [{
+              data: summary.byMarketcap.map(function(d) { return d.value; }),
+              backgroundColor: colors,
+              borderWidth: 0,
+              hoverOffset: 4
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: { position: 'bottom', labels: { color: '#9ca3af', padding: 10, usePointStyle: true, font: { size: 10 } } },
+              tooltip: {
+                backgroundColor: 'rgba(17, 24, 39, 0.95)',
+                titleColor: '#fff',
+                bodyColor: '#9ca3af',
+                borderColor: '#374151',
+                borderWidth: 1,
+                padding: 10,
+                cornerRadius: 8,
+                callbacks: {
+                  label: function(context) {
+                    var label = context.label || '';
+                    var value = context.parsed || 0;
+                    var total = context.dataset.data.reduce(function(a, b) { return a + b; }, 0);
+                    var percentage = total > 0 ? ((value / total) * 100).toFixed(1) : 0;
+                    return label + ': ' + formatCurrency(value) + ' (' + percentage + '%)';
+                  }
+                }
+              }
+            }
+          }
+        });
+      }
+    }
+
+    function renderPortfolioTable(portfolio) {
+      var tbody = document.getElementById('portfolioTable');
+      var countSpan = document.getElementById('pfCount');
+
+      if (!portfolio || portfolio.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="14" class="py-8 text-center text-gray-500">No hay datos de portfolio</td></tr>';
+        countSpan.textContent = '0';
+        return;
+      }
+
+      var filtered = portfolio.filter(function(p) {
+        if (!showSoldPositionsFlag && p.isSold) return false;
+        if (portfolioFilter) {
+          var search = portfolioFilter.toLowerCase();
+          return (p.ticker && p.ticker.toLowerCase().includes(search)) ||
+                 (p.assetName && p.assetName.toLowerCase().includes(search));
+        }
+        return true;
+      });
+
+      filtered.sort(function(a, b) {
+        var va = a[portfolioSort.field];
+        var vb = b[portfolioSort.field];
+        if (typeof va === 'string') va = va.toLowerCase();
+        if (typeof vb === 'string') vb = vb.toLowerCase();
+        if (va === null || va === undefined) va = -Infinity;
+        if (vb === null || vb === undefined) vb = -Infinity;
+
+        if (portfolioSort.dir === 'asc') {
+          return va > vb ? 1 : va < vb ? -1 : 0;
+        } else {
+          return va < vb ? 1 : va > vb ? -1 : 0;
+        }
+      });
+
+      countSpan.textContent = filtered.length;
+
+      tbody.innerHTML = filtered.map(function(p) {
+        var roiClass = p.unrealizedROI > 0 ? 'text-green-400' : p.unrealizedROI < 0 ? 'text-red-400' : 'text-gray-400';
+        var plClass = p.unrealizedPL > 0 ? 'text-green-400' : p.unrealizedPL < 0 ? 'text-red-400' : 'text-gray-400';
+        var dailyClass = p.dailyChange > 0 ? 'text-green-400' : p.dailyChange < 0 ? 'text-red-400' : 'text-gray-400';
+        var soldBadge = p.isSold ? '<span class="ml-1 px-1.5 py-0.5 bg-red-500/20 text-red-400 rounded text-xs">VENDIDO</span>' : '';
+
+        return '<tr class="border-b border-gray-800/50 hover:bg-gray-800/30 transition-colors">' +
+          '<td class="py-3 px-2 font-mono font-semibold text-blue-400">' + (p.ticker || '-') + soldBadge + '</td>' +
+          '<td class="py-3 px-2">' + (p.assetName || '-') + '</td>' +
+          '<td class="py-3 px-2"><span class="px-2 py-1 bg-gray-800 rounded text-xs">' + (p.assetClass || '-') + '</span></td>' +
+          '<td class="py-3 px-2 text-gray-400">' + (p.sector || '-') + '</td>' +
+          '<td class="py-3 px-2 text-center text-xs">' + (p.marketcap || '-') + '</td>' +
+          '<td class="py-3 px-2 text-right font-mono">' + (p.isSold ? '<span class="text-gray-500">Sold All</span>' : (p.quantityNum || 0).toFixed(4)) + '</td>' +
+          '<td class="py-3 px-2 text-right font-mono text-gray-400">' + formatCurrency(p.avgPurchasePrice) + '</td>' +
+          '<td class="py-3 px-2 text-right font-mono">' + formatCurrency(p.currentPrice) + '</td>' +
+          '<td class="py-3 px-2 text-right font-mono text-gray-400">' + formatCurrency(p.cost) + '</td>' +
+          '<td class="py-3 px-2 text-right font-mono font-semibold">' + formatCurrency(p.currentValue) + '</td>' +
+          '<td class="py-3 px-2 text-right font-mono ' + roiClass + '">' + (p.unrealizedROI !== null ? (p.unrealizedROI > 0 ? '+' : '') + p.unrealizedROI.toFixed(2) + '%' : '-') + '</td>' +
+          '<td class="py-3 px-2 text-right font-mono ' + plClass + '">' + (p.unrealizedPL !== null ? (p.unrealizedPL > 0 ? '+' : '') + formatCurrency(p.unrealizedPL) : '-') + '</td>' +
+          '<td class="py-3 px-2 text-right font-mono ' + dailyClass + '">' + (p.dailyChange !== null ? (p.dailyChange > 0 ? '+' : '') + formatCurrency(p.dailyChange) : '-') + '</td>' +
+          '<td class="py-3 px-2 text-center"><span class="px-2 py-1 bg-gray-800 rounded text-xs">' + (p.currency || '-') + '</span></td>' +
+        '</tr>';
+      }).join('');
+    }
+
+    function sortPortfolio(field) {
+      if (portfolioSort.field === field) {
+        portfolioSort.dir = portfolioSort.dir === 'asc' ? 'desc' : 'asc';
+      } else {
+        portfolioSort.field = field;
+        portfolioSort.dir = 'desc';
+      }
+      renderPortfolioTable(portfolioData);
+    }
+
+    function toggleSoldPositions() {
+      showSoldPositionsFlag = document.getElementById('showSold').checked;
+      renderPortfolioTable(portfolioData);
+    }
+
+    function filterPortfolio() {
+      portfolioFilter = document.getElementById('pfSearch').value;
+      renderPortfolioTable(portfolioData);
     }
 
     async function loadPlatforms() {
@@ -431,23 +870,23 @@
       var pageSpan = document.getElementById('txPage');
       var prevBtn = document.getElementById('txPrev');
       var nextBtn = document.getElementById('txNext');
-      
+
       if (!allTransactions || allTransactions.length === 0) {
         tbody.innerHTML = '<tr><td colspan="8" class="py-8 text-center text-gray-500">No hay transacciones</td></tr>';
         countSpan.textContent = '0';
         return;
       }
-      
+
       countSpan.textContent = allTransactions.length;
-      
+
       var start = txPage * TX_PER_PAGE;
       var end = Math.min(start + TX_PER_PAGE, allTransactions.length);
       var pageTransactions = allTransactions.slice(start, end);
-      
-      pageSpan.textContent = 'Página ' + (txPage + 1) + ' de ' + Math.ceil(allTransactions.length / TX_PER_PAGE);
+
+      pageSpan.textContent = 'Pagina ' + (txPage + 1) + ' de ' + Math.ceil(allTransactions.length / TX_PER_PAGE);
       prevBtn.disabled = txPage === 0;
       nextBtn.disabled = end >= allTransactions.length;
-      
+
       tbody.innerHTML = pageTransactions.map(function(t) {
         return '<tr class="border-b border-gray-800/50 hover:bg-gray-800/30 transition-colors">' +
           '<td class="py-3 px-2 text-gray-400">' + (t.date || '-') + '</td>' +
@@ -465,14 +904,14 @@
     function renderAssetClassChart(data) {
       var ctx = document.getElementById('assetClassChart').getContext('2d');
       if (charts.assetClass) charts.assetClass.destroy();
-      
+
       if (!data || data.length === 0) {
         ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
         return;
       }
-      
+
       var colors = ['#3b82f6', '#8b5cf6', '#10b981', '#f59e0b', '#ef4444', '#ec4899', '#06b6d4', '#84cc16', '#f97316'];
-      
+
       charts.assetClass = new Chart(ctx, {
         type: 'doughnut',
         data: {
@@ -519,14 +958,14 @@
     function renderPlatformChart(data) {
       var ctx = document.getElementById('platformChart').getContext('2d');
       if (charts.platform) charts.platform.destroy();
-      
+
       if (!data || data.length === 0) {
         ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
         return;
       }
-      
+
       var colors = ['#3b82f6', '#8b5cf6', '#10b981', '#f59e0b', '#ef4444'];
-      
+
       charts.platform = new Chart(ctx, {
         type: 'bar',
         data: {
@@ -585,7 +1024,7 @@
         tbody.innerHTML = '<tr><td colspan="8" class="py-8 text-center text-gray-500">No hay activos en cartera</td></tr>';
         return;
       }
-      
+
       tbody.innerHTML = assets.map(function(a) {
         return '<tr class="border-b border-gray-800/50 hover:bg-gray-800/30 transition-colors">' +
           '<td class="py-3 px-2 font-mono font-semibold text-blue-400">' + (a.ticker || '-') + '</td>' +
@@ -606,7 +1045,7 @@
         tbody.innerHTML = '<tr><td colspan="8" class="py-8 text-center text-gray-500">No hay plataformas</td></tr>';
         return;
       }
-      
+
       tbody.innerHTML = platforms.map(function(p) {
         return '<tr class="border-b border-gray-800/50 hover:bg-gray-800/30 transition-colors">' +
           '<td class="py-3 px-2 font-medium">' + (p.platform || '-') + '</td>' +
@@ -625,13 +1064,13 @@
       var badges = {
         'Buy': '<span class="px-2 py-1 bg-blue-500/20 text-blue-400 rounded text-xs font-medium">COMPRA</span>',
         'Sell': '<span class="px-2 py-1 bg-green-500/20 text-green-400 rounded text-xs font-medium">VENTA</span>',
-        'Cash Deposit': '<span class="px-2 py-1 bg-emerald-500/20 text-emerald-400 rounded text-xs font-medium">DEPÓSITO</span>',
+        'Cash Deposit': '<span class="px-2 py-1 bg-emerald-500/20 text-emerald-400 rounded text-xs font-medium">DEPOSITO</span>',
         'Cash Withdrawal': '<span class="px-2 py-1 bg-red-500/20 text-red-400 rounded text-xs font-medium">RETIRO</span>',
         'Transfer Send': '<span class="px-2 py-1 bg-orange-500/20 text-orange-400 rounded text-xs font-medium">TRANSFER OUT</span>',
         'Transfer Deposit': '<span class="px-2 py-1 bg-teal-500/20 text-teal-400 rounded text-xs font-medium">TRANSFER IN</span>',
         'Dividend': '<span class="px-2 py-1 bg-purple-500/20 text-purple-400 rounded text-xs font-medium">DIVIDENDO</span>',
         'DRIP': '<span class="px-2 py-1 bg-indigo-500/20 text-indigo-400 rounded text-xs font-medium">DRIP</span>',
-        'Crypto Interest': '<span class="px-2 py-1 bg-yellow-500/20 text-yellow-400 rounded text-xs font-medium">INTERÉS</span>'
+        'Crypto Interest': '<span class="px-2 py-1 bg-yellow-500/20 text-yellow-400 rounded text-xs font-medium">INTERES</span>'
       };
       return badges[action] || '<span class="px-2 py-1 bg-gray-800 rounded text-xs">' + (action || '-') + '</span>';
     }
@@ -655,7 +1094,7 @@
     }
 
     function switchTab(tab) {
-      var tabs = ['assets', 'transactions', 'platforms'];
+      var tabs = ['portfolio', 'assets', 'transactions', 'platforms'];
       tabs.forEach(function(t) {
         document.getElementById('panel-' + t).classList.add('hidden');
         document.getElementById('tab-' + t).classList.remove('tab-active');
