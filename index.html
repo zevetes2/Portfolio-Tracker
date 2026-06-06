@@ -252,7 +252,85 @@
       border-color: rgba(59, 130, 246, 0.5);
       color: #60a5fa;
     }
+  
+    /* ===== TARJETAS DE RESUMEN POR BRÓKER ===== */
+    .broker-summary-card {
+      background: rgba(30, 41, 59, 0.5);
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(51, 65, 85, 0.5);
+      border-radius: 16px;
+      padding: 16px;
+      transition: all 0.2s ease;
+    }
+    .broker-summary-card:hover {
+      transform: translateY(-2px);
+      border-color: rgba(71, 85, 105, 0.7);
+      box-shadow: 0 8px 20px -4px rgba(0, 0, 0, 0.3);
+    }
+    .broker-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 14px;
+    }
+    .broker-icon {
+      width: 32px;
+      height: 32px;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+    }
+    .broker-name {
+      font-weight: 700;
+      font-size: 15px;
+      color: #f8fafc;
+    }
+    .broker-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+    }
+    .broker-stat {
+      text-align: center;
+    }
+    .broker-stat-label {
+      font-size: 9px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: #64748b;
+      margin-bottom: 4px;
+    }
+    .broker-stat-value {
+      font-size: 13px;
+      font-weight: 700;
+      font-family: 'Inter', sans-serif;
+    }
+    .broker-stat-sub {
+      font-size: 10px;
+      font-weight: 600;
+      margin-top: 2px;
+    }
+    .broker-divider {
+      height: 1px;
+      background: rgba(51, 65, 85, 0.4);
+      margin: 12px 0;
+    }
+    .broker-footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    @media (max-width: 640px) {
+      .broker-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+
   </style>
+<base target="_blank">
 <base target="_blank">
 </head>
 <body class="bg-slate-950 text-slate-200 min-h-screen selection:bg-brand-500/30">
@@ -404,7 +482,17 @@
         </div>
       </div>
 
-      <!-- ===== ASIGNACIÓN Y MOVIMIENTOS ===== -->
+            <!-- ===== RESUMEN POR BRÓKER ===== -->
+      <div id="brokersSummarySection" class="hidden">
+        <h3 class="text-xs sm:text-sm font-semibold text-slate-200 uppercase tracking-wider mb-4 flex items-center gap-2">
+          <i class="fas fa-building-columns text-brand-400"></i> Resumen por Plataforma
+        </h3>
+        <div id="brokersSummaryGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          <!-- Se llena dinámicamente -->
+        </div>
+      </div>
+
+<!-- ===== ASIGNACIÓN Y MOVIMIENTOS ===== -->
       <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
         <div class="glass-card lg:col-span-2 rounded-2xl p-4 sm:p-6">
           <div class="flex items-center justify-between mb-4 sm:mb-5">
@@ -822,6 +910,8 @@
       renderAssetsTable(data.currentAssets || []);
       renderTransactionsTable();
       loadPlatforms();
+            renderBrokersSummary(data.platforms || []);
+
     }
 
     function renderPortfolioSummary(summary, metrics) {
@@ -1245,7 +1335,84 @@ function renderPortfolioCharts(summary) {
       renderPortfolioTable(portfolioData);
     }
 
-    async function loadPlatforms() {
+    async function renderBrokersSummary(platforms) {
+      var section = document.getElementById('brokersSummarySection');
+      var grid = document.getElementById('brokersSummaryGrid');
+
+      if (!platforms || platforms.length === 0) {
+        section.classList.add('hidden');
+        return;
+      }
+
+      section.classList.remove('hidden');
+
+      var colors = {
+        'ETORO': { bg: 'rgba(59, 130, 246, 0.15)', icon: 'fa-globe', color: '#60a5fa' },
+        'HAPI':  { bg: 'rgba(16, 185, 129, 0.15)', icon: 'fa-bolt', color: '#34d399' },
+        'TRADESTATION': { bg: 'rgba(245, 158, 11, 0.15)', icon: 'fa-chart-line', color: '#fbbf24' },
+        'default': { bg: 'rgba(99, 102, 241, 0.15)', icon: 'fa-building', color: '#818cf8' }
+      };
+
+      grid.innerHTML = platforms.map(function(p) {
+        var key = (p.platform || 'default').toUpperCase();
+        var style = colors[key] || colors['default'];
+
+        var unrealizedPL = p.unrealizedPL || 0;
+        var realizedPL = p.realizedPL || 0;
+        var dayChange = p.dayChange || 0;
+        var dayChangePct = p.dayChangePct || 0;
+        var unrealizedROI = p.unrealizedROI || 0;
+        var realizedROI = p.realizedROI || 0;
+
+        var unrealizedClass = unrealizedPL >= 0 ? 'text-emerald-400' : 'text-rose-400';
+        var realizedClass = realizedPL >= 0 ? 'text-emerald-400' : 'text-rose-400';
+        var dayClass = dayChange >= 0 ? 'text-emerald-400' : 'text-rose-400';
+        var daySign = dayChange >= 0 ? '+' : '';
+
+        return '<div class="broker-summary-card">' +
+          '<div class="broker-header">' +
+            '<div class="broker-icon" style="background:' + style.bg + '; color:' + style.color + '">' +
+              '<i class="fas ' + style.icon + '"></i>' +
+            '</div>' +
+            '<span class="broker-name">' + (p.platform || 'Sin nombre') + '</span>' +
+          '</div>' +
+          '<div class="broker-grid">' +
+            '<div class="broker-stat">' +
+              '<div class="broker-stat-label">Cost Basis</div>' +
+              '<div class="broker-stat-value text-slate-300">' + formatCurrency(p.totalInvested || 0) + '</div>' +
+            '</div>' +
+            '<div class="broker-stat">' +
+              '<div class="broker-stat-label">Market Value</div>' +
+              '<div class="broker-stat-value text-white">' + formatCurrency(p.marketValue || p.totalInvested || 0) + '</div>' +
+            '</div>' +
+            '<div class="broker-stat">' +
+              '<div class="broker-stat-label">Símbolos</div>' +
+              '<div class="broker-stat-value text-slate-300">' + (p.symbols || 0) + '</div>' +
+            '</div>' +
+          '</div>' +
+          '<div class="broker-divider"></div>' +
+          '<div class="broker-grid">' +
+            '<div class="broker-stat">' +
+              '<div class="broker-stat-label">Day Change</div>' +
+              '<div class="broker-stat-value ' + dayClass + '">' + daySign + formatCurrency(dayChange) + '</div>' +
+              '<div class="broker-stat-sub ' + dayClass + '">' + daySign + dayChangePct.toFixed(2) + '%</div>' +
+            '</div>' +
+            '<div class="broker-stat">' +
+              '<div class="broker-stat-label">Unrealized</div>' +
+              '<div class="broker-stat-value ' + unrealizedClass + '">' + (unrealizedPL >= 0 ? '+' : '') + formatCurrency(unrealizedPL) + '</div>' +
+              '<div class="broker-stat-sub ' + unrealizedClass + '">' + (unrealizedROI >= 0 ? '+' : '') + unrealizedROI.toFixed(2) + '%</div>' +
+            '</div>' +
+            '<div class="broker-stat">' +
+              '<div class="broker-stat-label">Realized</div>' +
+              '<div class="broker-stat-value ' + realizedClass + '">' + (realizedPL >= 0 ? '+' : '') + formatCurrency(realizedPL) + '</div>' +
+              '<div class="broker-stat-sub ' + realizedClass + '">' + (realizedROI >= 0 ? '+' : '') + realizedROI.toFixed(2) + '%</div>' +
+            '</div>' +
+          '</div>' +
+        '</div>';
+      }).join('');
+    }
+
+async function loadPlatforms() {
       try {
         var url = API_URL + "?action=platforms&currency=" + currentCurrency;
         if (currentCurrency !== "USD" && currentRate) url += "&rate=" + currentRate;
