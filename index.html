@@ -243,6 +243,15 @@
       border-radius: 999px;
       transition: width 0.5s ease;
     }
+    .range-btn {
+      min-height: 28px;
+      border: 1px solid transparent;
+    }
+    .range-btn.active {
+      background: rgba(59, 130, 246, 0.2);
+      border-color: rgba(59, 130, 246, 0.5);
+      color: #60a5fa;
+    }
   </style>
 <base target="_blank">
 </head>
@@ -426,7 +435,7 @@
         </div>
       </div>
 
-      <!-- ===== GRÁFICOS ===== -->
+            <!-- ===== GRÁFICOS ===== -->
       <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
         <div class="glass-card rounded-2xl p-4 sm:p-6">
           <h3 class="text-xs sm:text-sm font-semibold text-slate-300 uppercase tracking-wider mb-4 sm:mb-6 flex items-center gap-2">
@@ -442,6 +451,39 @@
           </h3>
           <div class="relative h-[220px] sm:h-[280px]">
             <canvas id="portfolioSectorChart"></canvas>
+          </div>
+        </div>
+      </div>
+
+      <!-- ===== GRÁFICO EVOLUCIÓN HISTÓRICA ===== -->
+      <div class="glass-card rounded-2xl p-4 sm:p-6">
+        <div class="flex items-center justify-between mb-4 sm:mb-6">
+          <h3 class="text-xs sm:text-sm font-semibold text-slate-300 uppercase tracking-wider flex items-center gap-2">
+            <i class="fas fa-chart-line text-emerald-400"></i> Evolución del Patrimonio
+          </h3>
+          <div class="flex gap-1">
+            <button onclick="setHistoryRange('1M')" id="range-1M" class="range-btn px-2.5 py-1 rounded-md text-[10px] font-semibold transition-all text-slate-400 hover:text-slate-200">1M</button>
+            <button onclick="setHistoryRange('3M')" id="range-3M" class="range-btn px-2.5 py-1 rounded-md text-[10px] font-semibold transition-all text-slate-400 hover:text-slate-200">3M</button>
+            <button onclick="setHistoryRange('6M')" id="range-6M" class="range-btn px-2.5 py-1 rounded-md text-[10px] font-semibold transition-all text-slate-400 hover:text-slate-200">6M</button>
+            <button onclick="setHistoryRange('1Y')" id="range-1Y" class="range-btn px-2.5 py-1 rounded-md text-[10px] font-semibold transition-all text-slate-400 hover:text-slate-200">1A</button>
+            <button onclick="setHistoryRange('ALL')" id="range-ALL" class="range-btn active px-2.5 py-1 rounded-md text-[10px] font-semibold transition-all bg-brand-500/20 text-brand-400 border border-brand-500/30">TODO</button>
+          </div>
+        </div>
+        <div class="relative h-[300px] sm:h-[380px]">
+          <canvas id="portfolioHistoryChart"></canvas>
+        </div>
+        <div class="grid grid-cols-3 gap-3 mt-4 pt-4 border-t border-slate-700/30">
+          <div class="text-center">
+            <p class="text-[9px] text-slate-500 uppercase font-bold mb-1">Máximo Histórico</p>
+            <p id="historyMax" class="text-sm font-bold text-emerald-400">$0.00</p>
+          </div>
+          <div class="text-center">
+            <p class="text-[9px] text-slate-500 uppercase font-bold mb-1">Mínimo</p>
+            <p id="historyMin" class="text-sm font-bold text-rose-400">$0.00</p>
+          </div>
+          <div class="text-center">
+            <p class="text-[9px] text-slate-500 uppercase font-bold mb-1">Crecimiento Total</p>
+            <p id="historyGrowth" class="text-sm font-bold text-white">0.00%</p>
           </div>
         </div>
       </div>
@@ -616,6 +658,11 @@
     let portfolioSort = { field: 'currentValue', dir: 'desc' };
     let portfolioFilter = '';
     let mobileViewMode = 'cards'; // 'cards' or 'table'
+    let historyRange = 'ALL';
+    let historyData = [];
+    let historicalPrices = {};
+    let historicalDates = [];
+
 
     Chart.defaults.color = '#94a3b8'; 
     Chart.defaults.font.family = "'Inter', sans-serif";
@@ -742,6 +789,33 @@
         renderPortfolioCharts(data.portfolio.summary);
         renderTopPositions(data.portfolio.summary);
         renderLargestPositions(data.portfolio.summary);
+      }
+
+            // Guardar datos históricos y calcular evolución
+      console.log("=== renderDashboard: bloque historial ===");
+      console.log("data.history existe?", !!data.history);
+      console.log("data.history.dates?", data.history ? data.history.dates : null);
+      console.log("data.history.dates length?", data.history && data.history.dates ? data.history.dates.length : 0);
+      console.log("data.history.prices?", data.history ? Object.keys(data.history.prices || {}).length : 0);
+      
+      if (data.history && data.history.dates && data.history.dates.length > 0 && 
+          data.history.prices && Object.keys(data.history.prices).length > 0) {
+        console.log("ENTRANDO a buildRealHistoryFromPrices");
+        historicalDates = data.history.dates;
+        historicalPrices = data.history.prices;
+        buildRealHistoryFromPrices(data.allTransactions || []);
+        renderHistoryChart();
+      } else {
+        console.log("ENTRANDO a buildHistoryFromTransactions (fallback)");
+        historicalDates = [];
+        historicalPrices = {};
+        buildHistoryFromTransactions(data.allTransactions || []);
+        renderHistoryChart();
+      }
+       // Guardar portfolioData globalmente para uso en historial
+      if (data.portfolio && data.portfolio.portfolio) {
+        window.lastPortfolioData = data.portfolio.portfolio;
+        portfolioData = data.portfolio.portfolio; // también en variable global si existe
       }
 
       if (data.portfolio && data.portfolio.portfolio) renderPortfolioTable(data.portfolio.portfolio);
@@ -875,80 +949,179 @@
       }
     }
 
-    function renderPortfolioCharts(summary) {
-      var palette = ['#3b82f6', '#8b5cf6', '#10b981', '#f59e0b', '#f43f5e', '#0ea5e9', '#6366f1'];
+function renderPortfolioCharts(summary) {
+  var palette = ['#3b82f6', '#8b5cf6', '#10b981', '#f59e0b', '#f43f5e', '#0ea5e9', '#6366f1'];
 
-      if (summary.byAssetClass && summary.byAssetClass.length > 0) {
-        var ctx = document.getElementById('portfolioAssetClassChart').getContext('2d');
-        if (charts.portfolioAssetClass) charts.portfolioAssetClass.destroy();
-        charts.portfolioAssetClass = new Chart(ctx, {
-          type: 'doughnut',
-          data: {
-            labels: summary.byAssetClass.map(function(d) { return d.name; }),
-            datasets: [{
-              data: summary.byAssetClass.map(function(d) { return d.value; }),
-              backgroundColor: palette,
-              borderWidth: 0,
-              hoverOffset: 6
-            }]
-          },
-          options: {
-            responsive: true, 
-            maintainAspectRatio: false, 
-            cutout: '70%',
-            plugins: {
-              legend: { 
-                position: window.innerWidth < 640 ? 'bottom' : 'right', 
-                labels: { 
-                  usePointStyle: true, 
-                  pointStyle: 'circle', 
-                  font: { size: window.innerWidth < 640 ? 10 : 11 },
-                  padding: window.innerWidth < 640 ? 10 : 16,
-                  boxWidth: window.innerWidth < 640 ? 8 : 10
-                } 
-              },
-              tooltip: chartTooltipConfig
-            }
-          }
-        });
-      }
+  var totalAssetValue = 0;
+  var totalSectorValue = 0;
 
-      if (summary.bySector && summary.bySector.length > 0) {
-        var ctx = document.getElementById('portfolioSectorChart').getContext('2d');
-        if (charts.portfolioSector) charts.portfolioSector.destroy();
-        charts.portfolioSector = new Chart(ctx, {
-          type: 'doughnut',
-          data: {
-            labels: summary.bySector.map(function(d) { return d.name; }),
-            datasets: [{
-              data: summary.bySector.map(function(d) { return d.value; }),
-              backgroundColor: palette.slice().reverse(),
-              borderWidth: 0,
-              hoverOffset: 6
-            }]
-          },
-          options: {
-            responsive: true, 
-            maintainAspectRatio: false, 
-            cutout: '70%',
-            plugins: {
-              legend: { 
-                position: window.innerWidth < 640 ? 'bottom' : 'right', 
-                labels: { 
-                  usePointStyle: true, 
-                  pointStyle: 'circle', 
-                  font: { size: window.innerWidth < 640 ? 10 : 11 },
-                  padding: window.innerWidth < 640 ? 10 : 16,
-                  boxWidth: window.innerWidth < 640 ? 8 : 10
-                } 
-              },
-              tooltip: chartTooltipConfig
-            }
-          }
-        });
-      }
+  if (summary.byAssetClass && summary.byAssetClass.length > 0) {
+    totalAssetValue = summary.byAssetClass.reduce(function(sum, item) {
+      return sum + (item.value || 0);
+    }, 0);
+  }
+
+  if (summary.bySector && summary.bySector.length > 0) {
+    totalSectorValue = summary.bySector.reduce(function(sum, item) {
+      return sum + (item.value || 0);
+    }, 0);
+  }
+
+  // Plugin para forzar color de leyenda
+  var legendColorPlugin = {
+    id: 'legendColor',
+    afterDraw: function(chart) {
+      var legend = chart.legend;
+      if (!legend) return;
+      var ctx = chart.ctx;
+      ctx.save();
+      ctx.fillStyle = '#94a3b8';
+      legend.legendItems.forEach(function(item) {
+        // Chart.js ya dibujó el texto, no podemos cambiarlo fácilmente aquí
+        // En su lugar, usaremos otra aproximación
+      });
+      ctx.restore();
     }
+  };
 
+  if (summary.byAssetClass && summary.byAssetClass.length > 0) {
+    var ctx = document.getElementById('portfolioAssetClassChart').getContext('2d');
+    if (charts.portfolioAssetClass) charts.portfolioAssetClass.destroy();
+    charts.portfolioAssetClass = new Chart(ctx, {
+      type: 'doughnut',
+      data: {
+        labels: summary.byAssetClass.map(function(d) { return d.name; }),
+        datasets: [{
+          data: summary.byAssetClass.map(function(d) { return d.value; }),
+          backgroundColor: palette,
+          borderWidth: 0,
+          hoverOffset: 6
+        }]
+      },
+      options: {
+        responsive: true, 
+        maintainAspectRatio: false, 
+        cutout: '70%',
+        plugins: {
+          legend: { 
+            position: window.innerWidth < 640 ? 'bottom' : 'right', 
+            labels: { 
+              color: '#94a3b8',
+              usePointStyle: true, 
+              pointStyle: 'circle', 
+              font: { size: window.innerWidth < 640 ? 10 : 11 },
+              padding: window.innerWidth < 640 ? 10 : 16,
+              boxWidth: window.innerWidth < 640 ? 8 : 10,
+              generateLabels: function(chart) {
+                var data = chart.data;
+                if (data.labels.length && data.datasets.length) {
+                  return data.labels.map(function(label, i) {
+                    var meta = chart.getDatasetMeta(0);
+                    var style = meta.controller.getStyle(i);
+                    var value = data.datasets[0].data[i] || 0;
+                    var percentage = totalAssetValue > 0 ? ((value / totalAssetValue) * 100).toFixed(1) : '0.0';
+                    return {
+                      text: label + ' (' + percentage + '%)',
+                      fillStyle: style.backgroundColor,
+                      strokeStyle: style.borderColor,
+                      lineWidth: style.borderWidth,
+                      hidden: isNaN(data.datasets[0].data[i]) || meta.data[i].hidden,
+                      index: i,
+                      fontColor: '#94a3b8'
+                    };
+                  });
+                }
+                return [];
+              }
+            } 
+          },
+          tooltip: chartTooltipConfig
+        }
+      },
+      plugins: [{
+        id: 'customLegendColor',
+        afterUpdate: function(chart) {
+          var legend = chart.legend;
+          if (legend && legend.legendItems) {
+            legend.legendItems.forEach(function(item) {
+              item.fontColor = '#94a3b8';
+              item.color = '#94a3b8';
+            });
+          }
+        }
+      }]
+    });
+  }
+
+  if (summary.bySector && summary.bySector.length > 0) {
+    var ctx = document.getElementById('portfolioSectorChart').getContext('2d');
+    if (charts.portfolioSector) charts.portfolioSector.destroy();
+    charts.portfolioSector = new Chart(ctx, {
+      type: 'doughnut',
+      data: {
+        labels: summary.bySector.map(function(d) { return d.name; }),
+        datasets: [{
+          data: summary.bySector.map(function(d) { return d.value; }),
+          backgroundColor: palette.slice().reverse(),
+          borderWidth: 0,
+          hoverOffset: 6
+        }]
+      },
+      options: {
+        responsive: true, 
+        maintainAspectRatio: false, 
+        cutout: '70%',
+        plugins: {
+          legend: { 
+            position: window.innerWidth < 640 ? 'bottom' : 'right', 
+            labels: { 
+              color: '#94a3b8',
+              usePointStyle: true, 
+              pointStyle: 'circle', 
+              font: { size: window.innerWidth < 640 ? 10 : 11 },
+              padding: window.innerWidth < 640 ? 10 : 16,
+              boxWidth: window.innerWidth < 640 ? 8 : 10,
+              generateLabels: function(chart) {
+                var data = chart.data;
+                if (data.labels.length && data.datasets.length) {
+                  return data.labels.map(function(label, i) {
+                    var meta = chart.getDatasetMeta(0);
+                    var style = meta.controller.getStyle(i);
+                    var value = data.datasets[0].data[i] || 0;
+                    var percentage = totalSectorValue > 0 ? ((value / totalSectorValue) * 100).toFixed(1) : '0.0';
+                    return {
+                      text: label + ' (' + percentage + '%)',
+                      fillStyle: style.backgroundColor,
+                      strokeStyle: style.borderColor,
+                      lineWidth: style.borderWidth,
+                      hidden: isNaN(data.datasets[0].data[i]) || meta.data[i].hidden,
+                      index: i,
+                      fontColor: '#94a3b8'
+                    };
+                  });
+                }
+                return [];
+              }
+            } 
+          },
+          tooltip: chartTooltipConfig
+        }
+      },
+      plugins: [{
+        id: 'customLegendColor',
+        afterUpdate: function(chart) {
+          var legend = chart.legend;
+          if (legend && legend.legendItems) {
+            legend.legendItems.forEach(function(item) {
+              item.fontColor = '#94a3b8';
+              item.color = '#94a3b8';
+            });
+          }
+        }
+      }]
+    });
+  }
+}    
     function renderPortfolioTable(portfolio) {
       var tbody = document.getElementById('portfolioTable');
       var mobileContainer = document.getElementById('portfolioMobileCards');
@@ -1310,6 +1483,424 @@
         }
       }, 250);
     });
+
+        function buildHistoryFromTransactions(transactions) {
+      if (!transactions || transactions.length === 0) {
+        historyData = [];
+        return;
+      }
+
+      var sorted = transactions.slice().sort(function(a, b) {
+        return new Date(a.dateRaw || a.date) - new Date(b.dateRaw || b.date);
+      });
+
+      var monthlyData = {};
+      var runningInvested = 0;
+      var runningCash = 0;
+
+      sorted.forEach(function(tx) {
+        var date = new Date(tx.dateRaw || tx.date);
+        var monthKey = date.getFullYear() + '-' + String(date.getMonth() + 1).padStart(2, '0');
+        var amount = Math.abs(tx.displayTotal || tx.totalUSD || tx.total || 0);
+        var action = tx.action || '';
+
+        if (action === 'Buy') {
+          runningInvested += amount;
+          runningCash -= amount;
+        } else if (action === 'Sell') {
+          runningInvested -= amount;
+          runningCash += amount;
+        } else if (action === 'Cash Deposit' || action === 'Transfer Deposit') {
+          runningCash += amount;
+        } else if (action === 'Cash Withdrawal') {
+          runningCash -= amount;
+        } else if (action === 'Dividend' || action === 'Crypto Interest') {
+          runningCash += amount;
+        }
+
+        monthlyData[monthKey] = {
+          date: monthKey,
+          marketValue: runningInvested,
+          cash: runningCash,
+          total: runningInvested + runningCash,
+          invested: runningInvested
+        };
+      });
+
+      historyData = Object.keys(monthlyData).sort().map(function(key) {
+        return monthlyData[key];
+      });
+    }
+
+    function buildRealHistoryFromPrices(transactions) {
+      if (!transactions || transactions.length === 0 || historicalDates.length === 0) {
+        historyData = [];
+        return;
+      }
+
+      // Obtener precios actuales de la hoja Portfolio
+      var currentPricesFromPortfolio = {};
+      if (typeof portfolioData !== 'undefined' && portfolioData && portfolioData.length > 0) {
+        portfolioData.forEach(function(p) {
+          if (!p.isSold && p.ticker) {
+            currentPricesFromPortfolio[p.ticker.toUpperCase()] = {
+              price: p.currentPrice,
+              quantity: p.quantityNum,
+              currency: p.currency || 'USD'
+            };
+          }
+        });
+      } else if (typeof window.lastPortfolioData !== 'undefined' && window.lastPortfolioData) {
+        window.lastPortfolioData.forEach(function(p) {
+          if (!p.isSold && p.ticker) {
+            currentPricesFromPortfolio[p.ticker.toUpperCase()] = {
+              price: p.currentPrice,
+              quantity: p.quantityNum,
+              currency: p.currency || 'USD'
+            };
+          }
+        });
+      }
+
+      var sorted = transactions.slice().sort(function(a, b) {
+        return new Date(a.dateRaw || a.date) - new Date(b.dateRaw || b.date);
+      });
+
+      var monthlyPortfolio = {};
+      var lastDateKey = historicalDates[historicalDates.length - 1];
+
+      historicalDates.forEach(function(dateKey) {
+        // Calcular efectivo por bróker hasta este mes
+        var cashByBroker = {};
+        var runningPositions = {};
+        
+        // Primera pasada: calcular efectivo acumulado por bróker
+        sorted.forEach(function(tx) {
+          var txDate = new Date(tx.dateRaw || tx.date);
+          var txYear = txDate.getFullYear();
+          var txMonth = txDate.getMonth() + 1;
+          var txKey = txYear + '-' + String(txMonth).padStart(2, '0');
+          
+          if (txKey > dateKey) return;
+
+          var broker = (tx.platform || "Sin Plataforma").toUpperCase();
+          var action = tx.action || '';
+          var amount = Math.abs(tx.displayTotal || tx.totalUSD || tx.total || 0);
+          var ticker = (tx.ticker || "").toUpperCase();
+          var quantity = parseFloat(tx.quantity) || 0;
+
+          if (!cashByBroker[broker]) cashByBroker[broker] = 0;
+
+          if (action === 'Cash Deposit' || action === 'Transfer Deposit') {
+            cashByBroker[broker] += amount;
+          } else if (action === 'Cash Withdrawal') {
+            cashByBroker[broker] -= amount;
+          } else if (action === 'Dividend' || action === 'Crypto Interest') {
+            // Dividendos en efectivo aumentan el cash
+            cashByBroker[broker] += amount;
+          } else if (action === 'Buy') {
+            cashByBroker[broker] -= amount;
+            // Trackear posición
+            if (!runningPositions[ticker]) runningPositions[ticker] = {};
+            if (!runningPositions[ticker][broker]) {
+              runningPositions[ticker][broker] = { quantity: 0, invested: 0 };
+            }
+            runningPositions[ticker][broker].quantity += quantity;
+            runningPositions[ticker][broker].invested += amount;
+          } else if (action === 'Sell') {
+            cashByBroker[broker] += amount;
+            // Reducir posición
+            if (runningPositions[ticker] && runningPositions[ticker][broker]) {
+              var pos = runningPositions[ticker][broker];
+              var costBasisSold = pos.quantity > 0 ? (pos.invested / pos.quantity) * quantity : 0;
+              pos.quantity -= quantity;
+              pos.invested -= costBasisSold;
+              if (pos.quantity <= 0) {
+                delete runningPositions[ticker][broker];
+                if (Object.keys(runningPositions[ticker]).length === 0) {
+                  delete runningPositions[ticker];
+                }
+              }
+            }
+          } else if (action === 'DRIP') {
+            // DRIP: no afecta el cash (dividendo reinvertido)
+            if (!runningPositions[ticker]) runningPositions[ticker] = {};
+            if (!runningPositions[ticker][broker]) {
+              runningPositions[ticker][broker] = { quantity: 0, invested: 0 };
+            }
+            runningPositions[ticker][broker].quantity += quantity;
+            // El invested del DRIP es 0 porque no salió cash
+          }
+        });
+
+        // Calcular valor de mercado
+        var marketValue = 0;
+        var currentInvested = 0;
+        
+        for (var ticker in runningPositions) {
+          for (var broker in runningPositions[ticker]) {
+            var pos = runningPositions[ticker][broker];
+            if (pos.quantity > 0) {
+              currentInvested += pos.invested;
+              
+              var price = null;
+              
+              // PRIORIDAD 1: Si es el mes más reciente, usar precio actual de Portfolio
+              if (dateKey === lastDateKey && currentPricesFromPortfolio[ticker]) {
+                price = currentPricesFromPortfolio[ticker].price;
+              }
+              
+              // PRIORIDAD 2: Precio histórico de FECHAS
+              if (price === null && historicalPrices[ticker] && historicalPrices[ticker][broker] && historicalPrices[ticker][broker][dateKey]) {
+                price = historicalPrices[ticker][broker][dateKey];
+              }
+              
+              // PRIORIDAD 3: Último precio histórico conocido anterior
+              if (price === null) {
+                var tickerPrices = historicalPrices[ticker];
+                if (tickerPrices && tickerPrices[broker]) {
+                  var brokerPrices = tickerPrices[broker];
+                  var availableDates = Object.keys(brokerPrices).sort();
+                  for (var i = availableDates.length - 1; i >= 0; i--) {
+                    if (availableDates[i] <= dateKey) {
+                      price = brokerPrices[availableDates[i]];
+                      break;
+                    }
+                  }
+                }
+              }
+
+              // PRIORIDAD 4: Costo promedio como fallback
+              if (price === null) {
+                price = pos.invested / pos.quantity;
+              }
+
+              if (price !== null) {
+                marketValue += pos.quantity * price;
+              }
+            }
+          }
+        }
+
+        // Efectivo total = suma de efectivo por bróker
+        var cash = 0;
+        for (var broker in cashByBroker) {
+          cash += cashByBroker[broker];
+        }
+
+        monthlyPortfolio[dateKey] = {
+          date: dateKey,
+          marketValue: marketValue,
+          cash: cash,
+          total: marketValue + cash,
+          invested: currentInvested
+        };
+      });
+
+      historyData = historicalDates.map(function(dateKey) {
+        return monthlyPortfolio[dateKey] || { date: dateKey, marketValue: 0, cash: 0, total: 0, invested: 0 };
+      }).filter(function(d) { return d.total !== 0 || d.invested !== 0; });
+    }    
+    function setHistoryRange(range) {
+      historyRange = range;
+      
+      ['1M','3M','6M','1Y','ALL'].forEach(function(r) {
+        var btn = document.getElementById('range-' + r);
+        if (btn) {
+          if (r === range) {
+            btn.classList.add('active');
+            btn.classList.remove('text-slate-400');
+          } else {
+            btn.classList.remove('active');
+            btn.classList.add('text-slate-400');
+          }
+        }
+      });
+
+      renderHistoryChart();
+
+      
+    }
+
+    function renderHistoryChart() {
+      var ctx = document.getElementById('portfolioHistoryChart');
+      if (!ctx) return;
+
+      var filteredData = filterHistoryByRange(historyData, historyRange);
+      
+      if (filteredData.length === 0) {
+        if (charts.history) charts.history.destroy();
+        return;
+      }
+
+      var labels = filteredData.map(function(d) {
+        var parts = d.date.split('-');
+        var monthNames = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+        return monthNames[parseInt(parts[1]) - 1] + " '" + parts[0].slice(2);
+      });
+      
+      var totalValues = filteredData.map(function(d) { return d.total; });
+      var marketValues = filteredData.map(function(d) { return d.marketValue; });
+      var cashValues = filteredData.map(function(d) { return d.cash; });
+      var investedValues = filteredData.map(function(d) { return d.invested; });
+
+      // Calcular métricas
+      var maxVal = Math.max.apply(null, totalValues);
+      var minVal = Math.min.apply(null, totalValues);
+      var firstVal = totalValues[0] || 0;
+      var lastVal = totalValues[totalValues.length - 1] || 0;
+      var growth = firstVal > 0 ? ((lastVal - firstVal) / firstVal) * 100 : 0;
+
+      document.getElementById('historyMax').textContent = formatCurrency(maxVal);
+      document.getElementById('historyMin').textContent = formatCurrency(minVal);
+      document.getElementById('historyGrowth').textContent = (growth >= 0 ? '+' : '') + growth.toFixed(2) + '%';
+      document.getElementById('historyGrowth').className = 'text-sm font-bold ' + (growth >= 0 ? 'text-emerald-400' : 'text-rose-400');
+
+      if (charts.history) charts.history.destroy();
+
+      charts.history = new Chart(ctx.getContext('2d'), {
+        type: 'line',
+        data: {
+          labels: labels,
+          datasets: [
+            {
+              label: 'Patrimonio Total',
+              data: totalValues,
+              borderColor: '#3b82f6',
+              backgroundColor: 'rgba(59, 130, 246, 0.08)',
+              borderWidth: 2.5,
+              tension: 0.3,
+              fill: true,
+              pointRadius: 3,
+              pointHoverRadius: 6,
+              pointBackgroundColor: '#3b82f6',
+              pointBorderColor: '#0f172a',
+              pointBorderWidth: 2,
+              order: 1
+            },
+            {
+              label: 'Valor de Mercado',
+              data: marketValues,
+              borderColor: '#10b981',
+              backgroundColor: 'transparent',
+              borderWidth: 2,
+              borderDash: [5, 5],
+              tension: 0.3,
+              fill: false,
+              pointRadius: 0,
+              pointHoverRadius: 4,
+              order: 2
+            },
+            {
+              label: 'Capital Invertido',
+              data: investedValues,
+              borderColor: '#f59e0b',
+              backgroundColor: 'transparent',
+              borderWidth: 1.5,
+              tension: 0.3,
+              fill: false,
+              pointRadius: 0,
+              pointHoverRadius: 4,
+              order: 3
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          interaction: {
+            mode: 'index',
+            intersect: false
+          },
+          plugins: {
+            legend: {
+              position: 'top',
+              align: 'end',
+              labels: {
+                color: '#94a3b8',
+                usePointStyle: true,
+                pointStyle: 'circle',
+                font: { size: 11 },
+                padding: 16,
+                boxWidth: 8
+              }
+            },
+            tooltip: {
+              backgroundColor: 'rgba(15, 23, 42, 0.95)',
+              titleColor: '#f8fafc',
+              bodyColor: '#cbd5e1',
+              borderColor: '#334155',
+              borderWidth: 1,
+              padding: 12,
+              cornerRadius: 8,
+              callbacks: {
+                label: function(context) {
+                  return context.dataset.label + ': ' + formatCurrency(context.parsed.y);
+                }
+              }
+            }
+          },
+          scales: {
+            x: {
+              grid: {
+                color: 'rgba(51, 65, 85, 0.15)',
+                drawBorder: false
+              },
+              ticks: {
+                color: '#64748b',
+                font: { size: 10 },
+                maxRotation: 45,
+                minRotation: 45
+              }
+            },
+            y: {
+              grid: {
+                color: 'rgba(51, 65, 85, 0.15)',
+                drawBorder: false
+              },
+              ticks: {
+                color: '#64748b',
+                font: { size: 10 },
+                callback: function(value) {
+                  if (Math.abs(value) >= 1000000) return '$' + (value / 1000000).toFixed(1) + 'M';
+                  if (Math.abs(value) >= 1000) return '$' + (value / 1000).toFixed(1) + 'k';
+                  return '$' + value.toFixed(0);
+                }
+              }
+            }
+          }
+        }
+      });
+    }
+
+    function filterHistoryByRange(data, range) {
+      if (range === 'ALL' || data.length === 0) return data;
+      
+      var now = new Date();
+      var cutoff = new Date();
+      
+      switch(range) {
+        case '1M': cutoff.setMonth(now.getMonth() - 1); break;
+        case '3M': cutoff.setMonth(now.getMonth() - 3); break;
+        case '6M': cutoff.setMonth(now.getMonth() - 6); break;
+        case '1Y': cutoff.setFullYear(now.getFullYear() - 1); break;
+        default: return data;
+      }
+
+      var cutoffStr = cutoff.getFullYear() + '-' + String(cutoff.getMonth() + 1).padStart(2, '0');
+
+      var filtered = data.filter(function(d) {
+        return d.date >= cutoffStr;
+      });
+
+      if (filtered.length < 2) {
+        return data.slice(-3);
+      }
+
+      return filtered;
+    }
+
+    setHistoryRange('ALL');
 
     loadData();
   </script>
