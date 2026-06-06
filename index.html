@@ -799,17 +799,27 @@
 
     async function loadData() {
       showLoading();
+      console.log("loadData called, currentCurrency=" + currentCurrency + ", currentRate=" + currentRate);
 
       try {
         var url = API_URL + "?action=dashboard&currency=" + currentCurrency;
         if (currentCurrency !== "USD" && currentRate) {
           url += "&rate=" + currentRate;
+          console.log("Adding rate to URL: " + currentRate);
+        } else {
+          console.log("NOT adding rate. currentCurrency=" + currentCurrency + ", currentRate=" + currentRate);
         }
 
         const data = await fetchWithJSONP(url);
 
         if (data.error) throw new Error(data.error);
-        if (data.meta && data.meta.exchangeRate) currentRate = data.meta.exchangeRate;
+        console.log("API response meta:", data.meta);
+        if (data.meta && data.meta.exchangeRate) {
+        currentRate = data.meta.exchangeRate;
+        console.log("Saved currentRate:", currentRate);
+}
+
+
 
         allTransactions = data.allTransactions || [];
         txPage = 0;
@@ -916,7 +926,7 @@
 
     function renderPortfolioSummary(summary, metrics) {
       var marketValue = summary.totalCurrentValue || 0;
-      var totalCash = metrics ? (metrics.totalPortfolioValue || 0) : 0; 
+      var totalCash = metrics ? (metrics.totalCash || 0) : 0; 
       var totalBalance = marketValue + totalCash;
 
       document.getElementById('pfTotalBalance').textContent = formatCurrency(totalBalance);
@@ -955,11 +965,17 @@
         var best = summary.topGainers[0];
         document.getElementById('pfBestPosition').textContent = best.ticker;
         document.getElementById('pfBestROI').textContent = '+' + (best.unrealizedROI * 100 || 0).toFixed(2) + '%';
+      } else {
+        document.getElementById('pfBestPosition').textContent = '-';
+        document.getElementById('pfBestROI').textContent = '0%';
       }
       if (summary.topLosers && summary.topLosers.length > 0) {
         var worst = summary.topLosers[0];
         document.getElementById('pfWorstPosition').textContent = worst.ticker;
         document.getElementById('pfWorstROI').textContent = (worst.unrealizedROI * 100 || 0).toFixed(2) + '%';
+      } else {
+        document.getElementById('pfWorstPosition').textContent = '-';
+        document.getElementById('pfWorstROI').textContent = '0%';
       }
     }
 
@@ -995,7 +1011,6 @@
         }).join('');
       } else { losersEl.innerHTML = '<p class="text-slate-600 text-xs italic">N/A</p>'; }
     }
-
     function renderLargestPositions(summary) {
       var el = document.getElementById('largestPositionsList');
       var data = summary.largestPositions;
@@ -1335,7 +1350,7 @@ function renderPortfolioCharts(summary) {
       renderPortfolioTable(portfolioData);
     }
 
-    async function renderBrokersSummary(platforms) {
+    function renderBrokersSummary(platforms) {
       var section = document.getElementById('brokersSummarySection');
       var grid = document.getElementById('brokersSummaryGrid');
 
@@ -1363,11 +1378,14 @@ function renderPortfolioCharts(summary) {
         var dayChangePct = p.dayChangePct || 0;
         var unrealizedROI = p.unrealizedROI || 0;
         var realizedROI = p.realizedROI || 0;
+        var cash = p.cash || 0;
+        var totalValue = p.totalValue || (p.marketValue + cash) || 0;
 
         var unrealizedClass = unrealizedPL >= 0 ? 'text-emerald-400' : 'text-rose-400';
         var realizedClass = realizedPL >= 0 ? 'text-emerald-400' : 'text-rose-400';
         var dayClass = dayChange >= 0 ? 'text-emerald-400' : 'text-rose-400';
         var daySign = dayChange >= 0 ? '+' : '';
+        var cashClass = cash >= 0 ? 'text-slate-300' : 'text-rose-400';
 
         return '<div class="broker-summary-card">' +
           '<div class="broker-header">' +
@@ -1376,6 +1394,10 @@ function renderPortfolioCharts(summary) {
             '</div>' +
             '<span class="broker-name">' + (p.platform || 'Sin nombre') + '</span>' +
           '</div>' +
+          '<div class="text-center mb-3">' +
+            '<p class="text-[10px] text-slate-500 uppercase font-bold tracking-wider mb-1">Valor Total</p>' +
+            '<p class="text-xl sm:text-2xl font-extrabold text-white tracking-tight">' + formatCurrency(totalValue) + '</p>' +
+          '</div>' +
           '<div class="broker-grid">' +
             '<div class="broker-stat">' +
               '<div class="broker-stat-label">Cost Basis</div>' +
@@ -1383,11 +1405,11 @@ function renderPortfolioCharts(summary) {
             '</div>' +
             '<div class="broker-stat">' +
               '<div class="broker-stat-label">Market Value</div>' +
-              '<div class="broker-stat-value text-white">' + formatCurrency(p.marketValue || p.totalInvested || 0) + '</div>' +
+              '<div class="broker-stat-value text-white">' + formatCurrency(p.marketValue || 0) + '</div>' +
             '</div>' +
             '<div class="broker-stat">' +
-              '<div class="broker-stat-label">Símbolos</div>' +
-              '<div class="broker-stat-value text-slate-300">' + (p.symbols || 0) + '</div>' +
+              '<div class="broker-stat-label">Cash</div>' +
+              '<div class="broker-stat-value ' + cashClass + '">' + formatCurrency(cash) + '</div>' +
             '</div>' +
           '</div>' +
           '<div class="broker-divider"></div>' +
@@ -1408,11 +1430,15 @@ function renderPortfolioCharts(summary) {
               '<div class="broker-stat-sub ' + realizedClass + '">' + (realizedROI >= 0 ? '+' : '') + realizedROI.toFixed(2) + '%</div>' +
             '</div>' +
           '</div>' +
+          '<div class="mt-2 text-center">' +
+            '<span class="text-[10px] text-slate-500 font-medium">' + (p.symbols || 0) + ' símbolos</span>' +
+          '</div>' +
         '</div>';
       }).join('');
     }
+    
 
-async function loadPlatforms() {
+    async function loadPlatforms() {
       try {
         var url = API_URL + "?action=platforms&currency=" + currentCurrency;
         if (currentCurrency !== "USD" && currentRate) url += "&rate=" + currentRate;
@@ -1596,12 +1622,19 @@ async function loadPlatforms() {
 
     function formatCurrency(value) {
       if (value === undefined || value === null || isNaN(value)) {
-        return currentCurrency === 'DOP' ? 'RD$0.00' : '$0.00';
+        return currentCurrency === 'DOP' ? 'DOP$0.00' : '$0.00';
       }
-      return new Intl.NumberFormat('en-US', { 
-        style: 'currency', 
-        currency: currentCurrency === 'DOP' ? 'DOP' : 'USD',
-        minimumFractionDigits: 2 
+      
+      if (currentCurrency === 'DOP') {
+        return 'DOP$' + new Intl.NumberFormat('en-US', { 
+          minimumFractionDigits: 2,
+          maximumFractionDigits: 2
+        }).format(value);
+      }
+      
+      return '$' + new Intl.NumberFormat('en-US', { 
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2
       }).format(value);
     }
 
