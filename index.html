@@ -238,6 +238,29 @@
       height: 6px;
       overflow: hidden;
     }
+
+    /* Favicon icons */
+    .asset-icon {
+      width: 20px;
+      height: 20px;
+      border-radius: 4px;
+      object-fit: contain;
+      flex-shrink: 0;
+    }
+    .asset-icon-sm {
+      width: 16px;
+      height: 16px;
+      border-radius: 3px;
+      object-fit: contain;
+      flex-shrink: 0;
+    }
+    .asset-icon-lg {
+      width: 24px;
+      height: 24px;
+      border-radius: 6px;
+      object-fit: contain;
+      flex-shrink: 0;
+    }
     .progress-bar-fill {
       height: 100%;
       border-radius: 999px;
@@ -328,8 +351,60 @@
         grid-template-columns: repeat(2, 1fr);
       }
     }
+    /* ===== BUFFETT PORTFOLIO LEGEND ===== */
+    .buffett-legend-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 12px;
+      background: rgba(30, 41, 59, 0.5);
+      border: 1px solid rgba(51, 65, 85, 0.4);
+      border-radius: 12px;
+      transition: all 0.2s ease;
+    }
+    .buffett-legend-item:hover {
+      background: rgba(51, 65, 85, 0.5);
+      transform: translateY(-1px);
+      border-color: rgba(71, 85, 105, 0.6);
+    }
+
+    .buffett-legend-info {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .buffett-ticker {
+      font-weight: 700;
+      font-size: 13px;
+      color: #f8fafc;
+      letter-spacing: -0.01em;
+    }
+
+    .buffett-percent {
+      font-weight: 800;
+      font-size: 14px;
+      color: #fbbf24;
+    }
+
+    .buffett-value {
+      font-size: 11px;
+      color: #64748b;
+      font-family: 'Inter', sans-serif;
+    }
+
+    /* Slice hover effect */
+    #buffettPortfolioChart {
+      cursor: pointer;
+    }
+    /* Tamaño extra para la leyenda Buffett */
+    .buffett-legend-item .asset-icon-lg {
+      width: 28px;
+      height: 28px;
+      border-radius: 8px;
+    }
 
   </style>
+<base target="_blank">
 <base target="_blank">
 <base target="_blank">
 </head>
@@ -362,7 +437,7 @@
             <span class="block text-[10px] text-slate-500 uppercase tracking-wider">Última actualización</span>
             <span id="lastUpdate" class="text-xs text-slate-300 font-medium">Actualizando...</span>
           </div>
-          <button onclick="loadData()" class="w-9 h-9 touch-btn bg-slate-800 hover:bg-slate-700 border border-slate-600 rounded-lg text-slate-300 transition-colors">
+          <button onclick="loadData(true)" class="w-9 h-9 touch-btn bg-slate-800 hover:bg-slate-700 border border-slate-600 rounded-lg text-slate-300 transition-colors">
             <i class="fas fa-sync-alt text-sm"></i>
           </button>
         </div>
@@ -482,6 +557,29 @@
         </div>
       </div>
 
+      <!-- ===== PORTFOLIO VISUAL (Estilo Buffett) ===== -->
+      <div class="glass-card rounded-2xl p-4 sm:p-6 mb-6">
+        <div class="flex items-center justify-between mb-4">
+          <h3 class="text-xs sm:text-sm font-semibold text-slate-200 uppercase tracking-wider flex items-center gap-2">
+            <i class="fas fa-chart-pie text-brand-400"></i> Distribución Visual del Portafolio
+          </h3>
+        </div>
+        
+        <div class="relative flex items-center justify-center" style="min-height: 380px; max-height: 500px;">
+          <canvas id="buffettPortfolioChart"></canvas>
+          
+          <!-- Centro del donut -->
+          <div class="absolute inset-0 flex items-center justify-center pointer-events-none">
+            <div class="w-20 h-20 sm:w-28 sm:h-28 rounded-full overflow-hidden border-4 border-slate-800 shadow-2xl bg-slate-900 flex items-center justify-center">
+              <img src="https://ui-avatars.com/api/?name=A+E&background=3b82f6&color=fff&size=128" 
+                  alt="Profile" class="w-full h-full object-cover">
+            </div>
+          </div>
+        </div>
+        
+        <!-- Leyenda custom con asset-icon -->
+        <div id="buffettLegend" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 mt-6"></div>
+      </div>
             <!-- ===== RESUMEN POR BRÓKER ===== -->
       <div id="brokersSummarySection" class="hidden">
         <h3 class="text-xs sm:text-sm font-semibold text-slate-200 uppercase tracking-wider mb-4 flex items-center gap-2">
@@ -588,6 +686,9 @@
           <button onclick="switchTab('transactions')" id="tab-transactions" class="tab-btn px-4 sm:px-6 py-3 sm:py-4 text-[11px] sm:text-xs font-semibold text-slate-400 hover:text-slate-200 transition-all whitespace-nowrap tracking-wider uppercase touch-btn">
             Órdenes
           </button>
+          <button onclick="switchTab('performance')" id="tab-performance" class="tab-btn px-4 sm:px-6 py-3 sm:py-4 text-[11px] sm:text-xs font-semibold text-slate-400 hover:text-slate-200 transition-all whitespace-nowrap tracking-wider uppercase touch-btn">
+            Rendimiento
+          </button>
           <button onclick="switchTab('platforms')" id="tab-platforms" class="tab-btn px-4 sm:px-6 py-3 sm:py-4 text-[11px] sm:text-xs font-semibold text-slate-400 hover:text-slate-200 transition-all whitespace-nowrap tracking-wider uppercase touch-btn">
             Brókers
           </button>
@@ -638,6 +739,8 @@
                   <th class="py-3 px-3 sm:px-4 text-right sortable" onclick="sortPortfolio('currentValue')">Valor <span class="sort-icon">&#8645;</span></th>
                   <th class="py-3 px-3 sm:px-4 text-right sortable" onclick="sortPortfolio('unrealizedROI')">ROI <span class="sort-icon">&#8645;</span></th>
                   <th class="py-3 px-3 sm:px-4 text-right sortable" onclick="sortPortfolio('unrealizedPL')">P/L <span class="sort-icon">&#8645;</span></th>
+                  <th class="py-3 px-3 sm:px-4 text-right sortable" onclick="sortPortfolio('realizedPL')">Realizado <span class="sort-icon">&#8645;</span></th>
+                  <th class="py-3 px-3 sm:px-4 text-right sortable" onclick="sortPortfolio('totalPL')">Total P/L <span class="sort-icon">&#8645;</span></th>
                   <th class="py-3 px-3 sm:px-4 text-right sortable" onclick="sortPortfolio('dailyChange')">Día <span class="sort-icon">&#8645;</span></th>
                 </tr>
               </thead>
@@ -704,6 +807,115 @@
           <div id="transactionsMobileCards" class="mobile-card p-3 sm:p-4 space-y-3"></div>
         </div>
 
+
+        <!-- ===== PANEL RENDIMIENTO ===== -->
+        <div id="panel-performance" class="hidden p-0">
+
+          <!-- Resumen de Rendimiento Total -->
+          <div class="p-4 sm:p-6 border-b border-slate-700/50">
+            <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-6">
+              <div class="glass-card p-4 rounded-2xl">
+                <p class="text-[9px] sm:text-[10px] text-slate-500 uppercase font-bold tracking-wider mb-1">Retorno Total</p>
+                <p id="perfTotalReturn" class="mobile-stat-value text-white">$0.00</p>
+                <p id="perfTotalReturnPct" class="text-[10px] font-bold mt-1">0.00%</p>
+              </div>
+              <div class="glass-card p-4 rounded-2xl">
+                <p class="text-[9px] sm:text-[10px] text-slate-500 uppercase font-bold tracking-wider mb-1">Capital Invertido</p>
+                <p id="perfTotalInvested" class="mobile-stat-value text-slate-300">$0.00</p>
+                <p class="text-[10px] text-slate-500 mt-1">Base de costo</p>
+              </div>
+              <div class="glass-card p-4 rounded-2xl">
+                <p class="text-[9px] sm:text-[10px] text-slate-500 uppercase font-bold tracking-wider mb-1">Valor Actual</p>
+                <p id="perfTotalValue" class="mobile-stat-value text-white">$0.00</p>
+                <p class="text-[10px] text-slate-500 mt-1">Mercado + Cash</p>
+              </div>
+              <div class="glass-card p-4 rounded-2xl">
+                <p class="text-[9px] sm:text-[10px] text-slate-500 uppercase font-bold tracking-wider mb-1">Max Drawdown</p>
+                <p id="perfMaxDrawdown" class="mobile-stat-value text-rose-400">0.00%</p>
+                <p class="text-[10px] text-slate-500 mt-1">Desde el pico</p>
+              </div>
+            </div>
+
+            <!-- Tabla de Rendimiento por Período -->
+            <h3 class="text-xs sm:text-sm font-semibold text-slate-200 uppercase tracking-wider mb-4 flex items-center gap-2">
+              <i class="fas fa-calendar-alt text-brand-400"></i> Rendimiento por Período
+            </h3>
+            <div class="table-scroll-container">
+              <table class="w-full text-[11px] sm:text-xs text-left whitespace-nowrap">
+                <thead class="bg-slate-900/60 text-slate-400 uppercase tracking-wider font-semibold">
+                  <tr>
+                    <th class="py-3 px-3 sm:px-4">Mes</th>
+                    <th class="py-3 px-3 sm:px-4 text-right">Capital Inv.</th>
+                    <th class="py-3 px-3 sm:px-4 text-right">Patrimonio</th>
+                    <th class="py-3 px-3 sm:px-4 text-right">P/L No Realizado</th>
+                    <th class="py-3 px-3 sm:px-4 text-right">P/L Realizado</th>
+                    <th class="py-3 px-3 sm:px-4 text-right">P/L Total</th>
+                    <th class="py-3 px-3 sm:px-4 text-right hidden sm:table-cell">Mercado / Cash</th>
+                  </tr>
+                </thead>
+                <tbody id="performancePeriodsTable" class="divide-y divide-slate-800/50"></tbody>
+              </table>
+            </div>
+            <!-- Mobile cards for periods -->
+            <div id="performancePeriodsMobile" class="mobile-card mt-4 space-y-3"></div>
+          </div>
+
+          <!-- Gráfico de Rendimiento por Período -->
+          <div class="p-4 sm:p-6 border-b border-slate-700/50">
+            <h3 class="text-xs sm:text-sm font-semibold text-slate-200 uppercase tracking-wider mb-4 flex items-center gap-2">
+              <i class="fas fa-chart-bar text-emerald-400"></i> Retorno por Período
+            </h3>
+            <div class="relative h-[250px] sm:h-[300px]">
+              <canvas id="performancePeriodChart"></canvas>
+            </div>
+          </div>
+
+          <!-- Distribución de Rendimiento -->
+          <div class="p-4 sm:p-6 border-b border-slate-700/50">
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
+              <div>
+                <h3 class="text-xs sm:text-sm font-semibold text-slate-200 uppercase tracking-wider mb-4 flex items-center gap-2">
+                  <i class="fas fa-pie-chart text-purple-400"></i> Distribución de Posiciones
+                </h3>
+                <div class="relative h-[220px] sm:h-[260px]">
+                  <canvas id="performanceDistributionChart"></canvas>
+                </div>
+              </div>
+              <div>
+                <h3 class="text-xs sm:text-sm font-semibold text-slate-200 uppercase tracking-wider mb-4 flex items-center gap-2">
+                  <i class="fas fa-trophy text-yellow-400"></i> Top Performers
+                </h3>
+                <div id="topPerformersList" class="space-y-2 max-h-[260px] overflow-y-auto pr-2"></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Rendimiento por Plataforma -->
+          <div class="p-4 sm:p-6">
+            <h3 class="text-xs sm:text-sm font-semibold text-slate-200 uppercase tracking-wider mb-4 flex items-center gap-2">
+              <i class="fas fa-building-columns text-brand-400"></i> Rendimiento por Plataforma
+            </h3>
+            <div class="table-scroll-container">
+              <table class="w-full text-[11px] sm:text-xs text-left whitespace-nowrap">
+                <thead class="bg-slate-900/60 text-slate-400 uppercase tracking-wider font-semibold">
+                  <tr>
+                    <th class="py-3 px-3 sm:px-4">Plataforma</th>
+                    <th class="py-3 px-3 sm:px-4 text-right">Invertido</th>
+                    <th class="py-3 px-3 sm:px-4 text-right">Valor Actual</th>
+                    <th class="py-3 px-3 sm:px-4 text-right">P/L No Realizado</th>
+                    <th class="py-3 px-3 sm:px-4 text-right">ROI %</th>
+                    <th class="py-3 px-3 sm:px-4 text-right">P/L Realizado</th>
+                    <th class="py-3 px-3 sm:px-4 text-right">P/L Total</th>
+                    <th class="py-3 px-3 sm:px-4 text-right">Total ROI</th>
+                  </tr>
+                </thead>
+                <tbody id="performancePlatformsTable" class="divide-y divide-slate-800/50"></tbody>
+              </table>
+            </div>
+            <div id="performancePlatformsMobile" class="mobile-card mt-4 space-y-3"></div>
+          </div>
+        </div>
+
         <!-- ===== PANEL PLATAFORMAS ===== -->
         <div id="panel-platforms" class="hidden p-0">
           <!-- Desktop Table -->
@@ -733,6 +945,100 @@
   <script>
 
     const API_URL = "https://script.google.com/macros/s/AKfycbzljOCK6u9cCGViOPrAXdLxmznXTAHR8YTBFZ5TQNPnuwij5b6mHKsczAvQdz2_YFaj/exec";
+
+    // Añade al inicio de tu <script>
+    let cache = {
+      USD: null,
+      DOP: null
+    };
+    let perfCache = {
+      USD: null,
+      DOP: null
+    };
+    let lastFetchTime = 0;
+    const CACHE_TTL = 5 * 60 * 1000; // 5 minutos
+
+    async function loadData(forceRefresh = false) {
+      showLoading();
+      console.log("loadData called, currentCurrency=" + currentCurrency + ", forceRefresh=" + forceRefresh);
+
+      // Usar caché si existe y no ha expirado
+      const now = Date.now();
+      if (!forceRefresh && cache[currentCurrency] && (now - lastFetchTime) < CACHE_TTL) {
+        console.log("Usando caché para " + currentCurrency);
+        var cachedData = cache[currentCurrency];
+        
+        allTransactions = cachedData.allTransactions || [];
+        txPage = 0;
+        
+        if (cachedData.portfolio) {
+          portfolioData = cachedData.portfolio.portfolio || [];
+          portfolioSummary = cachedData.portfolio.summary || {};
+        }
+        
+        renderDashboard(cachedData);
+        document.getElementById('lastUpdate').textContent = new Date(cachedData.meta?.timestamp || Date.now()).toLocaleTimeString('es-DO', { hour: '2-digit', minute: '2-digit' }) + ' (caché)';
+        showContent();
+        return;
+      }
+
+      try {
+        var url = API_URL + "?action=dashboard&currency=" + currentCurrency;
+        // Cargar datos de rendimiento en paralelo
+        var perfUrl = API_URL + "?action=performance&currency=" + currentCurrency;
+        if (currentCurrency !== "USD" && currentRate) {
+          perfUrl += "&rate=" + currentRate;
+        }
+        if (currentCurrency !== "USD" && currentRate) {
+          url += "&rate=" + currentRate;
+          console.log("Adding rate to URL: " + currentRate);
+        } else {
+          console.log("NOT adding rate. currentCurrency=" + currentCurrency + ", currentRate=" + currentRate);
+        }
+
+        const data = await fetchWithJSONP(url);
+        if (data.error) throw new Error(data.error);
+        
+        // Cargar performance
+        try {
+          var perfData = await fetchWithJSONP(perfUrl);
+          if (!perfData.error) {
+            data.performance = perfData;
+          }
+        } catch (e) {
+          console.log('Performance data not available');
+        }
+        
+        console.log("API response meta:", data.meta);
+        if (data.meta && data.meta.exchangeRate) {
+          currentRate = data.meta.exchangeRate;
+          console.log("Saved currentRate:", currentRate);
+        }
+
+        // Guardar en caché
+        cache[currentCurrency] = data;
+        if (data.performance) {
+          perfCache[currentCurrency] = data.performance;
+        }
+        lastFetchTime = now;
+
+        allTransactions = data.allTransactions || [];
+        txPage = 0;
+
+        if (data.portfolio) {
+          portfolioData = data.portfolio.portfolio || [];
+          portfolioSummary = data.portfolio.summary || {};
+        }
+
+        renderDashboard(data);
+        document.getElementById('lastUpdate').textContent = new Date().toLocaleTimeString('es-DO', { hour: '2-digit', minute: '2-digit' });
+        showContent();
+      } catch (error) {
+        console.error("Error:", error);
+        showError(error.message);
+      }
+    }
+    
 
     let charts = {};
     let allTransactions = [];
@@ -768,16 +1074,16 @@
     function setCurrency(currency) {
       if (currency === currentCurrency) return;
       currentCurrency = currency;
-
+      
+      // Actualizar botones UI
       document.getElementById('btn-usd').className = currency === 'USD' 
         ? "px-2.5 sm:px-3 py-1.5 rounded-md text-[11px] sm:text-xs font-semibold transition-all bg-brand-500 text-white shadow-sm touch-btn" 
         : "px-2.5 sm:px-3 py-1.5 rounded-md text-[11px] sm:text-xs font-semibold transition-all text-slate-400 hover:text-slate-200 touch-btn";
-
       document.getElementById('btn-dop').className = currency === 'DOP' 
         ? "px-2.5 sm:px-3 py-1.5 rounded-md text-[11px] sm:text-xs font-semibold transition-all bg-brand-500 text-white shadow-sm touch-btn" 
         : "px-2.5 sm:px-3 py-1.5 rounded-md text-[11px] sm:text-xs font-semibold transition-all text-slate-400 hover:text-slate-200 touch-btn";
 
-      loadData();
+      loadData(); // Usará caché automáticamente si existe
     }
 
     function setMobileView(mode) {
@@ -796,48 +1102,6 @@
         cardsEl.style.display = 'none';
       }
     }
-
-    async function loadData() {
-      showLoading();
-      console.log("loadData called, currentCurrency=" + currentCurrency + ", currentRate=" + currentRate);
-
-      try {
-        var url = API_URL + "?action=dashboard&currency=" + currentCurrency;
-        if (currentCurrency !== "USD" && currentRate) {
-          url += "&rate=" + currentRate;
-          console.log("Adding rate to URL: " + currentRate);
-        } else {
-          console.log("NOT adding rate. currentCurrency=" + currentCurrency + ", currentRate=" + currentRate);
-        }
-
-        const data = await fetchWithJSONP(url);
-
-        if (data.error) throw new Error(data.error);
-        console.log("API response meta:", data.meta);
-        if (data.meta && data.meta.exchangeRate) {
-        currentRate = data.meta.exchangeRate;
-        console.log("Saved currentRate:", currentRate);
-}
-
-
-
-        allTransactions = data.allTransactions || [];
-        txPage = 0;
-
-        if (data.portfolio) {
-          portfolioData = data.portfolio.portfolio || [];
-          portfolioSummary = data.portfolio.summary || {};
-        }
-
-        renderDashboard(data);
-        document.getElementById('lastUpdate').textContent = new Date().toLocaleTimeString('es-DO', { hour: '2-digit', minute: '2-digit' });
-        showContent();
-      } catch (error) {
-        console.error("Error:", error);
-        showError(error.message);
-      }
-    }
-
     function fetchWithJSONP(url) {
       return new Promise(function(resolve, reject) {
         var scriptId = 'jsonp_' + Date.now();
@@ -871,7 +1135,98 @@
       });
     }
 
+    function calculatePeriodsFromHistory(historyData, transactions, currentTotalValue, currentCash) {
+
+      if (!historyData || historyData.length === 0 || !window.monthlyPL) return [];
+      
+      var now = new Date();
+      var currentYear = now.getFullYear();
+      var currentMonth = now.getMonth() + 1;
+      var currentKey = currentYear + '-' + String(currentMonth).padStart(2, '0');
+      
+      var allMonths = Object.keys(window.monthlyPL).sort();
+      var last12Months = [];
+      
+      var currentIdx = -1;
+      for (var i = allMonths.length - 1; i >= 0; i--) {
+        if (allMonths[i] <= currentKey) {
+          currentIdx = i;
+          break;
+        }
+      }
+      
+      if (currentIdx < 0) currentIdx = allMonths.length - 1;
+      
+      var startIdx = Math.max(0, currentIdx - 11);
+      for (var i = startIdx; i <= currentIdx; i++) {
+        last12Months.push(allMonths[i]);
+      }
+      
+      var monthNames = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+      
+      var result = last12Months.map(function(dateKey, idx) {
+        var plData = window.monthlyPL[dateKey];
+        var portfolioData = null;
+        
+        for (var i = 0; i < historyData.length; i++) {
+          if (historyData[i].date === dateKey) {
+            portfolioData = historyData[i];
+            break;
+          }
+        }
+        
+        var parts = dateKey.split('-');
+        var year = parts[0];
+        var month = parseInt(parts[1]);
+        var label = monthNames[month - 1] + " '" + year.slice(2);
+        
+        // Usar P/L ya calculado en buildRealHistoryFromPrices (exacto, por activo y FIFO)
+        var realizedPL = plData ? (plData.realizedPL || 0) : 0;
+        var unrealizedPL = plData ? (plData.unrealizedPL || 0) : 0;
+        var totalPL = plData ? (plData.pl || 0) : 0;
+        
+        var startValue = portfolioData ? portfolioData.invested : 0;
+        var endValue = portfolioData ? portfolioData.total : 0;
+        var marketValue = portfolioData ? portfolioData.marketValue : 0;
+        var cash = portfolioData ? portfolioData.cash : 0;
+        
+        return {
+          key: dateKey,
+          label: label,
+          yearMonth: dateKey,
+          startValue: Math.round(startValue * 100) / 100,
+          endValue: Math.round(endValue * 100) / 100,
+          realizedPL: Math.round(realizedPL * 100) / 100,
+          unrealizedPL: Math.round(unrealizedPL * 100) / 100,
+          totalPL: Math.round(totalPL * 100) / 100,
+          marketValue: Math.round(marketValue * 100) / 100,
+          cash: Math.round(cash * 100) / 100
+        };
+      });
+      
+      // === AJUSTAR ÚLTIMO MES PARA COINCIDIR CON DASHBOARD ===
+            // === AJUSTAR ÚLTIMO MES PARA COINCIDIR CON DASHBOARD ===
+      if (result.length > 0 && currentTotalValue > 0) {
+        var last = result[result.length - 1];
+        var prevTotal = result.length > 1 ? result[result.length - 2].endValue : last.startValue;
+        
+        // Forzar patrimonio y cash al valor real del dashboard
+        last.endValue = Math.round(currentTotalValue * 100) / 100;
+        last.cash = Math.round((currentCash || 0) * 100) / 100;
+        last.marketValue = Math.round((last.endValue - last.cash) * 100) / 100;
+        
+        // Recalcular P/L para que cuadre con el patrimonio real
+        var adjustedTotalPL = last.endValue - prevTotal;
+        last.totalPL = Math.round(adjustedTotalPL * 100) / 100;
+        last.unrealizedPL = Math.round((adjustedTotalPL - last.realizedPL) * 100) / 100;
+      }
+      // === FIN AJUSTE ===
+      
+      return result;
+    }
+    
     function renderDashboard(data) {
+      window.dashboardData = data;
       var rateInfo = document.getElementById('rateInfo');
       var rateText = document.getElementById('rateText');
 
@@ -889,6 +1244,11 @@
         renderLargestPositions(data.portfolio.summary);
       }
 
+        // ⭐ NUEVO: Chart estilo Buffett con tus asset-icon
+      if (data.portfolio.portfolio) {
+        renderBuffettPortfolio(data.portfolio.portfolio);
+      }
+
             // Guardar datos históricos y calcular evolución
       console.log("=== renderDashboard: bloque historial ===");
       console.log("data.history existe?", !!data.history);
@@ -902,6 +1262,23 @@
         historicalDates = data.history.dates;
         historicalPrices = data.history.prices;
         buildRealHistoryFromPrices(data.allTransactions || []);
+        
+        // === NUEVO: Calcular rendimiento por períodos con precios reales de FECHAS ===
+        var currentTotalValue = data.metrics && data.metrics.totalPortfolioValue ? 
+          data.metrics.totalPortfolioValue : 
+          (historyData.length > 0 ? historyData[historyData.length - 1].total : 0);
+        
+        if (!data.performance) data.performance = {};
+          var currentCash = data.metrics && data.metrics.totalCash ? data.metrics.totalCash : 0;
+        
+          data.performance.periods = calculatePeriodsFromHistory(
+            historyData, 
+            data.allTransactions || [], 
+            currentTotalValue,
+            currentCash
+        );
+        // === FIN NUEVO ===
+        
         renderHistoryChart();
       } else {
         console.log("ENTRANDO a buildHistoryFromTransactions (fallback)");
@@ -916,11 +1293,16 @@
         portfolioData = data.portfolio.portfolio; // también en variable global si existe
       }
 
-      if (data.portfolio && data.portfolio.portfolio) renderPortfolioTable(data.portfolio.portfolio);
+      if (data.portfolio && data.portfolio.portfolio) 
+      renderPortfolioTable(data.portfolio.portfolio);
       renderAssetsTable(data.currentAssets || []);
       renderTransactionsTable();
-      loadPlatforms();
-            renderBrokersSummary(data.platforms || []);
+      renderBrokersSummary(data.platforms || []);
+      
+      // Renderizar panel de rendimiento
+      if (data.performance) {
+        renderPerformance(data.performance);
+      }
 
     }
 
@@ -1024,17 +1406,20 @@
         totalValue = data.reduce(function(s, item) { return s + (item.value || 0); }, 0);
       }
       
-      if (data && data.length > 0) {
+            if (data && data.length > 0) {
         el.innerHTML = data.map(function(p, idx) {
           var displayName = p.ticker || p.name || 'Sin nombre';
           var value = p.currentValue !== undefined ? p.currentValue : p.value;
           var weight = totalValue > 0 ? ((value || 0) / totalValue * 100).toFixed(1) : 0;
           var palette = ['#3b82f6', '#8b5cf6', '#10b981', '#f59e0b', '#f43f5e', '#0ea5e9', '#6366f1'];
           var color = p.ticker ? '#3b82f6' : (palette[idx % palette.length]);
+          var lpIcon = p.iconUrl ? 
+            '<img src="' + p.iconUrl + '" alt="" class="asset-icon-sm mr-1.5" loading="lazy" onerror="this.style.display=\'none\'">' : 
+            '';
           
           return '<div class="bg-slate-800/40 rounded-xl p-3 border border-slate-700/50 hover:bg-slate-800/60 transition-colors">' +
             '<div class="flex items-center justify-between mb-1.5">' +
-              '<span class="font-bold text-sm text-slate-200">' + displayName + '</span>' +
+              '<div class="flex items-center">' + lpIcon + '<span class="font-bold text-sm text-slate-200">' + displayName + '</span></div>' +
               '<span class="text-[10px] font-medium text-slate-400 bg-slate-900 px-1.5 py-0.5 rounded">' + weight + '%</span>' +
             '</div>' +
             '<p class="text-sm font-semibold text-slate-300 mb-2">' + formatCurrency(value) + '</p>' +
@@ -1233,7 +1618,7 @@ function renderPortfolioCharts(summary) {
       var countSpan = document.getElementById('pfCount');
 
       if (!portfolio || portfolio.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="12" class="py-12 text-center text-slate-500 text-sm">No hay activos registrados en el portafolio.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="14" class="py-12 text-center text-slate-500 text-sm">No hay activos registrados en el portafolio.</td></tr>';
         mobileContainer.innerHTML = '<p class="text-slate-500 text-sm text-center py-8">No hay activos registrados.</p>';
         countSpan.textContent = '0';
         return;
@@ -1265,11 +1650,17 @@ function renderPortfolioCharts(summary) {
       tbody.innerHTML = filtered.map(function(p) {
         var roiClass = p.unrealizedROI > 0 ? 'text-emerald-400' : p.unrealizedROI < 0 ? 'text-rose-400' : 'text-slate-400';
         var plClass = p.unrealizedPL > 0 ? 'text-emerald-400' : p.unrealizedPL < 0 ? 'text-rose-400' : 'text-slate-400';
+        var realizedClass = p.realizedPL > 0 ? 'text-emerald-400' : p.realizedPL < 0 ? 'text-rose-400' : 'text-slate-400';
+        var totalPLClass = p.totalPL > 0 ? 'text-emerald-400' : p.totalPL < 0 ? 'text-rose-400' : 'text-slate-400';
         var dailyClass = p.dailyChange > 0 ? 'text-emerald-400' : p.dailyChange < 0 ? 'text-rose-400' : 'text-slate-400';
         var soldBadge = p.isSold ? '<span class="ml-2 px-1.5 py-0.5 bg-slate-800 text-slate-500 rounded text-[9px] font-bold tracking-wider">CERRADA</span>' : '';
 
+        var iconHtml = p.iconUrl ? 
+          '<img src="' + p.iconUrl + '" alt="" class="asset-icon mr-2" loading="lazy" onerror="this.style.display=\'none\'">' : 
+          '<div class="w-5 h-5 mr-2 rounded bg-slate-700/50 flex items-center justify-center text-[9px] text-slate-500 font-bold">' + (p.ticker ? p.ticker.charAt(0) : '?') + '</div>';
+
         return '<tr class="hover:bg-slate-800/40 transition-colors group">' +
-          '<td class="py-3 px-3 sm:px-4 font-bold text-brand-400">' + (p.ticker || '-') + soldBadge + '</td>' +
+          '<td class="py-3 px-3 sm:px-4 font-bold text-brand-400 flex items-center">' + iconHtml + (p.ticker || '-') + soldBadge + '</td>' +
           '<td class="py-3 px-3 sm:px-4 text-slate-300 truncate max-w-[120px] sm:max-w-[150px]">' + (p.assetName || '-') + '</td>' +
           '<td class="py-3 px-3 sm:px-4"><span class="badge bg-slate-800 border-slate-700/50 text-slate-400">' + (p.assetClass || '-') + '</span></td>' +
           '<td class="py-3 px-3 sm:px-4 text-slate-500 hidden lg:table-cell text-[11px]">' + (p.sector || '-') + '</td>' +
@@ -1280,6 +1671,8 @@ function renderPortfolioCharts(summary) {
           '<td class="py-3 px-3 sm:px-4 text-right font-mono font-bold text-white">' + formatCurrency(p.currentValue) + '</td>' +
           '<td class="py-3 px-3 sm:px-4 text-right font-mono font-medium ' + roiClass + '">' + (p.unrealizedROI !== null ? (p.unrealizedROI > 0 ? '+' : '') + p.unrealizedROI.toFixed(2) + '%' : '-') + '</td>' +
           '<td class="py-3 px-3 sm:px-4 text-right font-mono font-medium ' + plClass + '">' + (p.unrealizedPL !== null ? (p.unrealizedPL > 0 ? '+' : '') + formatCurrency(p.unrealizedPL) : '-') + '</td>' +
+          '<td class="py-3 px-3 sm:px-4 text-right font-mono font-medium ' + realizedClass + '">' + (p.realizedPL !== null ? (p.realizedPL > 0 ? '+' : '') + formatCurrency(p.realizedPL) : '-') + '</td>' +
+          '<td class="py-3 px-3 sm:px-4 text-right font-mono font-bold ' + totalPLClass + '">' + (p.totalPL !== null ? (p.totalPL > 0 ? '+' : '') + formatCurrency(p.totalPL) : '-') + '</td>' +
           '<td class="py-3 px-3 sm:px-4 text-right font-mono font-medium ' + dailyClass + '">' + (p.dailyChange !== null ? (p.dailyChange > 0 ? '+' : '') + formatCurrency(p.dailyChange) : '-') + '</td>' +
         '</tr>';
       }).join('');
@@ -1288,12 +1681,18 @@ function renderPortfolioCharts(summary) {
       mobileContainer.innerHTML = filtered.map(function(p, idx) {
         var roiClass = p.unrealizedROI > 0 ? 'text-emerald-400' : p.unrealizedROI < 0 ? 'text-rose-400' : 'text-slate-400';
         var plClass = p.unrealizedPL > 0 ? 'text-emerald-400' : p.unrealizedPL < 0 ? 'text-rose-400' : 'text-slate-400';
+        var realizedClass = p.realizedPL > 0 ? 'text-emerald-400' : p.realizedPL < 0 ? 'text-rose-400' : 'text-slate-400';
+        var totalPLClass = p.totalPL > 0 ? 'text-emerald-400' : p.totalPL < 0 ? 'text-rose-400' : 'text-slate-400';
         var dailyClass = p.dailyChange > 0 ? 'text-emerald-400' : p.dailyChange < 0 ? 'text-rose-400' : 'text-slate-400';
         var soldBadge = p.isSold ? '<span class="ml-2 px-1.5 py-0.5 bg-slate-800 text-slate-500 rounded text-[9px] font-bold tracking-wider">CERRADA</span>' : '';
 
+        var mobileIconHtml = p.iconUrl ? 
+          '<img src="' + p.iconUrl + '" alt="" class="asset-icon-lg mr-2" loading="lazy" onerror="this.style.display=\'none\'">' : 
+          '<div class="w-6 h-6 mr-2 rounded bg-slate-700/50 flex items-center justify-center text-[10px] text-slate-500 font-bold">' + (p.ticker ? p.ticker.charAt(0) : '?') + '</div>';
+
         return '<div class="position-mobile-card" onclick="toggleCardDetails(this)">' +
           '<div class="flex items-center justify-between">' +
-            '<div class="flex items-center gap-2">' +
+            '<div class="flex items-center gap-2 flex items-center">' + mobileIconHtml +
               '<span class="font-bold text-sm text-brand-400">' + (p.ticker || '-') + '</span>' + soldBadge +
               '<span class="badge bg-slate-800 border-slate-700/50 text-slate-400">' + (p.assetClass || '-') + '</span>' +
             '</div>' +
@@ -1311,6 +1710,8 @@ function renderPortfolioCharts(summary) {
               '<div><p class="text-[10px] text-slate-500 uppercase">Precio Mercado</p><p class="text-slate-300 font-mono">' + formatCurrency(p.currentPrice) + '</p></div>' +
               '<div><p class="text-[10px] text-slate-500 uppercase">Costo</p><p class="text-slate-300 font-mono">' + formatCurrency(p.cost) + '</p></div>' +
               '<div><p class="text-[10px] text-slate-500 uppercase">P/L</p><p class="font-mono font-medium ' + plClass + '">' + (p.unrealizedPL !== null ? (p.unrealizedPL > 0 ? '+' : '') + formatCurrency(p.unrealizedPL) : '-') + '</p></div>' +
+              '<div><p class="text-[10px] text-slate-500 uppercase">P/L Realizado</p><p class="font-mono font-medium ' + realizedClass + '">' + (p.realizedPL !== null ? (p.realizedPL > 0 ? '+' : '') + formatCurrency(p.realizedPL) : '-') + '</p></div>' +
+              '<div><p class="text-[10px] text-slate-500 uppercase">P/L Total</p><p class="font-mono font-bold ' + totalPLClass + '">' + (p.totalPL !== null ? (p.totalPL > 0 ? '+' : '') + formatCurrency(p.totalPL) : '-') + '</p></div>' +
               '<div><p class="text-[10px] text-slate-500 uppercase">Día</p><p class="font-mono font-medium ' + dailyClass + '">' + (p.dailyChange !== null ? (p.dailyChange > 0 ? '+' : '') + formatCurrency(p.dailyChange) : '-') + '</p></div>' +
             '</div>' +
           '</div>' +
@@ -1436,16 +1837,6 @@ function renderPortfolioCharts(summary) {
         '</div>';
       }).join('');
     }
-    
-
-    async function loadPlatforms() {
-      try {
-        var url = API_URL + "?action=platforms&currency=" + currentCurrency;
-        if (currentCurrency !== "USD" && currentRate) url += "&rate=" + currentRate;
-        const data = await fetchWithJSONP(url);
-        renderPlatformsTable(data.platforms || []);
-      } catch (e) { console.error(e); }
-    }
 
     function changeTxPage(delta) {
       var maxPage = Math.ceil(allTransactions.length / TX_PER_PAGE) - 1;
@@ -1526,8 +1917,12 @@ function renderPortfolioCharts(summary) {
 
       // Desktop table
       tbody.innerHTML = assets.map(function(a) {
+        var assetIcon = a.iconUrl ? 
+          '<img src="' + a.iconUrl + '" alt="" class="asset-icon mr-2" loading="lazy" onerror="this.style.display=\'none\'">' : 
+          '<div class="w-5 h-5 mr-2 rounded bg-slate-700/50 flex items-center justify-center text-[9px] text-slate-500 font-bold">' + (a.ticker ? a.ticker.charAt(0) : '?') + '</div>';
+
         return '<tr class="hover:bg-slate-800/40 transition-colors">' +
-          '<td class="py-3 px-3 sm:px-4 font-bold text-brand-400">' + (a.ticker || '-') + '</td>' +
+          '<td class="py-3 px-3 sm:px-4 font-bold text-brand-400 flex items-center">' + assetIcon + (a.ticker || '-') + '</td>' +
           '<td class="py-3 px-3 sm:px-4 text-slate-300">' + (a.name || '-') + '</td>' +
           '<td class="py-3 px-3 sm:px-4"><span class="badge bg-slate-800 border-slate-700/50 text-slate-400">' + (a.class || '-') + '</span></td>' +
           '<td class="py-3 px-3 sm:px-4 text-slate-500 text-[11px]">' + (a.sector || '-') + '</td>' +
@@ -1540,9 +1935,13 @@ function renderPortfolioCharts(summary) {
 
       // Mobile cards
       mobileContainer.innerHTML = assets.map(function(a) {
+        var assetMobileIcon = a.iconUrl ? 
+          '<img src="' + a.iconUrl + '" alt="" class="asset-icon-lg mr-2" loading="lazy" onerror="this.style.display=\'none\'">' : 
+          '<div class="w-6 h-6 mr-2 rounded bg-slate-700/50 flex items-center justify-center text-[10px] text-slate-500 font-bold">' + (a.ticker ? a.ticker.charAt(0) : '?') + '</div>';
+
         return '<div class="position-mobile-card">' +
           '<div class="flex items-center justify-between mb-2">' +
-            '<div class="flex items-center gap-2">' +
+            '<div class="flex items-center gap-2 flex items-center">' + assetMobileIcon +
               '<span class="font-bold text-sm text-brand-400">' + (a.ticker || '-') + '</span>' +
               '<span class="badge bg-slate-800 border-slate-700/50 text-slate-400">' + (a.class || '-') + '</span>' +
             '</div>' +
@@ -1554,6 +1953,344 @@ function renderPortfolioCharts(summary) {
             '<div><p class="text-[10px] text-slate-500 uppercase">Costo Base</p><p class="text-slate-300 font-mono">' + formatCurrency(a.costBasis) + '</p></div>' +
             '<div><p class="text-[10px] text-slate-500 uppercase">Sector</p><p class="text-slate-300">' + (a.sector || '-') + '</p></div>' +
             '<div><p class="text-[10px] text-slate-500 uppercase">Plataforma</p><p class="text-slate-300">' + (a.platform || '-') + '</p></div>' +
+          '</div>' +
+        '</div>';
+      }).join('');
+    }
+
+
+    function renderPerformance(data) {
+      if (!data) return;
+
+      var summary = data.summary || {};
+      var periods = data.periods || [];
+      var assetPerformance = data.assetPerformance || [];
+      var platformPerformance = data.platformPerformance || [];
+      var distribution = data.distribution || {};
+      var riskMetrics = data.riskMetrics || {};
+
+      // Renderizar resumen
+      var totalReturn = summary.totalReturn || 0;
+      var totalReturnPct = summary.totalReturnPct || 0;
+
+      document.getElementById('perfTotalReturn').textContent = (totalReturn >= 0 ? '+' : '') + formatCurrency(totalReturn);
+      document.getElementById('perfTotalReturn').className = 'mobile-stat-value ' + (totalReturn >= 0 ? 'text-emerald-400' : 'text-rose-400');
+      document.getElementById('perfTotalReturnPct').textContent = (totalReturnPct >= 0 ? '+' : '') + totalReturnPct.toFixed(2) + '%';
+      document.getElementById('perfTotalReturnPct').className = 'text-[10px] font-bold mt-1 ' + (totalReturnPct >= 0 ? 'text-emerald-400' : 'text-rose-400');
+
+      document.getElementById('perfTotalInvested').textContent = formatCurrency(summary.totalInvested || 0);
+      document.getElementById('perfTotalValue').textContent = formatCurrency(summary.totalPortfolioValue || 0);
+
+      var maxDrawdown = riskMetrics.maxDrawdown;
+      document.getElementById('perfMaxDrawdown').textContent = maxDrawdown !== null ? maxDrawdown.toFixed(2) + '%' : 'N/A';
+
+      // Renderizar tabla de períodos
+      renderPerformancePeriods(periods);
+
+      // Renderizar gráfico de períodos
+      renderPerformancePeriodChart(periods);
+
+      // Renderizar distribución
+      renderPerformanceDistribution(distribution);
+
+      // Renderizar top performers
+      renderTopPerformers(assetPerformance);
+
+      // Renderizar plataformas
+      renderPerformancePlatforms(platformPerformance);
+    }
+
+    function renderPerformancePeriodChart(periods) {
+  var ctx = document.getElementById('performancePeriodChart');
+  if (!ctx) return;
+
+  if (charts.performancePeriod) charts.performancePeriod.destroy();
+
+  var labels = periods.map(function(p) { return p.label; });
+  var unrealized = periods.map(function(p) { return p.unrealizedPL; });
+  var realized = periods.map(function(p) { return p.realizedPL; });
+
+  charts.performancePeriod = new Chart(ctx.getContext('2d'), {
+    type: 'bar',
+    data: {
+      labels: labels,
+      datasets: [
+        {
+          label: 'No Realizado',
+          data: unrealized,
+          backgroundColor: unrealized.map(function(v) { return v >= 0 ? 'rgba(59, 130, 246, 0.7)' : 'rgba(244, 63, 94, 0.7)'; }),
+          borderColor: unrealized.map(function(v) { return v >= 0 ? '#3b82f6' : '#f43f5e'; }),
+          borderWidth: 1,
+          borderRadius: 4,
+          stack: 'stack1'
+        },
+        {
+          label: 'Realizado',
+          data: realized,
+          backgroundColor: realized.map(function(v) { return v >= 0 ? 'rgba(16, 185, 129, 0.7)' : 'rgba(245, 158, 11, 0.7)'; }),
+          borderColor: realized.map(function(v) { return v >= 0 ? '#10b981' : '#f59e0b'; }),
+          borderWidth: 1,
+          borderRadius: 4,
+          stack: 'stack1'
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: {
+          position: 'top',
+          labels: { color: '#94a3b8', usePointStyle: true, font: { size: 11 } }
+        },
+        tooltip: {
+          backgroundColor: 'rgba(15, 23, 42, 0.95)',
+          titleColor: '#f8fafc',
+          bodyColor: '#cbd5e1',
+          borderColor: '#334155',
+          borderWidth: 1,
+          padding: 12,
+          cornerRadius: 8,
+          callbacks: {
+            label: function(context) {
+              var val = context.parsed.y;
+              return context.dataset.label + ': ' + (val >= 0 ? '+' : '') + formatCurrency(val);
+            }
+          }
+        }
+      },
+      scales: {
+        x: {
+          stacked: true,
+          grid: { color: 'rgba(51, 65, 85, 0.15)', drawBorder: false },
+          ticks: { color: '#64748b', font: { size: 10 } }
+        },
+        y: {
+          stacked: true,
+          grid: { color: 'rgba(51, 65, 85, 0.15)', drawBorder: false },
+          ticks: { 
+            color: '#64748b', 
+            font: { size: 10 },
+            callback: function(value) { return formatCurrency(value); }
+          }
+        }
+      }
+    }
+  });
+}
+
+    function renderPerformancePeriods(periods) {
+      var tbody = document.getElementById('performancePeriodsTable');
+      var mobileContainer = document.getElementById('performancePeriodsMobile');
+
+      if (!periods || periods.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="7" class="py-12 text-center text-slate-500 text-sm">No hay datos de rendimiento</td></tr>';
+        mobileContainer.innerHTML = '<p class="text-slate-500 text-sm text-center py-8">No hay datos de rendimiento.</p>';
+        return;
+      }
+
+      // Desktop table
+      tbody.innerHTML = periods.map(function(p) {
+        var realizedClass = p.realizedPL >= 0 ? 'text-emerald-400' : 'text-rose-400';
+        var realizedSign = p.realizedPL >= 0 ? '+' : '';
+        var unrealizedClass = p.unrealizedPL >= 0 ? 'text-emerald-400' : 'text-rose-400';
+        var unrealizedSign = p.unrealizedPL >= 0 ? '+' : '';
+        var totalClass = p.totalPL >= 0 ? 'text-emerald-400' : 'text-rose-400';
+        var totalSign = p.totalPL >= 0 ? '+' : '';
+
+        return '<tr class="hover:bg-slate-800/40 transition-colors">' +
+          '<td class="py-3 px-3 sm:px-4 font-bold text-slate-200">' + p.label + '</td>' +
+          '<td class="py-3 px-3 sm:px-4 text-right font-mono text-slate-400">' + formatCurrency(p.startValue) + '</td>' +
+          '<td class="py-3 px-3 sm:px-4 text-right font-mono text-white">' + formatCurrency(p.endValue) + '</td>' +
+          '<td class="py-3 px-3 sm:px-4 text-right font-mono font-bold ' + unrealizedClass + '">' + unrealizedSign + formatCurrency(p.unrealizedPL) + '</td>' +
+          '<td class="py-3 px-3 sm:px-4 text-right font-mono font-bold ' + realizedClass + '">' + realizedSign + formatCurrency(p.realizedPL) + '</td>' +
+          '<td class="py-3 px-3 sm:px-4 text-right font-mono font-bold ' + totalClass + '">' + totalSign + formatCurrency(p.totalPL) + '</td>' +
+          '<td class="py-3 px-3 sm:px-4 text-right font-mono text-slate-500 text-[10px]">' + formatCurrency(p.marketValue) + ' / ' + formatCurrency(p.cash) + '</td>' +
+        '</tr>';
+      }).join('');
+
+      // Mobile cards
+      mobileContainer.innerHTML = periods.map(function(p) {
+        var totalClass = p.totalPL >= 0 ? 'text-emerald-400' : 'text-rose-400';
+        var totalSign = p.totalPL >= 0 ? '+' : '';
+        var unrealizedClass = p.unrealizedPL >= 0 ? 'text-emerald-400' : 'text-rose-400';
+        var realizedClass = p.realizedPL >= 0 ? 'text-emerald-400' : 'text-rose-400';
+
+        return '<div class="tx-mobile-card">' +
+          '<div class="flex items-center justify-between mb-2">' +
+            '<span class="font-bold text-sm text-slate-200">' + p.label + '</span>' +
+            '<span class="font-mono font-bold ' + totalClass + '">' + totalSign + formatCurrency(p.totalPL) + '</span>' +
+          '</div>' +
+          '<div class="grid grid-cols-2 gap-2 text-xs">' +
+            '<div><p class="text-[10px] text-slate-500 uppercase">No Realizado</p><p class="font-mono font-bold ' + unrealizedClass + '">' + (p.unrealizedPL >= 0 ? '+' : '') + formatCurrency(p.unrealizedPL) + '</p></div>' +
+            '<div><p class="text-[10px] text-slate-500 uppercase">Realizado</p><p class="font-mono font-bold ' + realizedClass + '">' + (p.realizedPL >= 0 ? '+' : '') + formatCurrency(p.realizedPL) + '</p></div>' +
+            '<div><p class="text-[10px] text-slate-500 uppercase">Mercado</p><p class="text-slate-300 font-mono">' + formatCurrency(p.marketValue) + '</p></div>' +
+            '<div><p class="text-[10px] text-slate-500 uppercase">Cash</p><p class="text-slate-300 font-mono">' + formatCurrency(p.cash) + '</p></div>' +
+          '</div>' +
+        '</div>';
+      }).join('');
+    }
+
+    function renderPerformanceDistribution(distribution) {
+      var ctx = document.getElementById('performanceDistributionChart');
+      if (!ctx) return;
+
+      if (charts.performanceDistribution) charts.performanceDistribution.destroy();
+
+      var data = [
+        distribution.excellentCount || 0,
+        distribution.goodCount || 0,
+        distribution.neutralCount || 0,
+        distribution.badCount || 0,
+        distribution.terribleCount || 0
+      ];
+
+      var total = data.reduce(function(a, b) { return a + b; }, 0);
+      if (total === 0) {
+        ctx.parentElement.innerHTML = '<div class="flex items-center justify-center h-full text-slate-500 text-sm">Sin datos de distribución</div>';
+        return;
+      }
+
+      charts.performanceDistribution = new Chart(ctx.getContext('2d'), {
+        type: 'doughnut',
+        data: {
+          labels: ['Excelente (+50%)', 'Bueno (+10%)', 'Neutral (±10%)', 'Malo (-10%)', 'Pésimo (-30%)'],
+          datasets: [{
+            data: data,
+            backgroundColor: ['#10b981', '#3b82f6', '#f59e0b', '#f43f5e', '#7c2d12'],
+            borderWidth: 0,
+            hoverOffset: 6
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          cutout: '65%',
+          plugins: {
+            legend: {
+              position: window.innerWidth < 640 ? 'bottom' : 'right',
+              labels: {
+                color: '#94a3b8',
+                usePointStyle: true,
+                pointStyle: 'circle',
+                font: { size: window.innerWidth < 640 ? 10 : 11 },
+                padding: window.innerWidth < 640 ? 10 : 16,
+                boxWidth: window.innerWidth < 640 ? 8 : 10
+              }
+            },
+            tooltip: {
+              backgroundColor: 'rgba(15, 23, 42, 0.95)',
+              titleColor: '#f8fafc',
+              bodyColor: '#cbd5e1',
+              borderColor: '#334155',
+              borderWidth: 1,
+              padding: 12,
+              cornerRadius: 8,
+              callbacks: {
+                label: function(context) {
+                  var value = context.parsed;
+                  var pct = total > 0 ? ((value / total) * 100).toFixed(1) : 0;
+                  return context.label + ': ' + value + ' posiciones (' + pct + '%)';
+                }
+              }
+            }
+          }
+        }
+      });
+    }
+
+    function renderTopPerformers(assets) {
+      var el = document.getElementById('topPerformersList');
+
+      if (!assets || assets.length === 0) {
+        el.innerHTML = '<p class="text-slate-500 text-sm text-center py-4">No hay datos de performers</p>';
+        return;
+      }
+
+      var top5 = assets.slice(0, 5);
+      var bottom5 = assets.slice(-5).reverse();
+
+      el.innerHTML = '<div class="mb-4"><p class="text-[10px] text-emerald-400 uppercase font-bold mb-2">Mejores</p>' +
+        top5.map(function(p) {
+          var roiClass = p.totalPL >= 0 ? 'text-emerald-400' : 'text-rose-400';
+          var sign = p.totalPL >= 0 ? '+' : '';
+          var perfIcon = p.iconUrl ? 
+            '<img src="' + p.iconUrl + '" alt="" class="asset-icon-sm mr-1.5" loading="lazy" onerror="this.style.display=\'none\'">' : 
+            '<div class="w-4 h-4 mr-1.5 rounded bg-slate-700/50 flex items-center justify-center text-[8px] text-slate-500 font-bold">' + (p.ticker ? p.ticker.charAt(0) : '?') + '</div>';
+          return '<div class="flex items-center justify-between py-1.5">' +
+            '<div class="flex items-center gap-2">' + perfIcon +
+              '<span class="font-bold text-xs text-slate-200">' + p.ticker + '</span>' +
+              '<span class="text-[10px] text-slate-500">' + (p.assetClass || '') + '</span>' +
+            '</div>' +
+            '<div class="text-right">' +
+              '<p class="font-bold text-xs ' + roiClass + '">' + sign + formatCurrency(p.totalPL) + '</p>' +
+              '<p class="text-[10px] text-slate-500">' + (p.weight || 0).toFixed(1) + '% del portafolio</p>' +
+            '</div>' +
+          '</div>';
+        }).join('') +
+      '</div>' +
+      '<div class="w-full h-px bg-slate-700/30 my-3"></div>' +
+      '<div><p class="text-[10px] text-rose-400 uppercase font-bold mb-2">Peores</p>' +
+        bottom5.map(function(p) {
+          var roiClass = p.totalPL >= 0 ? 'text-emerald-400' : 'text-rose-400';
+          var sign = p.totalPL >= 0 ? '+' : '';
+          var perfIcon2 = p.iconUrl ? 
+            '<img src="' + p.iconUrl + '" alt="" class="asset-icon-sm mr-1.5" loading="lazy" onerror="this.style.display=\'none\'">' : 
+            '<div class="w-4 h-4 mr-1.5 rounded bg-slate-700/50 flex items-center justify-center text-[8px] text-slate-500 font-bold">' + (p.ticker ? p.ticker.charAt(0) : '?') + '</div>';
+          return '<div class="flex items-center justify-between py-1.5">' +
+            '<div class="flex items-center gap-2">' + perfIcon2 +
+              '<span class="font-bold text-xs text-slate-200">' + p.ticker + '</span>' +
+              '<span class="text-[10px] text-slate-500">' + (p.assetClass || '') + '</span>' +
+            '</div>' +
+            '<div class="text-right">' +
+              '<p class="font-bold text-xs ' + roiClass + '">' + sign + formatCurrency(p.totalPL) + '</p>' +
+              '<p class="text-[10px] text-slate-500">' + (p.weight || 0).toFixed(1) + '% del portafolio</p>' +
+            '</div>' +
+          '</div>';
+        }).join('') +
+      '</div>';
+    }
+
+    function renderPerformancePlatforms(platforms) {
+      var tbody = document.getElementById('performancePlatformsTable');
+      var mobileContainer = document.getElementById('performancePlatformsMobile');
+
+      if (!platforms || platforms.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="8" class="py-12 text-center text-slate-500 text-sm">No hay datos por plataforma</td></tr>';
+        mobileContainer.innerHTML = '<p class="text-slate-500 text-sm text-center py-8">No hay datos por plataforma.</p>';
+        return;
+      }
+
+      tbody.innerHTML = platforms.map(function(p) {
+        var unrealizedClass = p.unrealizedPL >= 0 ? 'text-emerald-400' : 'text-rose-400';
+        var realizedClass = p.realizedPL >= 0 ? 'text-emerald-400' : 'text-rose-400';
+        var totalClass = p.totalPL >= 0 ? 'text-emerald-400' : 'text-rose-400';
+        var totalROIColor = p.totalROI >= 0 ? 'text-emerald-400' : 'text-rose-400';
+
+        return '<tr class="hover:bg-slate-800/40 transition-colors">' +
+          '<td class="py-3 px-3 sm:px-4 font-bold text-slate-200">' + (p.platform || '-') + '</td>' +
+          '<td class="py-3 px-3 sm:px-4 text-right font-mono text-slate-400">' + formatCurrency(p.totalInvested) + '</td>' +
+          '<td class="py-3 px-3 sm:px-4 text-right font-mono text-white">' + formatCurrency(p.totalValue) + '</td>' +
+          '<td class="py-3 px-3 sm:px-4 text-right font-mono font-medium ' + unrealizedClass + '">' + (p.unrealizedPL >= 0 ? '+' : '') + formatCurrency(p.unrealizedPL) + '</td>' +
+          '<td class="py-3 px-3 sm:px-4 text-right font-mono font-medium ' + (p.unrealizedROI >= 0 ? 'text-emerald-400' : 'text-rose-400') + '">' + (p.unrealizedROI >= 0 ? '+' : '') + p.unrealizedROI.toFixed(2) + '%</td>' +
+          '<td class="py-3 px-3 sm:px-4 text-right font-mono font-medium ' + realizedClass + '">' + (p.realizedPL >= 0 ? '+' : '') + formatCurrency(p.realizedPL) + '</td>' +
+          '<td class="py-3 px-3 sm:px-4 text-right font-mono font-bold ' + totalClass + '">' + (p.totalPL >= 0 ? '+' : '') + formatCurrency(p.totalPL) + '</td>' +
+          '<td class="py-3 px-3 sm:px-4 text-right font-mono font-bold ' + totalROIColor + '">' + (p.totalROI >= 0 ? '+' : '') + p.totalROI.toFixed(2) + '%</td>' +
+        '</tr>';
+      }).join('');
+
+      mobileContainer.innerHTML = platforms.map(function(p) {
+        var totalClass = p.totalPL >= 0 ? 'text-emerald-400' : 'text-rose-400';
+        return '<div class="platform-mobile-card">' +
+          '<div class="flex items-center justify-between mb-2">' +
+            '<span class="font-bold text-sm text-slate-200">' + (p.platform || '-') + '</span>' +
+            '<span class="font-mono font-bold ' + totalClass + '">' + (p.totalPL >= 0 ? '+' : '') + formatCurrency(p.totalPL) + '</span>' +
+          '</div>' +
+          '<div class="grid grid-cols-2 gap-2 text-xs">' +
+            '<div><p class="text-[10px] text-slate-500 uppercase">Invertido</p><p class="text-slate-300 font-mono">' + formatCurrency(p.totalInvested) + '</p></div>' +
+            '<div><p class="text-[10px] text-slate-500 uppercase">Valor Actual</p><p class="text-white font-mono">' + formatCurrency(p.totalValue) + '</p></div>' +
+            '<div><p class="text-[10px] text-slate-500 uppercase">ROI</p><p class="text-slate-300 font-mono">' + (p.totalROI >= 0 ? '+' : '') + p.totalROI.toFixed(2) + '%</p></div>' +
+            '<div><p class="text-[10px] text-slate-500 uppercase">Símbolos</p><p class="text-slate-300 font-mono">' + (p.symbols || 0) + '</p></div>' +
           '</div>' +
         '</div>';
       }).join('');
@@ -1604,6 +2341,203 @@ function renderPortfolioCharts(summary) {
       }).join('');
     }
 
+    // ===== RENDER BUFFETT-STYLE PORTFOLIO CHART =====
+    function renderBuffettPortfolio(portfolio) {
+      var ctx = document.getElementById('buffettPortfolioChart');
+      if (!ctx) return;
+
+      // Filtrar solo posiciones activas con valor, ordenadas por tamaño
+      var activePositions = (portfolio || []).filter(function(p) {
+        return !p.isSold && (p.currentValue || 0) > 0;
+      }).sort(function(a, b) {
+        return (b.currentValue || 0) - (a.currentValue || 0);
+      });
+
+      if (activePositions.length === 0) {
+        ctx.parentElement.innerHTML = '<div class="flex items-center justify-center h-[300px] text-slate-500 text-sm">Sin posiciones activas</div>';
+        return;
+      }
+
+      // Calcular total para porcentajes
+      var totalValue = activePositions.reduce(function(sum, p) {
+        return sum + (p.currentValue || 0);
+      }, 0);
+
+      // Colores corporativos por ticker (ajusta según tus empresas)
+      var brandColors = {
+        'AAPL': '#000000',
+        'MSFT': '#00a4ef',
+        'GOOGL': '#4285f4',
+        'GOOG': '#4285f4',
+        'AMZN': '#ff9900',
+        'TSLA': '#cc0000',
+        'META': '#0668e1',
+        'NVDA': '#76b900',
+        'JPM': '#0066b2',
+        'V': '#1a1f71',
+        'MA': '#eb001b',
+        'KO': '#f40009',
+        'AXP': '#006fcf',
+        'BAC': '#012169',
+        'CVX': '#0073cf',
+        'OXY': '#005596',
+        'MCO': '#003087',
+        'KHC': '#004990',
+        'BRK.B': '#002c5f',
+        'HPQ': '#0096d6',
+        'VZ': '#cd040b',
+        'DEO': '#000000',
+        'default': '#3b82f6'
+      };
+
+      // Preparar datos para Chart.js
+      var labels = [];
+      var data = [];
+      var colors = [];
+      var tickers = [];
+      var iconUrls = [];
+
+      activePositions.forEach(function(p) {
+        var ticker = (p.ticker || 'OTRO').toUpperCase();
+        labels.push(p.assetName || ticker);
+        data.push(p.currentValue || 0);
+        colors.push(brandColors[ticker] || brandColors['default']);
+        tickers.push(ticker);
+        iconUrls.push(p.iconUrl || '');
+      });
+
+      // Destruir chart anterior si existe
+      if (charts.buffettPortfolio) {
+        charts.buffettPortfolio.destroy();
+      }
+
+      // Crear el donut chart
+      charts.buffettPortfolio = new Chart(ctx.getContext('2d'), {
+        type: 'doughnut',
+        data: {
+          labels: labels,
+          datasets: [{
+            data: data,
+            backgroundColor: colors,
+            borderColor: '#0f172a',
+            borderWidth: 3,
+            hoverOffset: 12,
+            hoverBorderWidth: 0
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          cutout: '58%',
+          animation: {
+            animateRotate: true,
+            animateScale: true,
+            duration: 1200,
+            easing: 'easeOutQuart'
+          },
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              backgroundColor: 'rgba(15, 23, 42, 0.95)',
+              titleColor: '#f8fafc',
+              bodyColor: '#cbd5e1',
+              borderColor: '#334155',
+              borderWidth: 1,
+              padding: 12,
+              cornerRadius: 8,
+              callbacks: {
+                label: function(context) {
+                  var idx = context.dataIndex;
+                  var value = context.parsed;
+                  var pct = totalValue > 0 ? ((value / totalValue) * 100).toFixed(1) : 0;
+                  return tickers[idx] + ': ' + formatCurrency(value) + ' (' + pct + '%)';
+                }
+              }
+            }
+          },
+          onHover: function(event, elements) {
+            event.native.target.style.cursor = elements.length > 0 ? 'pointer' : 'default';
+          }
+        },
+        plugins: [{
+          // Plugin para dibujar iconos en el centro de cada slice grande
+          id: 'sliceIcons',
+          afterDraw: function(chart) {
+            var ctx = chart.ctx;
+            var meta = chart.getDatasetMeta(0);
+            
+            meta.data.forEach(function(arc, index) {
+              var center = arc.tooltipPosition();
+              var value = data[index];
+              var pct = totalValue > 0 ? ((value / totalValue) * 100) : 0;
+              
+              // Solo mostrar icono si el slice es > 4%
+              if (pct < 4) return;
+              
+              var size = Math.min(26, Math.max(18, pct * 0.6));
+              
+              // Círculo de fondo oscuro
+              ctx.save();
+              ctx.beginPath();
+              ctx.arc(center.x, center.y, size/2 + 2, 0, 2 * Math.PI);
+              ctx.fillStyle = '#0f172a';
+              ctx.fill();
+              ctx.strokeStyle = '#334155';
+              ctx.lineWidth = 1;
+              ctx.stroke();
+              ctx.restore();
+              
+              // Si hay iconUrl, intentar dibujarlo (simplificado - usa iniciales como fallback)
+              var ticker = tickers[index];
+              ctx.save();
+              ctx.fillStyle = '#f8fafc';
+              ctx.font = 'bold ' + (size * 0.35) + 'px Inter, sans-serif';
+              ctx.textAlign = 'center';
+              ctx.textBaseline = 'middle';
+              ctx.fillText(ticker.substring(0, 3), center.x, center.y);
+              ctx.restore();
+            });
+          }
+        }]
+      });
+
+      // Renderizar leyenda custom con asset-icon
+      renderBuffettLegend(activePositions, totalValue, colors, tickers, iconUrls);
+    }
+
+    function renderBuffettLegend(positions, totalValue, colors, tickers, iconUrls) {
+      var el = document.getElementById('buffettLegend');
+      if (!el) return;
+
+      el.innerHTML = positions.map(function(p, idx) {
+        var ticker = tickers[idx];
+        var weight = totalValue > 0 ? ((p.currentValue || 0) / totalValue * 100).toFixed(1) : 0;
+        var color = colors[idx];
+        var iconUrl = iconUrls[idx];
+        
+        // Usar tu asset-icon existente
+        var iconHtml = iconUrl ? 
+          '<img src="' + iconUrl + '" alt="" class="asset-icon-lg" loading="lazy" onerror="this.style.display=\'none\'; this.nextElementSibling.style.display=\'flex\'">' :
+          '';
+        
+        // Fallback con iniciales (hidden por defecto, se muestra si la imagen falla)
+        var fallbackHtml = '<div class="w-6 h-6 rounded-lg bg-slate-700/50 flex items-center justify-center text-[10px] text-slate-500 font-bold" style="display:' + (iconUrl ? 'none' : 'flex') + '">' + 
+          (ticker ? ticker.charAt(0) : '?') + '</div>';
+
+        return '<div class="buffett-legend-item">' +
+          '<div class="flex-shrink-0">' + iconHtml + fallbackHtml + '</div>' +
+          '<div class="buffett-legend-info">' +
+            '<div class="flex items-center justify-between gap-2">' +
+              '<span class="buffett-ticker truncate">' + ticker + '</span>' +
+              '<span class="buffett-percent flex-shrink-0">' + weight + '%</span>' +
+            '</div>' +
+            '<p class="buffett-value truncate">' + formatCurrency(p.currentValue || 0) + '</p>' +
+          '</div>' +
+          '<div class="w-1 h-8 rounded-full flex-shrink-0" style="background-color: ' + color + '"></div>' +
+        '</div>';
+      }).join('');
+    }
+
     function getActionBadge(action) {
       var b = 'px-2 py-0.5 rounded text-[10px] font-bold tracking-wider ';
       var badges = {
@@ -1639,7 +2573,7 @@ function renderPortfolioCharts(summary) {
     }
 
     function switchTab(tab) {
-      var tabs = ['portfolio', 'assets', 'transactions', 'platforms'];
+      var tabs = ['portfolio', 'assets', 'transactions', 'performance', 'platforms'];
       tabs.forEach(function(t) {
         document.getElementById('panel-' + t).classList.add('hidden');
         document.getElementById('tab-' + t).classList.remove('tab-active');
@@ -1648,6 +2582,17 @@ function renderPortfolioCharts(summary) {
       document.getElementById('panel-' + tab).classList.remove('hidden');
       document.getElementById('tab-' + tab).classList.add('tab-active');
       document.getElementById('tab-' + tab).classList.add('text-brand-400');
+
+      // Renderizar desde datos cacheados sin llamar API
+      if (window.dashboardData) {
+        if (tab === 'assets') {
+          renderAssetsTable(window.dashboardData.currentAssets || []);
+        } else if (tab === 'platforms') {
+          renderPlatformsTable(window.dashboardData.byPlatform || []);
+        } else if (tab === 'transactions') {
+          renderTransactionsTable();
+        }
+      }
 
       // Re-apply mobile view mode if on portfolio tab
       if (tab === 'portfolio' && window.innerWidth < 768) {
@@ -1732,9 +2677,10 @@ function renderPortfolioCharts(summary) {
       });
     }
 
-    function buildRealHistoryFromPrices(transactions) {
+        function buildRealHistoryFromPrices(transactions) {
       if (!transactions || transactions.length === 0 || historicalDates.length === 0) {
         historyData = [];
+        window.monthlyPL = {};
         return;
       }
 
@@ -1768,13 +2714,18 @@ function renderPortfolioCharts(summary) {
 
       var monthlyPortfolio = {};
       var lastDateKey = historicalDates[historicalDates.length - 1];
+      
+      // === NUEVO: Guardar detalle por ticker para P&L ===
+      var monthlyTickerDetail = {};
+      // === FIN NUEVO ===
 
       historicalDates.forEach(function(dateKey) {
-        // Calcular efectivo por bróker hasta este mes
         var cashByBroker = {};
         var runningPositions = {};
+        var monthlyDividends = 0;
+        var monthlyBuys = []; // { ticker, broker, quantity, price, total }
+        var monthlySells = []; // { ticker, broker, quantity, total, costBasis }
         
-        // Primera pasada: calcular efectivo acumulado por bróker
         sorted.forEach(function(tx) {
           var txDate = new Date(tx.dateRaw || tx.date);
           var txYear = txDate.getFullYear();
@@ -1791,28 +2742,39 @@ function renderPortfolioCharts(summary) {
 
           if (!cashByBroker[broker]) cashByBroker[broker] = 0;
 
-          if (action === 'Cash Deposit' || action === 'Transfer Deposit') {
+                    if (action === 'Cash Deposit') {
             cashByBroker[broker] += amount;
+          } else if (action === 'Transfer Deposit') {
+            // Solo suma al cash si es transferencia de EFECTIVO (sin ticker)
+            if (!ticker) cashByBroker[broker] += amount;
           } else if (action === 'Cash Withdrawal') {
             cashByBroker[broker] -= amount;
           } else if (action === 'Dividend' || action === 'Crypto Interest') {
-            // Dividendos en efectivo aumentan el cash
             cashByBroker[broker] += amount;
+            monthlyDividends += amount;
           } else if (action === 'Buy') {
             cashByBroker[broker] -= amount;
-            // Trackear posición
             if (!runningPositions[ticker]) runningPositions[ticker] = {};
             if (!runningPositions[ticker][broker]) {
-              runningPositions[ticker][broker] = { quantity: 0, invested: 0 };
+              runningPositions[ticker][broker] = { quantity: 0, invested: 0, avgCost: 0 };
             }
-            runningPositions[ticker][broker].quantity += quantity;
-            runningPositions[ticker][broker].invested += amount;
+            var pos = runningPositions[ticker][broker];
+            // Actualizar costo promedio
+            var newTotalCost = pos.invested + amount;
+            var newQty = pos.quantity + quantity;
+            pos.avgCost = newQty > 0 ? newTotalCost / newQty : 0;
+            pos.quantity = newQty;
+            pos.invested = newTotalCost;
+            
+            // Guardar compra del mes para P&L
+            if (txKey === dateKey) {
+              monthlyBuys.push({ ticker: ticker, broker: broker, quantity: quantity, price: amount/quantity, total: amount });
+            }
           } else if (action === 'Sell') {
             cashByBroker[broker] += amount;
-            // Reducir posición
             if (runningPositions[ticker] && runningPositions[ticker][broker]) {
               var pos = runningPositions[ticker][broker];
-              var costBasisSold = pos.quantity > 0 ? (pos.invested / pos.quantity) * quantity : 0;
+              var costBasisSold = pos.avgCost * quantity;
               pos.quantity -= quantity;
               pos.invested -= costBasisSold;
               if (pos.quantity <= 0) {
@@ -1821,21 +2783,30 @@ function renderPortfolioCharts(summary) {
                   delete runningPositions[ticker];
                 }
               }
+              
+              // Guardar venta del mes para P&L
+              if (txKey === dateKey) {
+                monthlySells.push({ ticker: ticker, broker: broker, quantity: quantity, total: amount, costBasis: costBasisSold });
+              }
             }
           } else if (action === 'DRIP') {
-            // DRIP: no afecta el cash (dividendo reinvertido)
             if (!runningPositions[ticker]) runningPositions[ticker] = {};
             if (!runningPositions[ticker][broker]) {
-              runningPositions[ticker][broker] = { quantity: 0, invested: 0 };
+              runningPositions[ticker][broker] = { quantity: 0, invested: 0, avgCost: 0 };
             }
             runningPositions[ticker][broker].quantity += quantity;
-            // El invested del DRIP es 0 porque no salió cash
-          }
+            // DRIP no aumenta invested (dividendo reinvertido)
+            
+            if (txKey === dateKey) {
+              monthlyBuys.push({ ticker: ticker, broker: broker, quantity: quantity, price: 0, total: 0, isDRIP: true });
+            }
+          } 
         });
 
-        // Calcular valor de mercado
+        // Calcular valor de mercado y guardar detalle por ticker
         var marketValue = 0;
         var currentInvested = 0;
+        var tickerValues = {};
         
         for (var ticker in runningPositions) {
           for (var broker in runningPositions[ticker]) {
@@ -1872,17 +2843,27 @@ function renderPortfolioCharts(summary) {
 
               // PRIORIDAD 4: Costo promedio como fallback
               if (price === null) {
-                price = pos.invested / pos.quantity;
+                price = pos.avgCost;
               }
 
               if (price !== null) {
-                marketValue += pos.quantity * price;
+                var val = pos.quantity * price;
+                marketValue += val;
+                
+                // Guardar detalle para P&L
+                if (!tickerValues[ticker]) tickerValues[ticker] = {};
+                tickerValues[ticker][broker] = {
+                  quantity: pos.quantity,
+                  price: price,
+                  invested: pos.invested,
+                  avgCost: pos.avgCost,
+                  value: val
+                };
               }
             }
           }
         }
 
-        // Efectivo total = suma de efectivo por bróker
         var cash = 0;
         for (var broker in cashByBroker) {
           cash += cashByBroker[broker];
@@ -1893,14 +2874,109 @@ function renderPortfolioCharts(summary) {
           marketValue: marketValue,
           cash: cash,
           total: marketValue + cash,
-          invested: currentInvested
+          invested: currentInvested,
+          dividends: monthlyDividends,
+          buys: monthlyBuys,
+          sells: monthlySells
         };
+        
+        // Guardar detalle por ticker
+        monthlyTickerDetail[dateKey] = tickerValues;
       });
+
+      // === CALCULAR P&L POR PERÍODO (como fórmula de Sheets) ===
+      window.monthlyPL = {};
+      var monthlyKeys = historicalDates.slice().sort();
+      
+      monthlyKeys.forEach(function(dateKey, idx) {
+        var current = monthlyPortfolio[dateKey];
+        var currentTickers = monthlyTickerDetail[dateKey];
+        if (!current) return;
+        
+        var pl = 0;
+        
+        if (idx === 0) {
+          // Primer mes: valor de mercado - capital invertido + dividendos
+          pl = current.marketValue - current.invested + current.dividends;
+        } else {
+          var prevKey = monthlyKeys[idx - 1];
+          var prev = monthlyPortfolio[prevKey];
+          var prevTickers = monthlyTickerDetail[prevKey];
+          
+          if (!prev || !prevTickers) {
+            pl = current.marketValue - current.invested + current.dividends;
+          } else {
+            // 1. Ganancia de posiciones que llevabas del mes anterior
+            for (var ticker in prevTickers) {
+              for (var broker in prevTickers[ticker]) {
+                var prevPos = prevTickers[ticker][broker];
+                var currentPos = currentTickers && currentTickers[ticker] && currentTickers[ticker][broker];
+                
+                if (currentPos) {
+                  // Sigo teniendo estas acciones: ganancia = (PrecioActual - PrecioAnterior) × CantidadAnterior
+                  // PERO limitado a la cantidad que sigue (si vendí algunas, el resto se calcula en ventas)
+                  var qtyCarried = Math.min(prevPos.quantity, currentPos.quantity);
+                  pl += (currentPos.price - prevPos.price) * qtyCarried;
+                }
+                // Si no está en current, se vendió todo (se calcula en sells)
+              }
+            }
+            
+            // 2. Ganancia de compras nuevas del mes
+            current.buys.forEach(function(buy) {
+              var currentPos = currentTickers && currentTickers[buy.ticker] && currentTickers[buy.ticker][buy.broker];
+              if (currentPos && !buy.isDRIP) {
+                // Ganancia = (PrecioActual - PrecioCompra) × CantidadComprada
+                pl += (currentPos.price - buy.price) * buy.quantity;
+              }
+              // DRIP: no hay ganancia adicional (ya está en la valorización)
+            });
+            
+            // 3. Ganancia/pérdida de ventas del mes
+            current.sells.forEach(function(sell) {
+              pl += sell.total - sell.costBasis;
+            });
+            
+            // 4. Dividendos del mes
+            pl += current.dividends;
+          }
+        }
+        // === CALCULAR P/L REALIZADO Y NO REALIZADO DEL MES ===
+        var monthlyRealizedPL = 0;
+        
+        // 1. P/L de ventas del mes (FIFO exacto)
+        current.sells.forEach(function(sell) {
+          monthlyRealizedPL += (sell.total - sell.costBasis);
+        });
+        
+        // 2. Dividendos y Crypto Interest (son P/L realizado)
+        monthlyRealizedPL += current.dividends;
+        
+        // 3. P/L No Realizado = Total del mes - Realizado
+        var monthlyUnrealizedPL = pl - monthlyRealizedPL;
+        
+        window.monthlyPL[dateKey] = {
+          date: dateKey,
+          pl: pl,
+          realizedPL: monthlyRealizedPL,
+          unrealizedPL: monthlyUnrealizedPL,
+          marketValue: current.marketValue,
+          invested: current.invested,
+          cash: current.cash,
+          total: current.total,
+          buys: current.buys.length,
+          sells: current.sells.length,
+          dividends: current.dividends
+        };
+        // === FIN ===
+      });
+      // === FIN CALCULAR P&L ===
 
       historyData = historicalDates.map(function(dateKey) {
         return monthlyPortfolio[dateKey] || { date: dateKey, marketValue: 0, cash: 0, total: 0, invested: 0 };
       }).filter(function(d) { return d.total !== 0 || d.invested !== 0; });
-    }    
+    }
+    
     function setHistoryRange(range) {
       historyRange = range;
       
