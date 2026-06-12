@@ -6,7 +6,9 @@
   <title>Portfolio Tracker Pro</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <!-- Google Fonts optimizado: solo 4 weights necesarios -->
+  <link rel="preload" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'">
+  <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"></noscript>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -25,10 +27,38 @@
   <style>
     body { font-family: 'Inter', sans-serif; -webkit-tap-highlight-color: transparent; }
 
-    /* Efectos Fintech / Glassmorphism */
-    .glass-header { background: rgba(15, 23, 42, 0.85); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); border-bottom: 1px solid rgba(51, 65, 85, 0.5); }
-    .glass-card { background: rgba(30, 41, 59, 0.4); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border: 1px solid rgba(51, 65, 85, 0.5); box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06); transition: transform 0.2s ease, box-shadow 0.2s ease; }
-    .glass-card:hover { transform: translateY(-2px); box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3), 0 8px 10px -6px rgba(0, 0, 0, 0.1); border-color: rgba(71, 85, 105, 0.6); }
+    /* Efectos Fintech / Glassmorphism OPTIMIZADO */
+    .glass-header { 
+      background: rgba(15, 23, 42, 0.92); 
+      border-bottom: 1px solid rgba(51, 65, 85, 0.4); 
+      /* Blur DESACTIVADO en base, activar en hover desktop solo */
+      will-change: auto;
+    }
+    @media (hover: hover) {
+      .glass-header:hover { 
+        backdrop-filter: blur(8px); 
+        -webkit-backdrop-filter: blur(8px); 
+      }
+    }
+    
+    .glass-card { 
+      background: rgba(30, 41, 59, 0.5); 
+      border: 1px solid rgba(51, 65, 85, 0.4); 
+      box-shadow: 0 2px 4px -1px rgba(0, 0, 0, 0.1);
+      /* Usar outline en lugar de box-shadow para mejor rendimiento */
+      outline: 2px solid transparent;
+      outline-offset: -1px;
+      transition: transform 0.2s ease, outline-color 0.2s ease;
+      will-change: transform;
+    }
+    @media (hover: hover) {
+      .glass-card:hover { 
+        transform: translateY(-2px); 
+        outline-color: rgba(71, 85, 105, 0.6);
+        background: rgba(30, 41, 59, 0.65);
+        /* SIN box-shadow costoso */
+      }
+    }
 
     .gradient-text { background: linear-gradient(135deg, #60a5fa, #c084fc); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
     .animate-fade-in { animation: fadeIn 0.5s ease-out; }
@@ -143,14 +173,13 @@
       margin-bottom: 10px;
     }
 
-    /* Sticky summary on mobile */
+    /* Sticky summary on mobile - SIN BLUR */
     @media (max-width: 1023px) {
       .sticky-mobile-summary {
         position: sticky;
         top: 60px;
         z-index: 40;
         background: rgba(15, 23, 42, 0.95);
-        backdrop-filter: blur(12px);
         margin: 0 -16px;
         padding: 12px 16px;
         border-bottom: 1px solid rgba(51, 65, 85, 0.3);
@@ -363,6 +392,7 @@
       border-radius: 12px;
       transition: all 0.2s ease;
     }
+    /* Buffett legend hover effect */
     .buffett-legend-item:hover {
       background: rgba(51, 65, 85, 0.5);
       transform: translateY(-1px);
@@ -402,6 +432,37 @@
       width: 28px;
       height: 28px;
       border-radius: 8px;
+    }
+
+    /* ===== OPTIMIZACIONES DE RENDIMIENTO ===== */
+
+    /* Desactivar blur durante scroll (mejor UX en móvil) */
+    body.is-scrolling .glass-header,
+    body.is-scrolling .glass-card:hover {
+      backdrop-filter: none !important;
+      -webkit-backdrop-filter: none !important;
+    }
+
+    /* En móvil: nunca usar blur */
+    @media (max-width: 1023px) {
+      .glass-header:hover,
+      .glass-card:hover {
+        backdrop-filter: none !important;
+        -webkit-backdrop-filter: none !important;
+      }
+    }
+
+    /* GPU acceleration para animaciones smooth */
+    .glass-card,
+    .spinner,
+    .position-mobile-card {
+      transform: translateZ(0);
+      -webkit-transform: translateZ(0);
+    }
+
+    /* Evitar reflows durante scroll */
+    body.is-scrolling {
+      will-change: scroll-position;
     }
 
   </style>
@@ -655,7 +716,7 @@
           </div>
         </div>
         <div class="relative h-[300px] sm:h-[380px]">
-          <canvas id="portfolioHistoryChart"></canvas>
+          <canvas id="portfolioHistoryChart" data-chart="history"></canvas>
         </div>
         <div class="grid grid-cols-3 gap-3 mt-4 pt-4 border-t border-slate-700/30">
           <div class="text-center">
@@ -3175,6 +3236,122 @@ function renderPortfolioCharts(summary) {
     setHistoryRange('ALL');
 
     loadData();
+
+    // ===== PERFORMANCE OPTIMIZATIONS =====
+    
+    // 1. Debounce helper para eventos frecuentes
+    function debounce(func, wait) {
+      let timeout;
+      return function executedFunction(...args) {
+        const later = () => {
+          clearTimeout(timeout);
+          func.apply(this, args);
+        };
+        clearTimeout(timeout);
+        timeout = setTimeout(later, wait);
+      };
+    }
+
+    // 2. Throttle helper para scroll
+    function throttle(func, limit) {
+      let inThrottle;
+      return function(...args) {
+        if (!inThrottle) {
+          func.apply(this, args);
+          inThrottle = true;
+          setTimeout(() => (inThrottle = false), limit);
+        }
+      };
+    }
+
+    // 3. Cache para charts con memoización
+    const chartCache = {
+      data: new Map(),
+      lastHash: new Map(),
+      
+      hash: function(data) {
+        return JSON.stringify(data).length;
+      },
+      
+      shouldUpdate: function(key, newData) {
+        const newHash = this.hash(newData);
+        const oldHash = this.lastHash.get(key);
+        const hasChanged = newHash !== oldHash;
+        if (hasChanged) {
+          this.lastHash.set(key, newHash);
+        }
+        return hasChanged;
+      }
+    };
+
+    // 4. Debounce resize para redibujados de charts
+    const debouncedResize = debounce(() => {
+      if (charts.history) {
+        renderHistoryChart();
+      }
+    }, 300);
+
+    window.addEventListener('resize', debouncedResize, { passive: true });
+
+    // 5. Detectar scroll y desactivar blur dinámicamente
+    let scrollTimeout;
+    const scrollListener = throttle(() => {
+      document.body.classList.add('is-scrolling');
+      clearTimeout(scrollTimeout);
+      scrollTimeout = setTimeout(() => {
+        document.body.classList.remove('is-scrolling');
+      }, 150);
+    }, 100);
+
+    document.addEventListener('scroll', scrollListener, { passive: true });
+
+    // 6. Lazy load de gráficos con Intersection Observer
+    const chartContainers = document.querySelectorAll('[data-chart]');
+    if ('IntersectionObserver' in window) {
+      const chartObserver = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+          if (entry.isIntersecting) {
+            const chartId = entry.target.id;
+            // Renderizar solo cuando sea visible
+            if (chartId === 'portfolioHistoryChart') {
+              renderHistoryChart();
+            }
+            chartObserver.unobserve(entry.target);
+          }
+        });
+      }, {
+        rootMargin: '50px',
+        threshold: 0.01
+      });
+
+      chartContainers.forEach(el => {
+        if (el.dataset.chart) {
+          chartObserver.observe(el);
+        }
+      });
+    }
+
+    // 7. Memoizar renderHistoryChart para evitar recálculos
+    const originalRenderHistoryChart = renderHistoryChart;
+    renderHistoryChart = function() {
+      if (chartCache.shouldUpdate('historyChart', historyData)) {
+        originalRenderHistoryChart.apply(this, arguments);
+      }
+    };
+
+    // 8. Reducir frecuencia de loadData
+    const debouncedLoadData = debounce((forceRefresh) => {
+      // Aquí va tu loadData original
+      window.originalLoadData && window.originalLoadData(forceRefresh);
+    }, 500);
+
+    // Guardar loadData original si existe
+    if (typeof loadData === 'function') {
+      window.originalLoadData = loadData;
+      loadData = debouncedLoadData;
+    }
+
+    // ===== FIN OPTIMIZACIONES =====
   </script>
 </body>
 </html>
