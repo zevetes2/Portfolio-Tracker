@@ -1171,8 +1171,8 @@
 
         var timeout = setTimeout(function() {
           cleanup();
-          reject(new Error('Timeout - La API no respondió en 30s.'));
-        }, 30000);
+          reject(new Error('Timeout - La API no respondió en 60s.'));
+        }, 60000);
 
         function cleanup() {
           clearTimeout(timeout);
