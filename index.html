@@ -1002,18 +1002,107 @@
     </div>
   </main>
 
-<!--
-  PORTFOLIO TRACKER PRO v7.0
-  Frontend simplificado — Solo visualización
-  Todos los cálculos se hacen en code.gs (servidor)
--->
-
-<script>
-// ═════════════════════════════════════════════════════════════════════════════
-// CONFIGURACIÓN
-// ═════════════════════════════════════════════════════════════════════════════
+  <script>
 
     const API_URL = "https://script.google.com/macros/s/AKfycbzljOCK6u9cCGViOPrAXdLxmznXTAHR8YTBFZ5TQNPnuwij5b6mHKsczAvQdz2_YFaj/exec";
+
+    // Añade al inicio de tu <script>
+    let cache = {
+      USD: null,
+      DOP: null
+    };
+    let perfCache = {
+      USD: null,
+      DOP: null
+    };
+    let lastFetchTime = 0;
+    const CACHE_TTL = 5 * 60 * 1000; // 5 minutos
+
+    // Reemplaza tu loadData actual con esto:
+
+
+  async function loadData(forceRefresh = false) {
+    showLoading();
+    console.log("loadData called, currentCurrency=" + currentCurrency + ", forceRefresh=" + forceRefresh);
+
+    const now = Date.now();
+    
+    // Usar caché si existe y no ha expirado
+    if (!forceRefresh && cache[currentCurrency] && (now - lastFetchTime) < CACHE_TTL) {
+      console.log("Usando caché para " + currentCurrency);
+      var cachedData = cache[currentCurrency];
+      
+      allTransactions = cachedData.allTransactions || [];
+      txPage = 0;
+      
+      if (cachedData.portfolio) {
+        portfolioData = cachedData.portfolio.portfolio || [];
+        portfolioSummary = cachedData.portfolio.summary || {};
+      }
+      
+      renderDashboard(cachedData);
+      document.getElementById('lastUpdate').textContent = 
+        new Date(cachedData.meta?.timestamp || Date.now()).toLocaleTimeString('es-DO', { hour: '2-digit', minute: '2-digit' }) + ' (caché)';
+      showContent();
+      return;
+    }
+
+    try {
+      // ETAPA 1: Cargar TODO de una vez (tu GAS es rápido ahora con fórmulas)
+      var url = API_URL + "?action=dashboard&currency=" + currentCurrency;
+      if (currentCurrency !== "USD" && currentRate) {
+        url += "&rate=" + currentRate;
+      }
+      
+      var data = await fetchAPI(url, 30000, 2);
+      
+      if (data.error) throw new Error(data.error);
+      
+      console.log("API response meta:", data.meta);
+      if (data.meta && data.meta.exchangeRate) {
+        currentRate = data.meta.exchangeRate;
+        console.log("Saved currentRate:", currentRate);
+      }
+
+      // Guardar en caché
+      cache[currentCurrency] = data;
+      lastFetchTime = now;
+
+      allTransactions = data.allTransactions || [];
+      txPage = 0;
+
+      if (data.portfolio) {
+        portfolioData = data.portfolio.portfolio || [];
+        portfolioSummary = data.portfolio.summary || {};
+      }
+
+      renderDashboard(data);
+      document.getElementById('lastUpdate').textContent = 
+        new Date().toLocaleTimeString('es-DO', { hour: '2-digit', minute: '2-digit' });
+      showContent();
+      
+    } catch (error) {
+      console.error("Error:", error);
+      showError(error.message);
+    }
+  }
+  
+  
+  // Función separada para rendimiento
+  async function loadPerformanceData() {
+    try {
+      const perfData = await fetchAPI(
+        API_URL + "?action=performance&currency=" + currentCurrency,
+        15000,
+        1
+    );
+      renderPerformance(perfData.performance);
+    } catch (e) {
+      console.warn("No se pudo cargar rendimiento:", e);
+    }
+  }
+
+
 
     let charts = {};
     let allTransactions = [];
@@ -1049,16 +1138,16 @@
     function setCurrency(currency) {
       if (currency === currentCurrency) return;
       currentCurrency = currency;
-
+      
+      // Actualizar botones UI
       document.getElementById('btn-usd').className = currency === 'USD' 
         ? "px-2.5 sm:px-3 py-1.5 rounded-md text-[11px] sm:text-xs font-semibold transition-all bg-brand-500 text-white shadow-sm touch-btn" 
         : "px-2.5 sm:px-3 py-1.5 rounded-md text-[11px] sm:text-xs font-semibold transition-all text-slate-400 hover:text-slate-200 touch-btn";
-
       document.getElementById('btn-dop').className = currency === 'DOP' 
         ? "px-2.5 sm:px-3 py-1.5 rounded-md text-[11px] sm:text-xs font-semibold transition-all bg-brand-500 text-white shadow-sm touch-btn" 
         : "px-2.5 sm:px-3 py-1.5 rounded-md text-[11px] sm:text-xs font-semibold transition-all text-slate-400 hover:text-slate-200 touch-btn";
 
-      loadData();
+      loadData(); // Usará caché automáticamente si existe
     }
 
     function setMobileView(mode) {
@@ -1077,82 +1166,314 @@
         cardsEl.style.display = 'none';
       }
     }
+    
+    // ============================================
+// NUEVO: fetch con fallback a JSONP
+// ============================================
 
-    async function loadData() {
-      showLoading();
-      console.log("loadData called, currentCurrency=" + currentCurrency + ", currentRate=" + currentRate);
-
-      try {
-        var url = API_URL + "?action=dashboard&currency=" + currentCurrency;
-        if (currentCurrency !== "USD" && currentRate) {
-          url += "&rate=" + currentRate;
-          console.log("Adding rate to URL: " + currentRate);
-        } else {
-          console.log("NOT adding rate. currentCurrency=" + currentCurrency + ", currentRate=" + currentRate);
-        }
-
-        const data = await fetchWithJSONP(url);
-
-        if (data.error) throw new Error(data.error);
-        console.log("API response meta:", data.meta);
-        if (data.meta && data.meta.exchangeRate) {
-        currentRate = data.meta.exchangeRate;
-        console.log("Saved currentRate:", currentRate);
+async function fetchAPI(url, timeoutMs, retries) {
+  timeoutMs = timeoutMs || 30000;
+  retries = retries || 2;
+  
+  console.log("fetchAPI called, URL:", url);
+  
+  // INTENTO 1: fetch moderno (CORS)
+  try {
+    const data = await fetchWithTimeout(url, timeoutMs);
+    console.log("fetchAPI: fetch exitoso");
+    return data;
+  } catch (fetchError) {
+    console.warn("fetchAPI: fetch falló:", fetchError.message);
+    
+    // INTENTO 2: JSONP como fallback
+    if (retries > 0) {
+      console.log("fetchAPI: intentando JSONP fallback...");
+      return fetchWithJSONP(url, timeoutMs, retries);
+    }
+    
+    throw fetchError;
+  }
 }
 
-
-
-        allTransactions = data.allTransactions || [];
-        txPage = 0;
-
-        if (data.portfolio) {
-          portfolioData = data.portfolio.portfolio || [];
-          portfolioSummary = data.portfolio.summary || {};
-        }
-
-        renderDashboard(data);
-        document.getElementById('lastUpdate').textContent = new Date().toLocaleTimeString('es-DO', { hour: '2-digit', minute: '2-digit' });
-        showContent();
-      } catch (error) {
-        console.error("Error:", error);
-        showError(error.message);
+async function fetchWithTimeout(url, timeoutMs) {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+  
+  try {
+    // Añadir cache-buster para evitar redirects cacheados
+    const separator = url.indexOf('?') !== -1 ? '&' : '?';
+    const urlWithCache = url + separator + '_cb=' + Date.now();
+    
+    const response = await fetch(urlWithCache, {
+      method: 'GET',
+      signal: controller.signal,
+      headers: {
+        'Accept': 'application/json'
       }
+    });
+    
+    clearTimeout(timeoutId);
+    
+    if (!response.ok) {
+      throw new Error('HTTP ' + response.status + ' ' + response.statusText);
     }
+    
+    const contentType = response.headers.get('content-type') || '';
+    
+    // Si devuelve JSON
+    if (contentType.includes('application/json')) {
+      return await response.json();
+    }
+    
+    // Si devuelve JavaScript (JSONP sin callback ejecutado), intentar parsear
+    const text = await response.text();
+    console.log("Response text preview:", text.substring(0, 100));
+    
+    // Intentar extraer JSON del texto
+    try {
+      return JSON.parse(text);
+    } catch {
+      throw new Error('Respuesta no es JSON válido: ' + text.substring(0, 100));
+    }
+    
+  } catch (error) {
+    clearTimeout(timeoutId);
+    throw error;
+  }
+}
 
-    function fetchWithJSONP(url) {
-      return new Promise(function(resolve, reject) {
-        var scriptId = 'jsonp_' + Date.now();
-        var script = document.createElement('script');
+// ============================================
+// NUEVO: fetch con fallback a JSONP
+// ============================================
 
-        window[scriptId] = function(data) {
-          cleanup();
-          resolve(data);
-        };
+async function fetchAPI(url, timeoutMs, retries) {
+  timeoutMs = timeoutMs || 30000;
+  retries = retries || 2;
+  
+  console.log("fetchAPI called, URL:", url);
+  
+  // INTENTO 1: fetch moderno (CORS)
+  try {
+    const data = await fetchWithTimeout(url, timeoutMs);
+    console.log("fetchAPI: fetch exitoso");
+    return data;
+  } catch (fetchError) {
+    console.warn("fetchAPI: fetch falló:", fetchError.message);
+    
+    // INTENTO 2: JSONP como fallback
+    if (retries > 0) {
+      console.log("fetchAPI: intentando JSONP fallback...");
+      return fetchWithJSONP(url, timeoutMs, retries);
+    }
+    
+    throw fetchError;
+  }
+}
 
-        var timeout = setTimeout(function() {
-          cleanup();
-          reject(new Error('Timeout - La API no respondió en 30s.'));
-        }, 30000);
+async function fetchWithTimeout(url, timeoutMs) {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+  
+  try {
+    // Añadir cache-buster para evitar redirects cacheados
+    const separator = url.indexOf('?') !== -1 ? '&' : '?';
+    const urlWithCache = url + separator + '_cb=' + Date.now();
+    
+    const response = await fetch(urlWithCache, {
+      method: 'GET',
+      signal: controller.signal,
+      headers: {
+        'Accept': 'application/json'
+      }
+    });
+    
+    clearTimeout(timeoutId);
+    
+    if (!response.ok) {
+      throw new Error('HTTP ' + response.status + ' ' + response.statusText);
+    }
+    
+    const contentType = response.headers.get('content-type') || '';
+    
+    // Si devuelve JSON
+    if (contentType.includes('application/json')) {
+      return await response.json();
+    }
+    
+    // Si devuelve JavaScript (JSONP sin callback ejecutado), intentar parsear
+    const text = await response.text();
+    console.log("Response text preview:", text.substring(0, 100));
+    
+    // Intentar extraer JSON del texto
+    try {
+      return JSON.parse(text);
+    } catch {
+      throw new Error('Respuesta no es JSON válido: ' + text.substring(0, 100));
+    }
+    
+  } catch (error) {
+    clearTimeout(timeoutId);
+    throw error;
+  }
+}
 
-        function cleanup() {
-          clearTimeout(timeout);
-          if (script.parentNode) script.parentNode.removeChild(script);
-          delete window[scriptId];
+// JSONP fallback (tu función original, conservada)
+function fetchWithJSONP(url, timeoutMs, retries) {
+  timeoutMs = timeoutMs || 30000;
+  retries = retries || 2;
+  
+  return new Promise(function(resolve, reject) {
+    var attempt = function(remainingRetries) {
+      var scriptId = 'jsonp_' + Date.now() + '_' + Math.random();
+      var script = document.createElement('script');
+      var timeoutId;
+      var cleanedUp = false;
+
+      window[scriptId] = function(data) {
+        if (cleanedUp) return;
+        cleanedUp = true;
+        cleanup();
+        resolve(data);
+      };
+
+      timeoutId = setTimeout(function() {
+        if (cleanedUp) return;
+        cleanedUp = true;
+        cleanup();
+        if (remainingRetries > 0) {
+          console.log('JSONP Retrying... remaining:', remainingRetries);
+          attempt(remainingRetries - 1);
+        } else {
+          reject(new Error('Timeout - La API no respondió en ' + timeoutMs + 'ms.'));
         }
+      }, timeoutMs);
 
-        script.onerror = function() {
-          cleanup();
+      function cleanup() {
+        clearTimeout(timeoutId);
+        if (script.parentNode) script.parentNode.removeChild(script);
+        delete window[scriptId];
+      }
+
+      script.onerror = function() {
+        if (cleanedUp) return;
+        cleanedUp = true;
+        cleanup();
+        if (remainingRetries > 0) {
+          attempt(remainingRetries - 1);
+        } else {
           reject(new Error('Fallo de red al intentar contactar Google Apps Script.'));
+        }
+      };
+
+      var separator = url.indexOf('?') !== -1 ? '&' : '?';
+      script.src = url + separator + 'callback=' + scriptId;
+
+      document.head.appendChild(script);
+    };
+    
+    attempt(retries);
+  });
+}
+
+    function calculatePeriodsFromHistory(historyData, transactions, currentTotalValue, currentCash) {
+
+      if (!historyData || historyData.length === 0 || !window.monthlyPL) return [];
+      
+      var now = new Date();
+      var currentYear = now.getFullYear();
+      var currentMonth = now.getMonth() + 1;
+      var currentKey = currentYear + '-' + String(currentMonth).padStart(2, '0');
+      
+      var allMonths = Object.keys(window.monthlyPL).sort();
+      var last12Months = [];
+      
+      var currentIdx = -1;
+      for (var i = allMonths.length - 1; i >= 0; i--) {
+        if (allMonths[i] <= currentKey) {
+          currentIdx = i;
+          break;
+        }
+      }
+      
+      if (currentIdx < 0) currentIdx = allMonths.length - 1;
+      
+      var startIdx = Math.max(0, currentIdx - 11);
+      for (var i = startIdx; i <= currentIdx; i++) {
+        last12Months.push(allMonths[i]);
+      }
+      
+      var monthNames = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+      
+      var result = last12Months.map(function(dateKey, idx) {
+        var plData = window.monthlyPL[dateKey];
+        var portfolioData = null;
+        
+        for (var i = 0; i < historyData.length; i++) {
+          if (historyData[i].date === dateKey) {
+            portfolioData = historyData[i];
+            break;
+          }
+        }
+        
+        var parts = dateKey.split('-');
+        var year = parts[0];
+        var month = parseInt(parts[1]);
+        var label = monthNames[month - 1] + " '" + year.slice(2);
+        
+        // Usar P/L ya calculado en buildRealHistoryFromPrices (exacto, por activo y FIFO)
+        var realizedPL = plData ? (plData.realizedPL || 0) : 0;
+        var unrealizedPL = plData ? (plData.unrealizedPL || 0) : 0;
+        var totalPL = plData ? (plData.pl || 0) : 0;
+        
+        var startValue = portfolioData ? portfolioData.invested : 0;
+        var endValue = portfolioData ? portfolioData.total : 0;
+        var marketValue = portfolioData ? portfolioData.marketValue : 0;
+        var cash = portfolioData ? portfolioData.cash : 0;
+        
+        return {
+          key: dateKey,
+          label: label,
+          yearMonth: dateKey,
+          startValue: Math.round(startValue * 100) / 100,
+          endValue: Math.round(endValue * 100) / 100,
+          realizedPL: Math.round(realizedPL * 100) / 100,
+          unrealizedPL: Math.round(unrealizedPL * 100) / 100,
+          totalPL: Math.round(totalPL * 100) / 100,
+          marketValue: Math.round(marketValue * 100) / 100,
+          cash: Math.round(cash * 100) / 100
         };
-
-        var separator = url.indexOf('?') !== -1 ? '&' : '?';
-        script.src = url + separator + 'callback=' + scriptId;
-
-        document.head.appendChild(script);
       });
+      
+      // === AJUSTAR ÚLTIMO MES PARA COINCIDIR CON DASHBOARD ===
+            // === AJUSTAR ÚLTIMO MES PARA COINCIDIR CON DASHBOARD ===
+      if (result.length > 0 && currentTotalValue > 0) {
+        var last = result[result.length - 1];
+        var prevTotal = result.length > 1 ? result[result.length - 2].endValue : last.startValue;
+        
+        // Forzar patrimonio y cash al valor real del dashboard
+        last.endValue = Math.round(currentTotalValue * 100) / 100;
+        last.cash = Math.round((currentCash || 0) * 100) / 100;
+        last.marketValue = Math.round((last.endValue - last.cash) * 100) / 100;
+        
+        // Recalcular P/L para que cuadre con el patrimonio real
+        var adjustedTotalPL = last.endValue - prevTotal;
+        last.totalPL = Math.round(adjustedTotalPL * 100) / 100;
+        last.unrealizedPL = Math.round((adjustedTotalPL - last.realizedPL) * 100) / 100;
+      }
+      // === FIN AJUSTE ===
+      
+      return result;
     }
-
+    
     function renderDashboard(data) {
+      // Validación defensiva
+      if (!data || typeof data !== 'object') {
+        console.error("renderDashboard: data inválida", data);
+        return;
+      }
+      
+      window.dashboardData = data;
+      
       var rateInfo = document.getElementById('rateInfo');
       var rateText = document.getElementById('rateText');
 
@@ -1163,103 +1484,182 @@
         rateInfo.classList.add('hidden');
       }
 
+      // ===== RESUMEN DEL PORTAFOLIO =====
       if (data.portfolio && data.portfolio.summary) {
         renderPortfolioSummary(data.portfolio.summary, data.metrics);
+      } else if (data.summary) {
+        // Fallback: si viene estructura plana
+        renderPortfolioSummary(data.summary, data.metrics);
+      }
+
+      // ===== GRÁFICOS =====
+      if (data.portfolio && data.portfolio.summary) {
         renderPortfolioCharts(data.portfolio.summary);
         renderTopPositions(data.portfolio.summary);
         renderLargestPositions(data.portfolio.summary);
       }
 
-            // Guardar datos históricos y calcular evolución
-      console.log("=== renderDashboard: bloque historial ===");
-      console.log("data.history existe?", !!data.history);
-      console.log("data.history.dates?", data.history ? data.history.dates : null);
-      console.log("data.history.dates length?", data.history && data.history.dates ? data.history.dates.length : 0);
-      console.log("data.history.prices?", data.history ? Object.keys(data.history.prices || {}).length : 0);
-      
-      if (data.history && data.history.dates && data.history.dates.length > 0 && 
-          data.history.prices && Object.keys(data.history.prices).length > 0) {
-        console.log("ENTRANDO a buildRealHistoryFromPrices");
-        historicalDates = data.history.dates;
-        historicalPrices = data.history.prices;
-        buildRealHistoryFromPrices(data.allTransactions || []);
+      // ===== BUFFETT CHART =====
+      if (data.portfolio && data.portfolio.portfolio && data.portfolio.portfolio.length > 0) {
+        renderBuffettPortfolio(data.portfolio.portfolio);
+      }
+
+      // ===== HISTORIAL PRIORIDAD 1: HISTORICO BROKERS (datos reales) =====
+      if (data.historicoBrokers && data.historicoBrokers.dates && data.historicoBrokers.dates.length > 0) {
+        console.log("Usando HISTORICO BROKERS para evolución del patrimonio");
+        
+        var hb = data.historicoBrokers;
+        historyData = [];
+        
+        for (var i = 0; i < hb.dates.length; i++) {
+          historyData.push({
+            date: hb.dates[i],
+            total: hb.totals[i] || 0,
+            marketValue: hb.totals[i] || 0, // En HISTORICO BROKERS, el total es el patrimonio
+            cash: 0, // No tenemos desglose de cash vs mercado en esta hoja
+            invested: 0 // Se puede calcular si lo necesitas
+          });
+        }
+        
+        // Si hay datos de transacciones, intentar calcular cash/invested
+        if (data.allTransactions && data.allTransactions.length > 0) {
+          // Opcional: calcular cash desde transacciones para cada mes
+          // o simplemente dejar como está
+        }
+        
         renderHistoryChart();
-      } else {
-        console.log("ENTRANDO a buildHistoryFromTransactions (fallback)");
+      } 
+      // ===== HISTORIAL PRIORIDAD 2: FECHAS (precios históricos) =====
+      else if (data.history && data.history.dates && data.history.dates.length > 0) {
+        historicalDates = data.history.dates;
+        historicalPrices = data.history.prices || {};
+        buildRealHistoryFromPrices(data.allTransactions || []);
+        // ... resto del código existente ...
+        renderHistoryChart();
+      } 
+      // ===== HISTORIAL PRIORIDAD 3: Transacciones (fallback) =====
+      else {
         historicalDates = [];
         historicalPrices = {};
         buildHistoryFromTransactions(data.allTransactions || []);
         renderHistoryChart();
       }
-       // Guardar portfolioData globalmente para uso en historial
+      // Guardar portfolioData global
       if (data.portfolio && data.portfolio.portfolio) {
         window.lastPortfolioData = data.portfolio.portfolio;
-        portfolioData = data.portfolio.portfolio; // también en variable global si existe
+        portfolioData = data.portfolio.portfolio;
       }
 
-      if (data.portfolio && data.portfolio.portfolio) renderPortfolioTable(data.portfolio.portfolio);
-      renderAssetsTable(data.currentAssets || []);
+      // ===== TABLAS =====
+      if (data.portfolio && data.portfolio.portfolio) {
+        renderPortfolioTable(data.portfolio.portfolio);
+      }
+      
+      if (data.currentAssets) {
+        renderAssetsTable(data.currentAssets);
+      }
+      
       renderTransactionsTable();
-      loadPlatforms();
-            renderBrokersSummary(data.platforms || []);
-
+      
+      if (data.platforms) {
+        renderBrokersSummary(data.platforms);
+      }
+      
+      // ===== RENDIMIENTO =====
+      if (data.performance) {
+        renderPerformance(data.performance);
+      }
     }
+    
 
     function renderPortfolioSummary(summary, metrics) {
-      var marketValue = summary.totalCurrentValue || 0;
-      var totalCash = metrics ? (metrics.totalCash || 0) : 0; 
-      var totalBalance = marketValue + totalCash;
+      if (!summary || typeof summary !== 'object') {
+        console.error("renderPortfolioSummary: summary inválido", summary);
+        return;
+      }
+
+      var marketValue = summary.totalCurrentValue || summary.marketValue || 0;
+      var totalCash = metrics ? (metrics.totalCash || 0) : (summary.totalCash || 0); 
+      var totalBalance = summary.totalBalance || (marketValue + totalCash);
 
       document.getElementById('pfTotalBalance').textContent = formatCurrency(totalBalance);
       document.getElementById('pfMarketValue').textContent = formatCurrency(marketValue);
       document.getElementById('pfTotalCash').textContent = formatCurrency(totalCash);
 
-      document.getElementById('pfTotalCost').textContent = formatCurrency(summary.totalCost || 0);
+      document.getElementById('pfTotalCost').textContent = formatCurrency(summary.totalCost || summary.costBasis || 0);
 
-      var unrealizedPL = summary.totalUnrealizedPL || 0;
+      var unrealizedPL = summary.totalUnrealizedPL || summary.unrealizedPL || 0;
       document.getElementById('pfUnrealizedPL').textContent = (unrealizedPL >= 0 ? '+' : '') + formatCurrency(unrealizedPL);
       document.getElementById('pfUnrealizedPL').className = 'font-bold text-sm sm:text-base leading-none ' + (unrealizedPL >= 0 ? 'text-emerald-400' : 'text-rose-400');
 
-      var roi = (summary.overallUnrealizedROI || 0);
+      var roi = (summary.overallUnrealizedROI || summary.unrealizedROI || 0);
+      // Si viene como decimal (0.0211) convertir a porcentaje
+      if (Math.abs(roi) < 1 && roi !== 0) roi = roi * 100;
       document.getElementById('pfUnrealizedROI').textContent = (roi >= 0 ? '+' : '') + roi.toFixed(2) + '%';
       document.getElementById('pfUnrealizedROIContainer').className = 'px-2 py-1 rounded-md text-[10px] sm:text-xs font-bold ' + (roi >= 0 ? 'bg-emerald-500/20 text-emerald-400' : 'bg-rose-500/20 text-rose-400');
 
-      var realizedPL = summary.totalRealizedPL || 0;
+      var realizedPL = summary.totalRealizedPL || summary.realizedPL || 0;
       document.getElementById('pfRealizedPL').textContent = (realizedPL >= 0 ? '+' : '') + formatCurrency(realizedPL);
       document.getElementById('pfRealizedPL').className = 'mobile-stat-value ' + (realizedPL >= 0 ? 'text-emerald-400' : 'text-rose-400');
 
-      var totalPL = summary.totalPL || 0;
+      var totalPL = summary.totalPL || (unrealizedPL + realizedPL) || 0;
       document.getElementById('pfTotalPL').textContent = 'P/L Histórico: ' + (totalPL >= 0 ? '+' : '') + formatCurrency(totalPL);
 
+      // Daily change (si no existe, calcular aproximado o mostrar 0)
       var dailyChange = summary.totalDailyChange || 0;
       document.getElementById('pfDailyChange').textContent = (dailyChange >= 0 ? '+' : '') + formatCurrency(dailyChange);
       document.getElementById('pfDailyChange').className = 'font-bold text-sm sm:text-base leading-none ' + (dailyChange >= 0 ? 'text-emerald-400' : 'text-rose-400');
 
-      var dailyPct = dailyChange / (summary.totalCurrentValue - dailyChange) * 100 || 0;
+      var dailyBase = marketValue - dailyChange;
+      var dailyPct = dailyBase > 0 ? (dailyChange / dailyBase) * 100 : 0;
       document.getElementById('pfDailyChangePct').textContent = (dailyPct >= 0 ? '+' : '') + dailyPct.toFixed(2) + '%';
       document.getElementById('pfDailyChangePctContainer').className = 'px-2 py-1 rounded-md text-[10px] sm:text-xs font-bold ' + (dailyPct >= 0 ? 'bg-emerald-500/20 text-emerald-400' : 'bg-rose-500/20 text-rose-400');
 
-      document.getElementById('pfHoldings').textContent = summary.currentHoldings || 0;
-      document.getElementById('pfSold').textContent = 'Liquidadas: ' + (summary.soldPositions || 0) + ' | Total: ' + (summary.totalPositions || 0);
+      document.getElementById('pfHoldings').textContent = summary.currentHoldings || summary.activePositions || 0;
+      document.getElementById('pfSold').textContent = 'Liquidadas: ' + (summary.soldPositions || 0) + ' | Total: ' + ((summary.currentHoldings || 0) + (summary.soldPositions || 0));
 
+      // Top/Bottom - usar portfolioData si summary no tiene topGainers
       if (summary.topGainers && summary.topGainers.length > 0) {
         var best = summary.topGainers[0];
         document.getElementById('pfBestPosition').textContent = best.ticker;
         document.getElementById('pfBestROI').textContent = '+' + (best.unrealizedROI * 100 || 0).toFixed(2) + '%';
+      } else if (portfolioData && portfolioData.length > 0) {
+        // Calcular del portfolioData
+        var sorted = portfolioData.slice().sort(function(a, b) { return b.unrealizedROI - a.unrealizedROI; });
+        var best = sorted[0];
+        if (best && best.unrealizedROI > 0) {
+          document.getElementById('pfBestPosition').textContent = best.ticker;
+          document.getElementById('pfBestROI').textContent = '+' + (best.unrealizedROI * 100).toFixed(2) + '%';
+        } else {
+          document.getElementById('pfBestPosition').textContent = '-';
+          document.getElementById('pfBestROI').textContent = '0%';
+        }
       } else {
         document.getElementById('pfBestPosition').textContent = '-';
         document.getElementById('pfBestROI').textContent = '0%';
       }
+      
       if (summary.topLosers && summary.topLosers.length > 0) {
         var worst = summary.topLosers[0];
         document.getElementById('pfWorstPosition').textContent = worst.ticker;
         document.getElementById('pfWorstROI').textContent = (worst.unrealizedROI * 100 || 0).toFixed(2) + '%';
+      } else if (portfolioData && portfolioData.length > 0) {
+        var sorted = portfolioData.slice().sort(function(a, b) { return a.unrealizedROI - b.unrealizedROI; });
+        var worst = sorted[0];
+        if (worst && worst.unrealizedROI < 0) {
+          document.getElementById('pfWorstPosition').textContent = worst.ticker;
+          document.getElementById('pfWorstROI').textContent = (worst.unrealizedROI * 100).toFixed(2) + '%';
+        } else {
+          document.getElementById('pfWorstPosition').textContent = '-';
+          document.getElementById('pfWorstROI').textContent = '0%';
+        }
       } else {
         document.getElementById('pfWorstPosition').textContent = '-';
         document.getElementById('pfWorstROI').textContent = '0%';
       }
     }
-
+    
+    
     function renderTopPositions(summary) {
       var gainersEl = document.getElementById('topGainersList');
       var losersEl = document.getElementById('topLosersList');
@@ -1305,17 +1705,20 @@
         totalValue = data.reduce(function(s, item) { return s + (item.value || 0); }, 0);
       }
       
-      if (data && data.length > 0) {
+            if (data && data.length > 0) {
         el.innerHTML = data.map(function(p, idx) {
           var displayName = p.ticker || p.name || 'Sin nombre';
           var value = p.currentValue !== undefined ? p.currentValue : p.value;
           var weight = totalValue > 0 ? ((value || 0) / totalValue * 100).toFixed(1) : 0;
           var palette = ['#3b82f6', '#8b5cf6', '#10b981', '#f59e0b', '#f43f5e', '#0ea5e9', '#6366f1'];
           var color = p.ticker ? '#3b82f6' : (palette[idx % palette.length]);
+          var lpIcon = p.iconUrl ? 
+            '<img src="' + p.iconUrl + '" alt="" class="asset-icon-sm mr-1.5" loading="lazy" onerror="this.style.display=\'none\'">' : 
+            '';
           
           return '<div class="bg-slate-800/40 rounded-xl p-3 border border-slate-700/50 hover:bg-slate-800/60 transition-colors">' +
             '<div class="flex items-center justify-between mb-1.5">' +
-              '<span class="font-bold text-sm text-slate-200">' + displayName + '</span>' +
+              '<div class="flex items-center">' + lpIcon + '<span class="font-bold text-sm text-slate-200">' + displayName + '</span></div>' +
               '<span class="text-[10px] font-medium text-slate-400 bg-slate-900 px-1.5 py-0.5 rounded">' + weight + '%</span>' +
             '</div>' +
             '<p class="text-sm font-semibold text-slate-300 mb-2">' + formatCurrency(value) + '</p>' +
@@ -1423,119 +1826,140 @@ function renderPortfolioCharts(summary) {
           },
           tooltip: chartTooltipConfig
         }
-      }
-    }
-  });
-}
-
-function renderPerformanceDistribution(distribution) {
-  var ctx = document.getElementById('performanceDistributionChart');
-  if (!ctx) return;
-
-  if (charts.performanceDistribution) charts.performanceDistribution.destroy();
-
-  var data = [
-    distribution.excellentCount || 0,
-    distribution.goodCount || 0,
-    distribution.neutralCount || 0,
-    distribution.badCount || 0,
-    distribution.terribleCount || 0
-  ];
-
-  var total = data.reduce(function(a, b) { return a + b; }, 0);
-  if (total === 0) {
-    ctx.parentElement.innerHTML = '<div class="flex items-center justify-center h-full text-slate-500 text-sm">Sin datos de distribución</div>';
-    return;
-  }
-
-  charts.performanceDistribution = new Chart(ctx.getContext('2d'), {
-    type: 'doughnut',
-    data: {
-      labels: ['Excelente (+50%)', 'Bueno (+10%)', 'Neutral (±10%)', 'Malo (-10%)', 'Pésimo (-30%)'],
-      datasets: [{
-        data: data,
-        backgroundColor: ['#10b981', '#3b82f6', '#f59e0b', '#f43f5e', '#7c2d12'],
-        borderWidth: 0,
-        hoverOffset: 6
-      }]
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      cutout: '65%',
-      plugins: {
-        legend: {
-          position: window.innerWidth < 640 ? 'bottom' : 'right',
-          labels: { color: '#94a3b8', usePointStyle: true, pointStyle: 'circle', font: { size: window.innerWidth < 640 ? 10 : 11 }, padding: window.innerWidth < 640 ? 10 : 16, boxWidth: window.innerWidth < 640 ? 8 : 10 }
-        },
-        tooltip: {
-          backgroundColor: 'rgba(15, 23, 42, 0.95)',
-          titleColor: '#f8fafc',
-          bodyColor: '#cbd5e1',
-          borderColor: '#334155',
-          borderWidth: 1,
-          padding: 12,
-          cornerRadius: 8,
-          callbacks: {
-            label: function(context) {
-              var value = context.parsed;
-              var pct = total > 0 ? ((value / total) * 100).toFixed(1) : 0;
-              return context.label + ': ' + value + ' posiciones (' + pct + '%)';
-            }
+      },
+      plugins: [{
+        id: 'customLegendColor',
+        afterUpdate: function(chart) {
+          var legend = chart.legend;
+          if (legend && legend.legendItems) {
+            legend.legendItems.forEach(function(item) {
+              item.fontColor = '#94a3b8';
+              item.color = '#94a3b8';
+            });
           }
         }
-      }
-    }
-  });
-}
+      }]
+    });
+  }
 
-// ═════════════════════════════════════════════════════════════════════════════
-// TABLES — Solo renderizado, datos del servidor
-// ═════════════════════════════════════════════════════════════════════════════
-
-function renderPortfolioTable(portfolio) {
-  var tbody = document.getElementById('portfolioTable');
-  var mobileContainer = document.getElementById('portfolioMobileCards');
-  var countSpan = document.getElementById('pfCount');
+  if (summary.bySector && summary.bySector.length > 0) {
+    var ctx = document.getElementById('portfolioSectorChart').getContext('2d');
+    if (charts.portfolioSector) charts.portfolioSector.destroy();
+    charts.portfolioSector = new Chart(ctx, {
+      type: 'doughnut',
+      data: {
+        labels: summary.bySector.map(function(d) { return d.name; }),
+        datasets: [{
+          data: summary.bySector.map(function(d) { return d.value; }),
+          backgroundColor: palette.slice().reverse(),
+          borderWidth: 0,
+          hoverOffset: 6
+        }]
+      },
+      options: {
+        responsive: true, 
+        maintainAspectRatio: false, 
+        cutout: '70%',
+        plugins: {
+          legend: { 
+            position: window.innerWidth < 640 ? 'bottom' : 'right', 
+            labels: { 
+              color: '#94a3b8',
+              usePointStyle: true, 
+              pointStyle: 'circle', 
+              font: { size: window.innerWidth < 640 ? 10 : 11 },
+              padding: window.innerWidth < 640 ? 10 : 16,
+              boxWidth: window.innerWidth < 640 ? 8 : 10,
+              generateLabels: function(chart) {
+                var data = chart.data;
+                if (data.labels.length && data.datasets.length) {
+                  return data.labels.map(function(label, i) {
+                    var meta = chart.getDatasetMeta(0);
+                    var style = meta.controller.getStyle(i);
+                    var value = data.datasets[0].data[i] || 0;
+                    var percentage = totalSectorValue > 0 ? ((value / totalSectorValue) * 100).toFixed(1) : '0.0';
+                    return {
+                      text: label + ' (' + percentage + '%)',
+                      fillStyle: style.backgroundColor,
+                      strokeStyle: style.borderColor,
+                      lineWidth: style.borderWidth,
+                      hidden: isNaN(data.datasets[0].data[i]) || meta.data[i].hidden,
+                      index: i,
+                      fontColor: '#94a3b8'
+                    };
+                  });
+                }
+                return [];
+              }
+            } 
+          },
+          tooltip: chartTooltipConfig
+        }
+      },
+      plugins: [{
+        id: 'customLegendColor',
+        afterUpdate: function(chart) {
+          var legend = chart.legend;
+          if (legend && legend.legendItems) {
+            legend.legendItems.forEach(function(item) {
+              item.fontColor = '#94a3b8';
+              item.color = '#94a3b8';
+            });
+          }
+        }
+      }]
+    });
+  }
+}    
+    function renderPortfolioTable(portfolio) {
+      var tbody = document.getElementById('portfolioTable');
+      var mobileContainer = document.getElementById('portfolioMobileCards');
+      var countSpan = document.getElementById('pfCount');
 
       if (!portfolio || portfolio.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="12" class="py-12 text-center text-slate-500 text-sm">No hay activos registrados en el portafolio.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="14" class="py-12 text-center text-slate-500 text-sm">No hay activos registrados en el portafolio.</td></tr>';
         mobileContainer.innerHTML = '<p class="text-slate-500 text-sm text-center py-8">No hay activos registrados.</p>';
         countSpan.textContent = '0';
         return;
       }
 
-  var filtered = portfolio.filter(function(p) {
-    if (!showSoldPositionsFlag && p.isSold) return false;
-    if (portfolioFilter) {
-      var search = portfolioFilter.toLowerCase();
-      return (p.ticker && p.ticker.toLowerCase().includes(search)) ||
-             (p.assetName && p.assetName.toLowerCase().includes(search));
-    }
-    return true;
-  });
+      var filtered = portfolio.filter(function(p) {
+        if (!showSoldPositionsFlag && p.isSold) return false;
+        if (portfolioFilter) {
+          var search = portfolioFilter.toLowerCase();
+          return (p.ticker && p.ticker.toLowerCase().includes(search)) ||
+                 (p.assetName && p.assetName.toLowerCase().includes(search));
+        }
+        return true;
+      });
 
-  filtered.sort(function(a, b) {
-    var va = a[portfolioSort.field];
-    var vb = b[portfolioSort.field];
-    if (typeof va === 'string') va = va.toLowerCase();
-    if (typeof vb === 'string') vb = vb.toLowerCase();
-    if (va === null || va === undefined) va = -Infinity;
-    if (vb === null || vb === undefined) vb = -Infinity;
-    return portfolioSort.dir === 'asc' ? (va > vb ? 1 : va < vb ? -1 : 0) : (va < vb ? 1 : va > vb ? -1 : 0);
-  });
+      filtered.sort(function(a, b) {
+        var va = a[portfolioSort.field];
+        var vb = b[portfolioSort.field];
+        if (typeof va === 'string') va = va.toLowerCase();
+        if (typeof vb === 'string') vb = vb.toLowerCase();
+        if (va === null || va === undefined) va = -Infinity;
+        if (vb === null || vb === undefined) vb = -Infinity;
+        return portfolioSort.dir === 'asc' ? (va > vb ? 1 : va < vb ? -1 : 0) : (va < vb ? 1 : va > vb ? -1 : 0);
+      });
 
-  countSpan.textContent = filtered.length;
+      countSpan.textContent = filtered.length;
 
       // Desktop table
       tbody.innerHTML = filtered.map(function(p) {
         var roiClass = p.unrealizedROI > 0 ? 'text-emerald-400' : p.unrealizedROI < 0 ? 'text-rose-400' : 'text-slate-400';
         var plClass = p.unrealizedPL > 0 ? 'text-emerald-400' : p.unrealizedPL < 0 ? 'text-rose-400' : 'text-slate-400';
+        var realizedClass = p.realizedPL > 0 ? 'text-emerald-400' : p.realizedPL < 0 ? 'text-rose-400' : 'text-slate-400';
+        var totalPLClass = p.totalPL > 0 ? 'text-emerald-400' : p.totalPL < 0 ? 'text-rose-400' : 'text-slate-400';
         var dailyClass = p.dailyChange > 0 ? 'text-emerald-400' : p.dailyChange < 0 ? 'text-rose-400' : 'text-slate-400';
         var soldBadge = p.isSold ? '<span class="ml-2 px-1.5 py-0.5 bg-slate-800 text-slate-500 rounded text-[9px] font-bold tracking-wider">CERRADA</span>' : '';
 
+        var iconHtml = p.iconUrl ? 
+          '<img src="' + p.iconUrl + '" alt="" class="asset-icon mr-2" loading="lazy" onerror="this.style.display=\'none\'">' : 
+          '<div class="w-5 h-5 mr-2 rounded bg-slate-700/50 flex items-center justify-center text-[9px] text-slate-500 font-bold">' + (p.ticker ? p.ticker.charAt(0) : '?') + '</div>';
+
         return '<tr class="hover:bg-slate-800/40 transition-colors group">' +
-          '<td class="py-3 px-3 sm:px-4 font-bold text-brand-400">' + (p.ticker || '-') + soldBadge + '</td>' +
+          '<td class="py-3 px-3 sm:px-4 font-bold text-brand-400 flex items-center">' + iconHtml + (p.ticker || '-') + soldBadge + '</td>' +
           '<td class="py-3 px-3 sm:px-4 text-slate-300 truncate max-w-[120px] sm:max-w-[150px]">' + (p.assetName || '-') + '</td>' +
           '<td class="py-3 px-3 sm:px-4"><span class="badge bg-slate-800 border-slate-700/50 text-slate-400">' + (p.assetClass || '-') + '</span></td>' +
           '<td class="py-3 px-3 sm:px-4 text-slate-500 hidden lg:table-cell text-[11px]">' + (p.sector || '-') + '</td>' +
@@ -1546,6 +1970,8 @@ function renderPortfolioTable(portfolio) {
           '<td class="py-3 px-3 sm:px-4 text-right font-mono font-bold text-white">' + formatCurrency(p.currentValue) + '</td>' +
           '<td class="py-3 px-3 sm:px-4 text-right font-mono font-medium ' + roiClass + '">' + (p.unrealizedROI !== null ? (p.unrealizedROI > 0 ? '+' : '') + p.unrealizedROI.toFixed(2) + '%' : '-') + '</td>' +
           '<td class="py-3 px-3 sm:px-4 text-right font-mono font-medium ' + plClass + '">' + (p.unrealizedPL !== null ? (p.unrealizedPL > 0 ? '+' : '') + formatCurrency(p.unrealizedPL) : '-') + '</td>' +
+          '<td class="py-3 px-3 sm:px-4 text-right font-mono font-medium ' + realizedClass + '">' + (p.realizedPL !== null ? (p.realizedPL > 0 ? '+' : '') + formatCurrency(p.realizedPL) : '-') + '</td>' +
+          '<td class="py-3 px-3 sm:px-4 text-right font-mono font-bold ' + totalPLClass + '">' + (p.totalPL !== null ? (p.totalPL > 0 ? '+' : '') + formatCurrency(p.totalPL) : '-') + '</td>' +
           '<td class="py-3 px-3 sm:px-4 text-right font-mono font-medium ' + dailyClass + '">' + (p.dailyChange !== null ? (p.dailyChange > 0 ? '+' : '') + formatCurrency(p.dailyChange) : '-') + '</td>' +
         '</tr>';
       }).join('');
@@ -1554,12 +1980,18 @@ function renderPortfolioTable(portfolio) {
       mobileContainer.innerHTML = filtered.map(function(p, idx) {
         var roiClass = p.unrealizedROI > 0 ? 'text-emerald-400' : p.unrealizedROI < 0 ? 'text-rose-400' : 'text-slate-400';
         var plClass = p.unrealizedPL > 0 ? 'text-emerald-400' : p.unrealizedPL < 0 ? 'text-rose-400' : 'text-slate-400';
+        var realizedClass = p.realizedPL > 0 ? 'text-emerald-400' : p.realizedPL < 0 ? 'text-rose-400' : 'text-slate-400';
+        var totalPLClass = p.totalPL > 0 ? 'text-emerald-400' : p.totalPL < 0 ? 'text-rose-400' : 'text-slate-400';
         var dailyClass = p.dailyChange > 0 ? 'text-emerald-400' : p.dailyChange < 0 ? 'text-rose-400' : 'text-slate-400';
         var soldBadge = p.isSold ? '<span class="ml-2 px-1.5 py-0.5 bg-slate-800 text-slate-500 rounded text-[9px] font-bold tracking-wider">CERRADA</span>' : '';
 
+        var mobileIconHtml = p.iconUrl ? 
+          '<img src="' + p.iconUrl + '" alt="" class="asset-icon-lg mr-2" loading="lazy" onerror="this.style.display=\'none\'">' : 
+          '<div class="w-6 h-6 mr-2 rounded bg-slate-700/50 flex items-center justify-center text-[10px] text-slate-500 font-bold">' + (p.ticker ? p.ticker.charAt(0) : '?') + '</div>';
+
         return '<div class="position-mobile-card" onclick="toggleCardDetails(this)">' +
           '<div class="flex items-center justify-between">' +
-            '<div class="flex items-center gap-2">' +
+            '<div class="flex items-center gap-2 flex items-center">' + mobileIconHtml +
               '<span class="font-bold text-sm text-brand-400">' + (p.ticker || '-') + '</span>' + soldBadge +
               '<span class="badge bg-slate-800 border-slate-700/50 text-slate-400">' + (p.assetClass || '-') + '</span>' +
             '</div>' +
@@ -1577,6 +2009,8 @@ function renderPortfolioTable(portfolio) {
               '<div><p class="text-[10px] text-slate-500 uppercase">Precio Mercado</p><p class="text-slate-300 font-mono">' + formatCurrency(p.currentPrice) + '</p></div>' +
               '<div><p class="text-[10px] text-slate-500 uppercase">Costo</p><p class="text-slate-300 font-mono">' + formatCurrency(p.cost) + '</p></div>' +
               '<div><p class="text-[10px] text-slate-500 uppercase">P/L</p><p class="font-mono font-medium ' + plClass + '">' + (p.unrealizedPL !== null ? (p.unrealizedPL > 0 ? '+' : '') + formatCurrency(p.unrealizedPL) : '-') + '</p></div>' +
+              '<div><p class="text-[10px] text-slate-500 uppercase">P/L Realizado</p><p class="font-mono font-medium ' + realizedClass + '">' + (p.realizedPL !== null ? (p.realizedPL > 0 ? '+' : '') + formatCurrency(p.realizedPL) : '-') + '</p></div>' +
+              '<div><p class="text-[10px] text-slate-500 uppercase">P/L Total</p><p class="font-mono font-bold ' + totalPLClass + '">' + (p.totalPL !== null ? (p.totalPL > 0 ? '+' : '') + formatCurrency(p.totalPL) : '-') + '</p></div>' +
               '<div><p class="text-[10px] text-slate-500 uppercase">Día</p><p class="font-mono font-medium ' + dailyClass + '">' + (p.dailyChange !== null ? (p.dailyChange > 0 ? '+' : '') + formatCurrency(p.dailyChange) : '-') + '</p></div>' +
             '</div>' +
           '</div>' +
@@ -1629,28 +2063,38 @@ function renderPortfolioTable(portfolio) {
 
       var colors = {
         'ETORO': { bg: 'rgba(59, 130, 246, 0.15)', icon: 'fa-globe', color: '#60a5fa' },
+        'ETORO': { bg: 'rgba(59, 130, 246, 0.15)', icon: 'fa-globe', color: '#60a5fa' },
         'HAPI':  { bg: 'rgba(16, 185, 129, 0.15)', icon: 'fa-bolt', color: '#34d399' },
         'TRADESTATION': { bg: 'rgba(245, 158, 11, 0.15)', icon: 'fa-chart-line', color: '#fbbf24' },
+        'ALPHA': { bg: 'rgba(139, 92, 246, 0.15)', icon: 'fa-building', color: '#a78bfa' },
+        'SIEMBRA': { bg: 'rgba(34, 197, 94, 0.15)', icon: 'fa-seedling', color: '#4ade80' },
+        'CCI': { bg: 'rgba(239, 68, 68, 0.15)', icon: 'fa-credit-card', color: '#f87171' },
+        'BANRESERVAS': { bg: 'rgba(59, 130, 246, 0.15)', icon: 'fa-university', color: '#60a5fa' },
+        'UNITED': { bg: 'rgba(99, 102, 241, 0.15)', icon: 'fa-plane', color: '#818cf8' },
         'default': { bg: 'rgba(99, 102, 241, 0.15)', icon: 'fa-building', color: '#818cf8' }
       };
 
       grid.innerHTML = platforms.map(function(p) {
-        var key = (p.platform || 'default').toUpperCase();
+        var key = (p.platform || p.name || 'default').toUpperCase();
         var style = colors[key] || colors['default'];
 
+        // Mapear propiedades del GAS a las que usa el frontend
+        var marketValue = p.marketValue || 0;
+        var costBasis = p.costBasis || p.totalInvested || 0;
+        var cash = p.cash || 0;
         var unrealizedPL = p.unrealizedPL || 0;
         var realizedPL = p.realizedPL || 0;
-        var dayChange = p.dayChange || 0;
-        var dayChangePct = p.dayChangePct || 0;
+        var totalValue = marketValue + cash;
         var unrealizedROI = p.unrealizedROI || 0;
         var realizedROI = p.realizedROI || 0;
-        var cash = p.cash || 0;
-        var totalValue = p.totalValue || (p.marketValue + cash) || 0;
+        var totalPL = p.totalPL || (unrealizedPL + realizedPL);
+        var totalROI = p.totalROI || (costBasis > 0 ? totalPL / costBasis : 0);
+        var activePositions = p.activePositions || p.symbols || 0;
+        var soldPositions = p.soldPositions || 0;
 
         var unrealizedClass = unrealizedPL >= 0 ? 'text-emerald-400' : 'text-rose-400';
         var realizedClass = realizedPL >= 0 ? 'text-emerald-400' : 'text-rose-400';
-        var dayClass = dayChange >= 0 ? 'text-emerald-400' : 'text-rose-400';
-        var daySign = dayChange >= 0 ? '+' : '';
+        var totalClass = totalPL >= 0 ? 'text-emerald-400' : 'text-rose-400';
         var cashClass = cash >= 0 ? 'text-slate-300' : 'text-rose-400';
 
         return '<div class="broker-summary-card">' +
@@ -1658,7 +2102,7 @@ function renderPortfolioTable(portfolio) {
             '<div class="broker-icon" style="background:' + style.bg + '; color:' + style.color + '">' +
               '<i class="fas ' + style.icon + '"></i>' +
             '</div>' +
-            '<span class="broker-name">' + (p.platform || 'Sin nombre') + '</span>' +
+            '<span class="broker-name">' + (p.platform || p.name || 'Sin nombre') + '</span>' +
           '</div>' +
           '<div class="text-center mb-3">' +
             '<p class="text-[10px] text-slate-500 uppercase font-bold tracking-wider mb-1">Valor Total</p>' +
@@ -1667,11 +2111,11 @@ function renderPortfolioTable(portfolio) {
           '<div class="broker-grid">' +
             '<div class="broker-stat">' +
               '<div class="broker-stat-label">Cost Basis</div>' +
-              '<div class="broker-stat-value text-slate-300">' + formatCurrency(p.totalInvested || 0) + '</div>' +
+              '<div class="broker-stat-value text-slate-300">' + formatCurrency(costBasis) + '</div>' +
             '</div>' +
             '<div class="broker-stat">' +
               '<div class="broker-stat-label">Market Value</div>' +
-              '<div class="broker-stat-value text-white">' + formatCurrency(p.marketValue || 0) + '</div>' +
+              '<div class="broker-stat-value text-white">' + formatCurrency(marketValue) + '</div>' +
             '</div>' +
             '<div class="broker-stat">' +
               '<div class="broker-stat-label">Cash</div>' +
@@ -1681,37 +2125,28 @@ function renderPortfolioTable(portfolio) {
           '<div class="broker-divider"></div>' +
           '<div class="broker-grid">' +
             '<div class="broker-stat">' +
-              '<div class="broker-stat-label">Day Change</div>' +
-              '<div class="broker-stat-value ' + dayClass + '">' + daySign + formatCurrency(dayChange) + '</div>' +
-              '<div class="broker-stat-sub ' + dayClass + '">' + daySign + dayChangePct.toFixed(2) + '%</div>' +
-            '</div>' +
-            '<div class="broker-stat">' +
               '<div class="broker-stat-label">Unrealized</div>' +
               '<div class="broker-stat-value ' + unrealizedClass + '">' + (unrealizedPL >= 0 ? '+' : '') + formatCurrency(unrealizedPL) + '</div>' +
-              '<div class="broker-stat-sub ' + unrealizedClass + '">' + (unrealizedROI >= 0 ? '+' : '') + unrealizedROI.toFixed(2) + '%</div>' +
+              '<div class="broker-stat-sub ' + unrealizedClass + '">' + (unrealizedROI >= 0 ? '+' : '') + (unrealizedROI * 100).toFixed(2) + '%</div>' +
             '</div>' +
             '<div class="broker-stat">' +
               '<div class="broker-stat-label">Realized</div>' +
               '<div class="broker-stat-value ' + realizedClass + '">' + (realizedPL >= 0 ? '+' : '') + formatCurrency(realizedPL) + '</div>' +
-              '<div class="broker-stat-sub ' + realizedClass + '">' + (realizedROI >= 0 ? '+' : '') + realizedROI.toFixed(2) + '%</div>' +
+              '<div class="broker-stat-sub ' + realizedClass + '">' + (realizedROI >= 0 ? '+' : '') + (realizedROI * 100).toFixed(2) + '%</div>' +
+            '</div>' +
+            '<div class="broker-stat">' +
+              '<div class="broker-stat-label">Total P/L</div>' +
+              '<div class="broker-stat-value ' + totalClass + '">' + (totalPL >= 0 ? '+' : '') + formatCurrency(totalPL) + '</div>' +
+              '<div class="broker-stat-sub ' + totalClass + '">' + (totalROI >= 0 ? '+' : '') + (totalROI * 100).toFixed(2) + '%</div>' +
             '</div>' +
           '</div>' +
           '<div class="mt-2 text-center">' +
-            '<span class="text-[10px] text-slate-500 font-medium">' + (p.symbols || 0) + ' símbolos</span>' +
+            '<span class="text-[10px] text-slate-500 font-medium">' + activePositions + ' activas / ' + soldPositions + ' vendidas</span>' +
           '</div>' +
         '</div>';
       }).join('');
     }
     
-
-    async function loadPlatforms() {
-      try {
-        var url = API_URL + "?action=platforms&currency=" + currentCurrency;
-        if (currentCurrency !== "USD" && currentRate) url += "&rate=" + currentRate;
-        const data = await fetchWithJSONP(url);
-        renderPlatformsTable(data.platforms || []);
-      } catch (e) { console.error(e); }
-    }
 
     function changeTxPage(delta) {
       var maxPage = Math.ceil(allTransactions.length / TX_PER_PAGE) - 1;
@@ -1792,8 +2227,12 @@ function renderPortfolioTable(portfolio) {
 
       // Desktop table
       tbody.innerHTML = assets.map(function(a) {
+        var assetIcon = a.iconUrl ? 
+          '<img src="' + a.iconUrl + '" alt="" class="asset-icon mr-2" loading="lazy" onerror="this.style.display=\'none\'">' : 
+          '<div class="w-5 h-5 mr-2 rounded bg-slate-700/50 flex items-center justify-center text-[9px] text-slate-500 font-bold">' + (a.ticker ? a.ticker.charAt(0) : '?') + '</div>';
+
         return '<tr class="hover:bg-slate-800/40 transition-colors">' +
-          '<td class="py-3 px-3 sm:px-4 font-bold text-brand-400">' + (a.ticker || '-') + '</td>' +
+          '<td class="py-3 px-3 sm:px-4 font-bold text-brand-400 flex items-center">' + assetIcon + (a.ticker || '-') + '</td>' +
           '<td class="py-3 px-3 sm:px-4 text-slate-300">' + (a.name || '-') + '</td>' +
           '<td class="py-3 px-3 sm:px-4"><span class="badge bg-slate-800 border-slate-700/50 text-slate-400">' + (a.class || '-') + '</span></td>' +
           '<td class="py-3 px-3 sm:px-4 text-slate-500 text-[11px]">' + (a.sector || '-') + '</td>' +
@@ -1806,9 +2245,13 @@ function renderPortfolioTable(portfolio) {
 
       // Mobile cards
       mobileContainer.innerHTML = assets.map(function(a) {
+        var assetMobileIcon = a.iconUrl ? 
+          '<img src="' + a.iconUrl + '" alt="" class="asset-icon-lg mr-2" loading="lazy" onerror="this.style.display=\'none\'">' : 
+          '<div class="w-6 h-6 mr-2 rounded bg-slate-700/50 flex items-center justify-center text-[10px] text-slate-500 font-bold">' + (a.ticker ? a.ticker.charAt(0) : '?') + '</div>';
+
         return '<div class="position-mobile-card">' +
           '<div class="flex items-center justify-between mb-2">' +
-            '<div class="flex items-center gap-2">' +
+            '<div class="flex items-center gap-2 flex items-center">' + assetMobileIcon +
               '<span class="font-bold text-sm text-brand-400">' + (a.ticker || '-') + '</span>' +
               '<span class="badge bg-slate-800 border-slate-700/50 text-slate-400">' + (a.class || '-') + '</span>' +
             '</div>' +
@@ -1820,6 +2263,374 @@ function renderPortfolioTable(portfolio) {
             '<div><p class="text-[10px] text-slate-500 uppercase">Costo Base</p><p class="text-slate-300 font-mono">' + formatCurrency(a.costBasis) + '</p></div>' +
             '<div><p class="text-[10px] text-slate-500 uppercase">Sector</p><p class="text-slate-300">' + (a.sector || '-') + '</p></div>' +
             '<div><p class="text-[10px] text-slate-500 uppercase">Plataforma</p><p class="text-slate-300">' + (a.platform || '-') + '</p></div>' +
+          '</div>' +
+        '</div>';
+      }).join('');
+    }
+
+
+    function renderPerformance(data) {
+      if (!data) {
+        console.warn("renderPerformance: data es null/undefined");
+        return;
+      }
+
+      // Normalizar: si viene como objeto plano o con .performance anidado
+      var perfData = data.performance || data;
+      var summary = perfData.summary || {};
+      var periods = perfData.periods || [];
+      var assetPerformance = perfData.assetPerformance || [];
+      var platformPerformance = perfData.platformPerformance || [];
+      var distribution = perfData.distribution || {};
+      var riskMetrics = perfData.riskMetrics || {};
+
+      // Helper defensivo para formatear números
+      function safeNumber(val, fallback) {
+        if (val === undefined || val === null || isNaN(val) || !isFinite(val)) {
+          return fallback !== undefined ? fallback : 0;
+        }
+        return val;
+      }
+
+      // ===== RESUMEN =====
+      var totalReturn = safeNumber(summary.totalReturn);
+      var totalReturnPct = safeNumber(summary.totalReturnPct);
+
+      var totalReturnEl = document.getElementById('perfTotalReturn');
+      if (totalReturnEl) {
+        totalReturnEl.textContent = (totalReturn >= 0 ? '+' : '') + formatCurrency(totalReturn);
+        totalReturnEl.className = 'mobile-stat-value ' + (totalReturn >= 0 ? 'text-emerald-400' : 'text-rose-400');
+      }
+
+      var totalReturnPctEl = document.getElementById('perfTotalReturnPct');
+      if (totalReturnPctEl) {
+        totalReturnPctEl.textContent = (totalReturnPct >= 0 ? '+' : '') + totalReturnPct.toFixed(2) + '%';
+        totalReturnPctEl.className = 'text-[10px] font-bold mt-1 ' + (totalReturnPct >= 0 ? 'text-emerald-400' : 'text-rose-400');
+      }
+
+      var perfTotalInvested = document.getElementById('perfTotalInvested');
+      if (perfTotalInvested) {
+        perfTotalInvested.textContent = formatCurrency(safeNumber(summary.totalInvested));
+      }
+
+      var perfTotalValue = document.getElementById('perfTotalValue');
+      if (perfTotalValue) {
+        perfTotalValue.textContent = formatCurrency(safeNumber(summary.totalPortfolioValue));
+      }
+
+      var perfMaxDrawdown = document.getElementById('perfMaxDrawdown');
+      if (perfMaxDrawdown) {
+        var maxDrawdown = safeNumber(riskMetrics.maxDrawdown, null);
+        perfMaxDrawdown.textContent = maxDrawdown !== null ? maxDrawdown.toFixed(2) + '%' : 'N/A';
+      }
+
+      // ===== TABLA DE PERÍODOS =====
+      renderPerformancePeriods(periods);
+
+      // ===== GRÁFICO DE PERÍODOS =====
+      renderPerformancePeriodChart(periods);
+
+      // ===== DISTRIBUCIÓN =====
+      renderPerformanceDistribution(distribution);
+
+      // ===== TOP PERFORMERS =====
+      renderTopPerformers(assetPerformance);
+
+      // ===== PLATAFORMAS =====
+      renderPerformancePlatforms(platformPerformance);
+    }
+
+    function renderPerformancePeriodChart(periods) {
+  var ctx = document.getElementById('performancePeriodChart');
+  if (!ctx) return;
+
+  if (charts.performancePeriod) charts.performancePeriod.destroy();
+
+  var labels = periods.map(function(p) { return p.label; });
+  var unrealized = periods.map(function(p) { return p.unrealizedPL; });
+  var realized = periods.map(function(p) { return p.realizedPL; });
+
+  charts.performancePeriod = new Chart(ctx.getContext('2d'), {
+    type: 'bar',
+    data: {
+      labels: labels,
+      datasets: [
+        {
+          label: 'No Realizado',
+          data: unrealized,
+          backgroundColor: unrealized.map(function(v) { return v >= 0 ? 'rgba(59, 130, 246, 0.7)' : 'rgba(244, 63, 94, 0.7)'; }),
+          borderColor: unrealized.map(function(v) { return v >= 0 ? '#3b82f6' : '#f43f5e'; }),
+          borderWidth: 1,
+          borderRadius: 4,
+          stack: 'stack1'
+        },
+        {
+          label: 'Realizado',
+          data: realized,
+          backgroundColor: realized.map(function(v) { return v >= 0 ? 'rgba(16, 185, 129, 0.7)' : 'rgba(245, 158, 11, 0.7)'; }),
+          borderColor: realized.map(function(v) { return v >= 0 ? '#10b981' : '#f59e0b'; }),
+          borderWidth: 1,
+          borderRadius: 4,
+          stack: 'stack1'
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: {
+          position: 'top',
+          labels: { color: '#94a3b8', usePointStyle: true, font: { size: 11 } }
+        },
+        tooltip: {
+          backgroundColor: 'rgba(15, 23, 42, 0.95)',
+          titleColor: '#f8fafc',
+          bodyColor: '#cbd5e1',
+          borderColor: '#334155',
+          borderWidth: 1,
+          padding: 12,
+          cornerRadius: 8,
+          callbacks: {
+            label: function(context) {
+              var val = context.parsed.y;
+              return context.dataset.label + ': ' + (val >= 0 ? '+' : '') + formatCurrency(val);
+            }
+          }
+        }
+      },
+      scales: {
+        x: {
+          stacked: true,
+          grid: { color: 'rgba(51, 65, 85, 0.15)', drawBorder: false },
+          ticks: { color: '#64748b', font: { size: 10 } }
+        },
+        y: {
+          stacked: true,
+          grid: { color: 'rgba(51, 65, 85, 0.15)', drawBorder: false },
+          ticks: { 
+            color: '#64748b', 
+            font: { size: 10 },
+            callback: function(value) { return formatCurrency(value); }
+          }
+        }
+      }
+    }
+  });
+}
+
+    function renderPerformancePeriods(periods) {
+      var tbody = document.getElementById('performancePeriodsTable');
+      var mobileContainer = document.getElementById('performancePeriodsMobile');
+
+      if (!periods || periods.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="7" class="py-12 text-center text-slate-500 text-sm">No hay datos de rendimiento</td></tr>';
+        mobileContainer.innerHTML = '<p class="text-slate-500 text-sm text-center py-8">No hay datos de rendimiento.</p>';
+        return;
+      }
+
+      // Desktop table
+      tbody.innerHTML = periods.map(function(p) {
+        var realizedClass = p.realizedPL >= 0 ? 'text-emerald-400' : 'text-rose-400';
+        var realizedSign = p.realizedPL >= 0 ? '+' : '';
+        var unrealizedClass = p.unrealizedPL >= 0 ? 'text-emerald-400' : 'text-rose-400';
+        var unrealizedSign = p.unrealizedPL >= 0 ? '+' : '';
+        var totalClass = p.totalPL >= 0 ? 'text-emerald-400' : 'text-rose-400';
+        var totalSign = p.totalPL >= 0 ? '+' : '';
+
+        return '<tr class="hover:bg-slate-800/40 transition-colors">' +
+          '<td class="py-3 px-3 sm:px-4 font-bold text-slate-200">' + p.label + '</td>' +
+          '<td class="py-3 px-3 sm:px-4 text-right font-mono text-slate-400">' + formatCurrency(p.startValue) + '</td>' +
+          '<td class="py-3 px-3 sm:px-4 text-right font-mono text-white">' + formatCurrency(p.endValue) + '</td>' +
+          '<td class="py-3 px-3 sm:px-4 text-right font-mono font-bold ' + unrealizedClass + '">' + unrealizedSign + formatCurrency(p.unrealizedPL) + '</td>' +
+          '<td class="py-3 px-3 sm:px-4 text-right font-mono font-bold ' + realizedClass + '">' + realizedSign + formatCurrency(p.realizedPL) + '</td>' +
+          '<td class="py-3 px-3 sm:px-4 text-right font-mono font-bold ' + totalClass + '">' + totalSign + formatCurrency(p.totalPL) + '</td>' +
+          '<td class="py-3 px-3 sm:px-4 text-right font-mono text-slate-500 text-[10px]">' + formatCurrency(p.marketValue) + ' / ' + formatCurrency(p.cash) + '</td>' +
+        '</tr>';
+      }).join('');
+
+      // Mobile cards
+      mobileContainer.innerHTML = periods.map(function(p) {
+        var totalClass = p.totalPL >= 0 ? 'text-emerald-400' : 'text-rose-400';
+        var totalSign = p.totalPL >= 0 ? '+' : '';
+        var unrealizedClass = p.unrealizedPL >= 0 ? 'text-emerald-400' : 'text-rose-400';
+        var realizedClass = p.realizedPL >= 0 ? 'text-emerald-400' : 'text-rose-400';
+
+        return '<div class="tx-mobile-card">' +
+          '<div class="flex items-center justify-between mb-2">' +
+            '<span class="font-bold text-sm text-slate-200">' + p.label + '</span>' +
+            '<span class="font-mono font-bold ' + totalClass + '">' + totalSign + formatCurrency(p.totalPL) + '</span>' +
+          '</div>' +
+          '<div class="grid grid-cols-2 gap-2 text-xs">' +
+            '<div><p class="text-[10px] text-slate-500 uppercase">No Realizado</p><p class="font-mono font-bold ' + unrealizedClass + '">' + (p.unrealizedPL >= 0 ? '+' : '') + formatCurrency(p.unrealizedPL) + '</p></div>' +
+            '<div><p class="text-[10px] text-slate-500 uppercase">Realizado</p><p class="font-mono font-bold ' + realizedClass + '">' + (p.realizedPL >= 0 ? '+' : '') + formatCurrency(p.realizedPL) + '</p></div>' +
+            '<div><p class="text-[10px] text-slate-500 uppercase">Mercado</p><p class="text-slate-300 font-mono">' + formatCurrency(p.marketValue) + '</p></div>' +
+            '<div><p class="text-[10px] text-slate-500 uppercase">Cash</p><p class="text-slate-300 font-mono">' + formatCurrency(p.cash) + '</p></div>' +
+          '</div>' +
+        '</div>';
+      }).join('');
+    }
+
+    function renderPerformanceDistribution(distribution) {
+      var ctx = document.getElementById('performanceDistributionChart');
+      if (!ctx) return;
+
+      if (charts.performanceDistribution) charts.performanceDistribution.destroy();
+
+      var data = [
+        distribution.excellentCount || 0,
+        distribution.goodCount || 0,
+        distribution.neutralCount || 0,
+        distribution.badCount || 0,
+        distribution.terribleCount || 0
+      ];
+
+      var total = data.reduce(function(a, b) { return a + b; }, 0);
+      if (total === 0) {
+        ctx.parentElement.innerHTML = '<div class="flex items-center justify-center h-full text-slate-500 text-sm">Sin datos de distribución</div>';
+        return;
+      }
+
+      charts.performanceDistribution = new Chart(ctx.getContext('2d'), {
+        type: 'doughnut',
+        data: {
+          labels: ['Excelente (+50%)', 'Bueno (+10%)', 'Neutral (±10%)', 'Malo (-10%)', 'Pésimo (-30%)'],
+          datasets: [{
+            data: data,
+            backgroundColor: ['#10b981', '#3b82f6', '#f59e0b', '#f43f5e', '#7c2d12'],
+            borderWidth: 0,
+            hoverOffset: 6
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          cutout: '65%',
+          plugins: {
+            legend: {
+              position: window.innerWidth < 640 ? 'bottom' : 'right',
+              labels: {
+                color: '#94a3b8',
+                usePointStyle: true,
+                pointStyle: 'circle',
+                font: { size: window.innerWidth < 640 ? 10 : 11 },
+                padding: window.innerWidth < 640 ? 10 : 16,
+                boxWidth: window.innerWidth < 640 ? 8 : 10
+              }
+            },
+            tooltip: {
+              backgroundColor: 'rgba(15, 23, 42, 0.95)',
+              titleColor: '#f8fafc',
+              bodyColor: '#cbd5e1',
+              borderColor: '#334155',
+              borderWidth: 1,
+              padding: 12,
+              cornerRadius: 8,
+              callbacks: {
+                label: function(context) {
+                  var value = context.parsed;
+                  var pct = total > 0 ? ((value / total) * 100).toFixed(1) : 0;
+                  return context.label + ': ' + value + ' posiciones (' + pct + '%)';
+                }
+              }
+            }
+          }
+        }
+      });
+    }
+
+    function renderTopPerformers(assets) {
+      var el = document.getElementById('topPerformersList');
+
+      if (!assets || assets.length === 0) {
+        el.innerHTML = '<p class="text-slate-500 text-sm text-center py-4">No hay datos de performers</p>';
+        return;
+      }
+
+      var top5 = assets.slice(0, 5);
+      var bottom5 = assets.slice(-5).reverse();
+
+      el.innerHTML = '<div class="mb-4"><p class="text-[10px] text-emerald-400 uppercase font-bold mb-2">Mejores</p>' +
+        top5.map(function(p) {
+          var roiClass = p.totalPL >= 0 ? 'text-emerald-400' : 'text-rose-400';
+          var sign = p.totalPL >= 0 ? '+' : '';
+          var perfIcon = p.iconUrl ? 
+            '<img src="' + p.iconUrl + '" alt="" class="asset-icon-sm mr-1.5" loading="lazy" onerror="this.style.display=\'none\'">' : 
+            '<div class="w-4 h-4 mr-1.5 rounded bg-slate-700/50 flex items-center justify-center text-[8px] text-slate-500 font-bold">' + (p.ticker ? p.ticker.charAt(0) : '?') + '</div>';
+          return '<div class="flex items-center justify-between py-1.5">' +
+            '<div class="flex items-center gap-2">' + perfIcon +
+              '<span class="font-bold text-xs text-slate-200">' + p.ticker + '</span>' +
+              '<span class="text-[10px] text-slate-500">' + (p.assetClass || '') + '</span>' +
+            '</div>' +
+            '<div class="text-right">' +
+              '<p class="font-bold text-xs ' + roiClass + '">' + sign + formatCurrency(p.totalPL) + '</p>' +
+              '<p class="text-[10px] text-slate-500">' + (p.weight || 0).toFixed(1) + '% del portafolio</p>' +
+            '</div>' +
+          '</div>';
+        }).join('') +
+      '</div>' +
+      '<div class="w-full h-px bg-slate-700/30 my-3"></div>' +
+      '<div><p class="text-[10px] text-rose-400 uppercase font-bold mb-2">Peores</p>' +
+        bottom5.map(function(p) {
+          var roiClass = p.totalPL >= 0 ? 'text-emerald-400' : 'text-rose-400';
+          var sign = p.totalPL >= 0 ? '+' : '';
+          var perfIcon2 = p.iconUrl ? 
+            '<img src="' + p.iconUrl + '" alt="" class="asset-icon-sm mr-1.5" loading="lazy" onerror="this.style.display=\'none\'">' : 
+            '<div class="w-4 h-4 mr-1.5 rounded bg-slate-700/50 flex items-center justify-center text-[8px] text-slate-500 font-bold">' + (p.ticker ? p.ticker.charAt(0) : '?') + '</div>';
+          return '<div class="flex items-center justify-between py-1.5">' +
+            '<div class="flex items-center gap-2">' + perfIcon2 +
+              '<span class="font-bold text-xs text-slate-200">' + p.ticker + '</span>' +
+              '<span class="text-[10px] text-slate-500">' + (p.assetClass || '') + '</span>' +
+            '</div>' +
+            '<div class="text-right">' +
+              '<p class="font-bold text-xs ' + roiClass + '">' + sign + formatCurrency(p.totalPL) + '</p>' +
+              '<p class="text-[10px] text-slate-500">' + (p.weight || 0).toFixed(1) + '% del portafolio</p>' +
+            '</div>' +
+          '</div>';
+        }).join('') +
+      '</div>';
+    }
+
+    function renderPerformancePlatforms(platforms) {
+      var tbody = document.getElementById('performancePlatformsTable');
+      var mobileContainer = document.getElementById('performancePlatformsMobile');
+
+      if (!platforms || platforms.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="8" class="py-12 text-center text-slate-500 text-sm">No hay datos por plataforma</td></tr>';
+        mobileContainer.innerHTML = '<p class="text-slate-500 text-sm text-center py-8">No hay datos por plataforma.</p>';
+        return;
+      }
+
+      tbody.innerHTML = platforms.map(function(p) {
+        var unrealizedClass = p.unrealizedPL >= 0 ? 'text-emerald-400' : 'text-rose-400';
+        var realizedClass = p.realizedPL >= 0 ? 'text-emerald-400' : 'text-rose-400';
+        var totalClass = p.totalPL >= 0 ? 'text-emerald-400' : 'text-rose-400';
+        var totalROIColor = p.totalROI >= 0 ? 'text-emerald-400' : 'text-rose-400';
+
+        return '<tr class="hover:bg-slate-800/40 transition-colors">' +
+          '<td class="py-3 px-3 sm:px-4 font-bold text-slate-200">' + (p.platform || '-') + '</td>' +
+          '<td class="py-3 px-3 sm:px-4 text-right font-mono text-slate-400">' + formatCurrency(p.totalInvested) + '</td>' +
+          '<td class="py-3 px-3 sm:px-4 text-right font-mono text-white">' + formatCurrency(p.totalValue) + '</td>' +
+          '<td class="py-3 px-3 sm:px-4 text-right font-mono font-medium ' + unrealizedClass + '">' + (p.unrealizedPL >= 0 ? '+' : '') + formatCurrency(p.unrealizedPL) + '</td>' +
+          '<td class="py-3 px-3 sm:px-4 text-right font-mono font-medium ' + (p.unrealizedROI >= 0 ? 'text-emerald-400' : 'text-rose-400') + '">' + (p.unrealizedROI >= 0 ? '+' : '') + p.unrealizedROI.toFixed(2) + '%</td>' +
+          '<td class="py-3 px-3 sm:px-4 text-right font-mono font-medium ' + realizedClass + '">' + (p.realizedPL >= 0 ? '+' : '') + formatCurrency(p.realizedPL) + '</td>' +
+          '<td class="py-3 px-3 sm:px-4 text-right font-mono font-bold ' + totalClass + '">' + (p.totalPL >= 0 ? '+' : '') + formatCurrency(p.totalPL) + '</td>' +
+          '<td class="py-3 px-3 sm:px-4 text-right font-mono font-bold ' + totalROIColor + '">' + (p.totalROI >= 0 ? '+' : '') + p.totalROI.toFixed(2) + '%</td>' +
+        '</tr>';
+      }).join('');
+
+      mobileContainer.innerHTML = platforms.map(function(p) {
+        var totalClass = p.totalPL >= 0 ? 'text-emerald-400' : 'text-rose-400';
+        return '<div class="platform-mobile-card">' +
+          '<div class="flex items-center justify-between mb-2">' +
+            '<span class="font-bold text-sm text-slate-200">' + (p.platform || '-') + '</span>' +
+            '<span class="font-mono font-bold ' + totalClass + '">' + (p.totalPL >= 0 ? '+' : '') + formatCurrency(p.totalPL) + '</span>' +
+          '</div>' +
+          '<div class="grid grid-cols-2 gap-2 text-xs">' +
+            '<div><p class="text-[10px] text-slate-500 uppercase">Invertido</p><p class="text-slate-300 font-mono">' + formatCurrency(p.totalInvested) + '</p></div>' +
+            '<div><p class="text-[10px] text-slate-500 uppercase">Valor Actual</p><p class="text-white font-mono">' + formatCurrency(p.totalValue) + '</p></div>' +
+            '<div><p class="text-[10px] text-slate-500 uppercase">ROI</p><p class="text-slate-300 font-mono">' + (p.totalROI >= 0 ? '+' : '') + p.totalROI.toFixed(2) + '%</p></div>' +
+            '<div><p class="text-[10px] text-slate-500 uppercase">Símbolos</p><p class="text-slate-300 font-mono">' + (p.symbols || 0) + '</p></div>' +
           '</div>' +
         '</div>';
       }).join('');
@@ -1870,6 +2681,212 @@ function renderPortfolioTable(portfolio) {
       }).join('');
     }
 
+    // ===== RENDER BUFFETT-STYLE PORTFOLIO CHART =====
+    function renderBuffettPortfolio(portfolio) {
+      var ctx = document.getElementById('buffettPortfolioChart');
+      if (!ctx) return;
+
+      // Filtrar solo posiciones activas con valor, ordenadas por tamaño
+      var activePositions = (portfolio || []).filter(function(p) {
+        return !p.isSold && (p.currentValue || 0) > 0;
+      }).sort(function(a, b) {
+        return (b.currentValue || 0) - (a.currentValue || 0);
+      });
+
+      if (activePositions.length === 0) {
+        ctx.parentElement.innerHTML = '<div class="flex items-center justify-center h-[300px] text-slate-500 text-sm">Sin posiciones activas</div>';
+        return;
+      }
+
+      // Calcular total para porcentajes
+      var totalValue = activePositions.reduce(function(sum, p) {
+        return sum + (p.currentValue || 0);
+      }, 0);
+
+      // Colores corporativos por ticker (ajusta según tus empresas)
+      var brandColors = {
+          'NVDA': '#76b900',
+          'ALCANZA 2': '#8D5578',
+          'HAINA': '#142B37',
+          'ALTIO': '#449E40',
+          'BLK': '#000000',
+          'AMZN': '#ff9900',
+          'MA': '#eb001b',
+          'MSFT': '#00a4ef',
+          'META': '#0866ff',
+          'BKNG': '#003580',
+          'V': '#1434cb',
+          'ANET': '#005eb8',
+          'VRT': '#0072ce',
+          'GOOG': '#4285f4',
+          'AAPL': '#a2aaad',
+          'VOO': '#D04C55',
+          'AOCISA': '#c62828',
+          'UBER': '#000000',
+          'ASML': '#00a651',
+          'APH': '#005b96',
+          'DUOL': '#58cc02',
+          'ALCANZA': '#8D5578',
+          'CRM': '#1798c1',
+          'YMM': '#00a651',
+          'BABA': '#ff6a00',
+          'CBANR': '#007a3d',
+          'BTCUSD': '#f7931a',
+          'NOW': '#81b441',
+          'NFLX': '#e50914',
+          'METU': '#0866ff',
+          'ETHUSD': '#627eea',
+          'default': '#3b82f6'
+      };
+
+      // Preparar datos para Chart.js
+      var labels = [];
+      var data = [];
+      var colors = [];
+      var tickers = [];
+      var iconUrls = [];
+
+      activePositions.forEach(function(p) {
+        var ticker = (p.ticker || 'OTRO').toUpperCase();
+        labels.push(p.assetName || ticker);
+        data.push(p.currentValue || 0);
+        colors.push(brandColors[ticker] || brandColors['default']);
+        tickers.push(ticker);
+        iconUrls.push(p.iconUrl || '');
+      });
+
+      // Destruir chart anterior si existe
+      if (charts.buffettPortfolio) {
+        charts.buffettPortfolio.destroy();
+      }
+
+      // Crear el donut chart
+      charts.buffettPortfolio = new Chart(ctx.getContext('2d'), {
+        type: 'doughnut',
+        data: {
+          labels: labels,
+          datasets: [{
+            data: data,
+            backgroundColor: colors,
+            borderColor: '#0f172a',
+            borderWidth: 3,
+            hoverOffset: 12,
+            hoverBorderWidth: 0
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          cutout: '58%',
+          animation: {
+            animateRotate: true,
+            animateScale: true,
+            duration: 1200,
+            easing: 'easeOutQuart'
+          },
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              backgroundColor: 'rgba(15, 23, 42, 0.95)',
+              titleColor: '#f8fafc',
+              bodyColor: '#cbd5e1',
+              borderColor: '#334155',
+              borderWidth: 1,
+              padding: 12,
+              cornerRadius: 8,
+              callbacks: {
+                label: function(context) {
+                  var idx = context.dataIndex;
+                  var value = context.parsed;
+                  var pct = totalValue > 0 ? ((value / totalValue) * 100).toFixed(1) : 0;
+                  return tickers[idx] + ': ' + formatCurrency(value) + ' (' + pct + '%)';
+                }
+              }
+            }
+          },
+          onHover: function(event, elements) {
+            event.native.target.style.cursor = elements.length > 0 ? 'pointer' : 'default';
+          }
+        },
+        plugins: [{
+          // Plugin para dibujar iconos en el centro de cada slice grande
+          id: 'sliceIcons',
+          afterDraw: function(chart) {
+            var ctx = chart.ctx;
+            var meta = chart.getDatasetMeta(0);
+            
+            meta.data.forEach(function(arc, index) {
+              var center = arc.tooltipPosition();
+              var value = data[index];
+              var pct = totalValue > 0 ? ((value / totalValue) * 100) : 0;
+              
+              // Solo mostrar icono si el slice es > 4%
+              if (pct < 4) return;
+              
+              var size = Math.min(26, Math.max(18, pct * 0.6));
+              
+              // Círculo de fondo oscuro
+              ctx.save();
+              ctx.beginPath();
+              ctx.arc(center.x, center.y, size/2 + 2, 0, 2 * Math.PI);
+              ctx.fillStyle = '#0f172a';
+              ctx.fill();
+              ctx.strokeStyle = '#334155';
+              ctx.lineWidth = 1;
+              ctx.stroke();
+              ctx.restore();
+              
+              // Si hay iconUrl, intentar dibujarlo (simplificado - usa iniciales como fallback)
+              var ticker = tickers[index];
+              ctx.save();
+              ctx.fillStyle = '#f8fafc';
+              ctx.font = 'bold ' + (size * 0.35) + 'px Inter, sans-serif';
+              ctx.textAlign = 'center';
+              ctx.textBaseline = 'middle';
+              ctx.fillText(ticker.substring(0, 3), center.x, center.y);
+              ctx.restore();
+            });
+          }
+        }]
+      });
+
+      // Renderizar leyenda custom con asset-icon
+      renderBuffettLegend(activePositions, totalValue, colors, tickers, iconUrls);
+    }
+
+    function renderBuffettLegend(positions, totalValue, colors, tickers, iconUrls) {
+      var el = document.getElementById('buffettLegend');
+      if (!el) return;
+
+      el.innerHTML = positions.map(function(p, idx) {
+        var ticker = tickers[idx];
+        var weight = totalValue > 0 ? ((p.currentValue || 0) / totalValue * 100).toFixed(1) : 0;
+        var color = colors[idx];
+        var iconUrl = iconUrls[idx];
+        
+        // Usar tu asset-icon existente
+        var iconHtml = iconUrl ? 
+          '<img src="' + iconUrl + '" alt="" class="asset-icon-lg" loading="lazy" onerror="this.style.display=\'none\'; this.nextElementSibling.style.display=\'flex\'">' :
+          '';
+        
+        // Fallback con iniciales (hidden por defecto, se muestra si la imagen falla)
+        var fallbackHtml = '<div class="w-6 h-6 rounded-lg bg-slate-700/50 flex items-center justify-center text-[10px] text-slate-500 font-bold" style="display:' + (iconUrl ? 'none' : 'flex') + '">' + 
+          (ticker ? ticker.charAt(0) : '?') + '</div>';
+
+        return '<div class="buffett-legend-item">' +
+          '<div class="flex-shrink-0">' + iconHtml + fallbackHtml + '</div>' +
+          '<div class="buffett-legend-info">' +
+            '<div class="flex items-center justify-between gap-2">' +
+              '<span class="buffett-ticker truncate">' + ticker + '</span>' +
+              '<span class="buffett-percent flex-shrink-0">' + weight + '%</span>' +
+            '</div>' +
+            '<p class="buffett-value truncate">' + formatCurrency(p.currentValue || 0) + '</p>' +
+          '</div>' +
+          '<div class="w-1 h-8 rounded-full flex-shrink-0" style="background-color: ' + color + '"></div>' +
+        '</div>';
+      }).join('');
+    }
+
     function getActionBadge(action) {
       var b = 'px-2 py-0.5 rounded text-[10px] font-bold tracking-wider ';
       var badges = {
@@ -1886,34 +2903,26 @@ function renderPortfolioTable(portfolio) {
       return badges[action] || '<span class="' + b + 'bg-slate-800 text-slate-400">' + (action || '-') + '</span>';
     }
 
-function formatCurrency(value) {
-  if (value === undefined || value === null || isNaN(value)) {
-    return currentCurrency === 'DOP' ? 'DOP$0.00' : '$0.00';
-  }
-
-  if (currentCurrency === 'DOP') {
-    return 'DOP$' + new Intl.NumberFormat('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(value);
-  }
-
-  return '$' + new Intl.NumberFormat('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(value);
-}
-
-function setCurrency(currency) {
-  if (currency === currentCurrency) return;
-  currentCurrency = currency;
-
-  document.getElementById('btn-usd').className = currency === 'USD' 
-    ? "px-2.5 sm:px-3 py-1.5 rounded-md text-[11px] sm:text-xs font-semibold transition-all bg-brand-500 text-white shadow-sm touch-btn" 
-    : "px-2.5 sm:px-3 py-1.5 rounded-md text-[11px] sm:text-xs font-semibold transition-all text-slate-400 hover:text-slate-200 touch-btn";
-  document.getElementById('btn-dop').className = currency === 'DOP' 
-    ? "px-2.5 sm:px-3 py-1.5 rounded-md text-[11px] sm:text-xs font-semibold transition-all bg-brand-500 text-white shadow-sm touch-btn" 
-    : "px-2.5 sm:px-3 py-1.5 rounded-md text-[11px] sm:text-xs font-semibold transition-all text-slate-400 hover:text-slate-200 touch-btn";
-
-  loadData();
-}
+    function formatCurrency(value) {
+      if (value === undefined || value === null || isNaN(value)) {
+        return currentCurrency === 'DOP' ? 'DOP$0.00' : '$0.00';
+      }
+      
+      if (currentCurrency === 'DOP') {
+        return 'DOP$' + new Intl.NumberFormat('en-US', { 
+          minimumFractionDigits: 2,
+          maximumFractionDigits: 2
+        }).format(value);
+      }
+      
+      return '$' + new Intl.NumberFormat('en-US', { 
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2
+      }).format(value);
+    }
 
     function switchTab(tab) {
-      var tabs = ['portfolio', 'assets', 'transactions', 'platforms'];
+      var tabs = ['portfolio', 'assets', 'transactions', 'performance', 'platforms'];
       tabs.forEach(function(t) {
         document.getElementById('panel-' + t).classList.add('hidden');
         document.getElementById('tab-' + t).classList.remove('tab-active');
@@ -1923,29 +2932,40 @@ function setCurrency(currency) {
       document.getElementById('tab-' + tab).classList.add('tab-active');
       document.getElementById('tab-' + tab).classList.add('text-brand-400');
 
+      // Renderizar desde datos cacheados sin llamar API
+      if (window.dashboardData) {
+        if (tab === 'assets') {
+          renderAssetsTable(window.dashboardData.currentAssets || []);
+        } else if (tab === 'platforms') {
+          renderPlatformsTable(window.dashboardData.byPlatform || []);
+        } else if (tab === 'transactions') {
+          renderTransactionsTable();
+        }
+      }
+
       // Re-apply mobile view mode if on portfolio tab
       if (tab === 'portfolio' && window.innerWidth < 768) {
         setMobileView(mobileViewMode);
       }
     }
 
-function showLoading() {
-  document.getElementById('loadingState').classList.remove('hidden');
-  document.getElementById('errorState').classList.add('hidden');
-  document.getElementById('content').classList.add('hidden');
-}
+    function showLoading() {
+      document.getElementById('loadingState').classList.remove('hidden');
+      document.getElementById('errorState').classList.add('hidden');
+      document.getElementById('content').classList.add('hidden');
+    }
 
-function showContent() {
-  document.getElementById('loadingState').classList.add('hidden');
-  document.getElementById('errorState').classList.add('hidden');
-  document.getElementById('content').classList.remove('hidden');
-}
+    function showContent() {
+      document.getElementById('loadingState').classList.add('hidden');
+      document.getElementById('errorState').classList.add('hidden');
+      document.getElementById('content').classList.remove('hidden');
+    }
 
-function showError(msg) {
-  document.getElementById('loadingState').classList.add('hidden');
-  document.getElementById('errorState').classList.remove('hidden');
-  document.getElementById('errorMessage').textContent = msg;
-}
+    function showError(msg) {
+      document.getElementById('loadingState').classList.add('hidden');
+      document.getElementById('errorState').classList.remove('hidden');
+      document.getElementById('errorMessage').textContent = msg;
+    }
 
     // Handle window resize for charts
     var resizeTimeout;
@@ -2006,9 +3026,10 @@ function showError(msg) {
       });
     }
 
-    function buildRealHistoryFromPrices(transactions) {
+        function buildRealHistoryFromPrices(transactions) {
       if (!transactions || transactions.length === 0 || historicalDates.length === 0) {
         historyData = [];
+        window.monthlyPL = {};
         return;
       }
 
@@ -2042,13 +3063,18 @@ function showError(msg) {
 
       var monthlyPortfolio = {};
       var lastDateKey = historicalDates[historicalDates.length - 1];
+      
+      // === NUEVO: Guardar detalle por ticker para P&L ===
+      var monthlyTickerDetail = {};
+      // === FIN NUEVO ===
 
       historicalDates.forEach(function(dateKey) {
-        // Calcular efectivo por bróker hasta este mes
         var cashByBroker = {};
         var runningPositions = {};
+        var monthlyDividends = 0;
+        var monthlyBuys = []; // { ticker, broker, quantity, price, total }
+        var monthlySells = []; // { ticker, broker, quantity, total, costBasis }
         
-        // Primera pasada: calcular efectivo acumulado por bróker
         sorted.forEach(function(tx) {
           var txDate = new Date(tx.dateRaw || tx.date);
           var txYear = txDate.getFullYear();
@@ -2065,28 +3091,39 @@ function showError(msg) {
 
           if (!cashByBroker[broker]) cashByBroker[broker] = 0;
 
-          if (action === 'Cash Deposit' || action === 'Transfer Deposit') {
+                    if (action === 'Cash Deposit') {
             cashByBroker[broker] += amount;
+          } else if (action === 'Transfer Deposit') {
+            // Solo suma al cash si es transferencia de EFECTIVO (sin ticker)
+            if (!ticker) cashByBroker[broker] += amount;
           } else if (action === 'Cash Withdrawal') {
             cashByBroker[broker] -= amount;
           } else if (action === 'Dividend' || action === 'Crypto Interest') {
-            // Dividendos en efectivo aumentan el cash
             cashByBroker[broker] += amount;
+            monthlyDividends += amount;
           } else if (action === 'Buy') {
             cashByBroker[broker] -= amount;
-            // Trackear posición
             if (!runningPositions[ticker]) runningPositions[ticker] = {};
             if (!runningPositions[ticker][broker]) {
-              runningPositions[ticker][broker] = { quantity: 0, invested: 0 };
+              runningPositions[ticker][broker] = { quantity: 0, invested: 0, avgCost: 0 };
             }
-            runningPositions[ticker][broker].quantity += quantity;
-            runningPositions[ticker][broker].invested += amount;
+            var pos = runningPositions[ticker][broker];
+            // Actualizar costo promedio
+            var newTotalCost = pos.invested + amount;
+            var newQty = pos.quantity + quantity;
+            pos.avgCost = newQty > 0 ? newTotalCost / newQty : 0;
+            pos.quantity = newQty;
+            pos.invested = newTotalCost;
+            
+            // Guardar compra del mes para P&L
+            if (txKey === dateKey) {
+              monthlyBuys.push({ ticker: ticker, broker: broker, quantity: quantity, price: amount/quantity, total: amount });
+            }
           } else if (action === 'Sell') {
             cashByBroker[broker] += amount;
-            // Reducir posición
             if (runningPositions[ticker] && runningPositions[ticker][broker]) {
               var pos = runningPositions[ticker][broker];
-              var costBasisSold = pos.quantity > 0 ? (pos.invested / pos.quantity) * quantity : 0;
+              var costBasisSold = pos.avgCost * quantity;
               pos.quantity -= quantity;
               pos.invested -= costBasisSold;
               if (pos.quantity <= 0) {
@@ -2095,21 +3132,30 @@ function showError(msg) {
                   delete runningPositions[ticker];
                 }
               }
+              
+              // Guardar venta del mes para P&L
+              if (txKey === dateKey) {
+                monthlySells.push({ ticker: ticker, broker: broker, quantity: quantity, total: amount, costBasis: costBasisSold });
+              }
             }
           } else if (action === 'DRIP') {
-            // DRIP: no afecta el cash (dividendo reinvertido)
             if (!runningPositions[ticker]) runningPositions[ticker] = {};
             if (!runningPositions[ticker][broker]) {
-              runningPositions[ticker][broker] = { quantity: 0, invested: 0 };
+              runningPositions[ticker][broker] = { quantity: 0, invested: 0, avgCost: 0 };
             }
             runningPositions[ticker][broker].quantity += quantity;
-            // El invested del DRIP es 0 porque no salió cash
-          }
+            // DRIP no aumenta invested (dividendo reinvertido)
+            
+            if (txKey === dateKey) {
+              monthlyBuys.push({ ticker: ticker, broker: broker, quantity: quantity, price: 0, total: 0, isDRIP: true });
+            }
+          } 
         });
 
-        // Calcular valor de mercado
+        // Calcular valor de mercado y guardar detalle por ticker
         var marketValue = 0;
         var currentInvested = 0;
+        var tickerValues = {};
         
         for (var ticker in runningPositions) {
           for (var broker in runningPositions[ticker]) {
@@ -2146,17 +3192,27 @@ function showError(msg) {
 
               // PRIORIDAD 4: Costo promedio como fallback
               if (price === null) {
-                price = pos.invested / pos.quantity;
+                price = pos.avgCost;
               }
 
               if (price !== null) {
-                marketValue += pos.quantity * price;
+                var val = pos.quantity * price;
+                marketValue += val;
+                
+                // Guardar detalle para P&L
+                if (!tickerValues[ticker]) tickerValues[ticker] = {};
+                tickerValues[ticker][broker] = {
+                  quantity: pos.quantity,
+                  price: price,
+                  invested: pos.invested,
+                  avgCost: pos.avgCost,
+                  value: val
+                };
               }
             }
           }
         }
 
-        // Efectivo total = suma de efectivo por bróker
         var cash = 0;
         for (var broker in cashByBroker) {
           cash += cashByBroker[broker];
@@ -2167,14 +3223,109 @@ function showError(msg) {
           marketValue: marketValue,
           cash: cash,
           total: marketValue + cash,
-          invested: currentInvested
+          invested: currentInvested,
+          dividends: monthlyDividends,
+          buys: monthlyBuys,
+          sells: monthlySells
         };
+        
+        // Guardar detalle por ticker
+        monthlyTickerDetail[dateKey] = tickerValues;
       });
+
+      // === CALCULAR P&L POR PERÍODO (como fórmula de Sheets) ===
+      window.monthlyPL = {};
+      var monthlyKeys = historicalDates.slice().sort();
+      
+      monthlyKeys.forEach(function(dateKey, idx) {
+        var current = monthlyPortfolio[dateKey];
+        var currentTickers = monthlyTickerDetail[dateKey];
+        if (!current) return;
+        
+        var pl = 0;
+        
+        if (idx === 0) {
+          // Primer mes: valor de mercado - capital invertido + dividendos
+          pl = current.marketValue - current.invested + current.dividends;
+        } else {
+          var prevKey = monthlyKeys[idx - 1];
+          var prev = monthlyPortfolio[prevKey];
+          var prevTickers = monthlyTickerDetail[prevKey];
+          
+          if (!prev || !prevTickers) {
+            pl = current.marketValue - current.invested + current.dividends;
+          } else {
+            // 1. Ganancia de posiciones que llevabas del mes anterior
+            for (var ticker in prevTickers) {
+              for (var broker in prevTickers[ticker]) {
+                var prevPos = prevTickers[ticker][broker];
+                var currentPos = currentTickers && currentTickers[ticker] && currentTickers[ticker][broker];
+                
+                if (currentPos) {
+                  // Sigo teniendo estas acciones: ganancia = (PrecioActual - PrecioAnterior) × CantidadAnterior
+                  // PERO limitado a la cantidad que sigue (si vendí algunas, el resto se calcula en ventas)
+                  var qtyCarried = Math.min(prevPos.quantity, currentPos.quantity);
+                  pl += (currentPos.price - prevPos.price) * qtyCarried;
+                }
+                // Si no está en current, se vendió todo (se calcula en sells)
+              }
+            }
+            
+            // 2. Ganancia de compras nuevas del mes
+            current.buys.forEach(function(buy) {
+              var currentPos = currentTickers && currentTickers[buy.ticker] && currentTickers[buy.ticker][buy.broker];
+              if (currentPos && !buy.isDRIP) {
+                // Ganancia = (PrecioActual - PrecioCompra) × CantidadComprada
+                pl += (currentPos.price - buy.price) * buy.quantity;
+              }
+              // DRIP: no hay ganancia adicional (ya está en la valorización)
+            });
+            
+            // 3. Ganancia/pérdida de ventas del mes
+            current.sells.forEach(function(sell) {
+              pl += sell.total - sell.costBasis;
+            });
+            
+            // 4. Dividendos del mes
+            pl += current.dividends;
+          }
+        }
+        // === CALCULAR P/L REALIZADO Y NO REALIZADO DEL MES ===
+        var monthlyRealizedPL = 0;
+        
+        // 1. P/L de ventas del mes (FIFO exacto)
+        current.sells.forEach(function(sell) {
+          monthlyRealizedPL += (sell.total - sell.costBasis);
+        });
+        
+        // 2. Dividendos y Crypto Interest (son P/L realizado)
+        monthlyRealizedPL += current.dividends;
+        
+        // 3. P/L No Realizado = Total del mes - Realizado
+        var monthlyUnrealizedPL = pl - monthlyRealizedPL;
+        
+        window.monthlyPL[dateKey] = {
+          date: dateKey,
+          pl: pl,
+          realizedPL: monthlyRealizedPL,
+          unrealizedPL: monthlyUnrealizedPL,
+          marketValue: current.marketValue,
+          invested: current.invested,
+          cash: current.cash,
+          total: current.total,
+          buys: current.buys.length,
+          sells: current.sells.length,
+          dividends: current.dividends
+        };
+        // === FIN ===
+      });
+      // === FIN CALCULAR P&L ===
 
       historyData = historicalDates.map(function(dateKey) {
         return monthlyPortfolio[dateKey] || { date: dateKey, marketValue: 0, cash: 0, total: 0, invested: 0 };
       }).filter(function(d) { return d.total !== 0 || d.invested !== 0; });
-    }    
+    }
+    
     function setHistoryRange(range) {
       historyRange = range;
       
@@ -2196,7 +3347,7 @@ function showError(msg) {
       
     }
 
-    function renderHistoryChart() {
+        function renderHistoryChart() {
       var ctx = document.getElementById('portfolioHistoryChart');
       if (!ctx) return;
 
@@ -2214,10 +3365,7 @@ function showError(msg) {
       });
       
       var totalValues = filteredData.map(function(d) { return d.total; });
-      var marketValues = filteredData.map(function(d) { return d.marketValue; });
-      var cashValues = filteredData.map(function(d) { return d.cash; });
-      var investedValues = filteredData.map(function(d) { return d.invested; });
-
+      
       // Calcular métricas
       var maxVal = Math.max.apply(null, totalValues);
       var minVal = Math.min.apply(null, totalValues);
@@ -2232,52 +3380,92 @@ function showError(msg) {
 
       if (charts.history) charts.history.destroy();
 
+      // Construir datasets
+      var datasets = [
+        {
+          label: 'Patrimonio Total',
+          data: totalValues,
+          borderColor: '#3b82f6',
+          backgroundColor: 'rgba(59, 130, 246, 0.08)',
+          borderWidth: 2.5,
+          tension: 0.3,
+          fill: true,
+          pointRadius: 3,
+          pointHoverRadius: 6,
+          pointBackgroundColor: '#3b82f6',
+          pointBorderColor: '#0f172a',
+          pointBorderWidth: 2,
+          order: 1
+        }
+      ];
+
+      // Si tenemos datos de brokers individuales, agregar líneas
+      if (window.dashboardData && window.dashboardData.historicoBrokers && 
+          window.dashboardData.historicoBrokers.brokers) {
+        
+        var hb = window.dashboardData.historicoBrokers;
+        var brokerColors = {
+          'Etoro': '#60a5fa',
+          'Hapi': '#34d399', 
+          'TradeStation': '#fbbf24',
+          'Alpha': '#a78bfa',
+          'SIEMBRA': '#4ade80',
+          'Banreservas': '#60a5fa',
+          'UNITED': '#818cf8',
+          'Goarbit': '#f87171',
+          'R-Company': '#f472b6',
+          'BDI y QIK Ahorro': '#94a3b8'
+        };
+        
+        var colorIdx = 0;
+        var palette = ['#f43f5e', '#10b981', '#f59e0b', '#8b5cf6', '#0ea5e9', '#ec4899', '#84cc16', '#06b6d4'];
+        
+        for (var brokerName in hb.brokers) {
+          var brokerValues = hb.brokers[brokerName];
+          
+          // Filtrar por rango si es necesario
+          var filteredBrokerValues = [];
+          var allDates = hb.dates;
+          
+          for (var i = 0; i < filteredData.length; i++) {
+            var targetDate = filteredData[i].date;
+            var dateIdx = allDates.indexOf(targetDate);
+            if (dateIdx >= 0 && dateIdx < brokerValues.length) {
+              filteredBrokerValues.push(brokerValues[dateIdx]);
+            } else {
+              filteredBrokerValues.push(null);
+            }
+          }
+          
+          // Solo agregar si tiene valores no-cero
+          var hasData = filteredBrokerValues.some(function(v) { return v && v > 0; });
+          if (!hasData) continue;
+          
+          var color = brokerColors[brokerName] || palette[colorIdx % palette.length];
+          colorIdx++;
+          
+          datasets.push({
+            label: brokerName,
+            data: filteredBrokerValues,
+            borderColor: color,
+            backgroundColor: 'transparent',
+            borderWidth: 1.5,
+            borderDash: [3, 3],
+            tension: 0.3,
+            fill: false,
+            pointRadius: 0,
+            pointHoverRadius: 4,
+            hidden: true, // Oculto por defecto, el usuario puede activar en la leyenda
+            order: 2 + colorIdx
+          });
+        }
+      }
+
       charts.history = new Chart(ctx.getContext('2d'), {
         type: 'line',
         data: {
           labels: labels,
-          datasets: [
-            {
-              label: 'Patrimonio Total',
-              data: totalValues,
-              borderColor: '#3b82f6',
-              backgroundColor: 'rgba(59, 130, 246, 0.08)',
-              borderWidth: 2.5,
-              tension: 0.3,
-              fill: true,
-              pointRadius: 3,
-              pointHoverRadius: 6,
-              pointBackgroundColor: '#3b82f6',
-              pointBorderColor: '#0f172a',
-              pointBorderWidth: 2,
-              order: 1
-            },
-            {
-              label: 'Valor de Mercado',
-              data: marketValues,
-              borderColor: '#10b981',
-              backgroundColor: 'transparent',
-              borderWidth: 2,
-              borderDash: [5, 5],
-              tension: 0.3,
-              fill: false,
-              pointRadius: 0,
-              pointHoverRadius: 4,
-              order: 2
-            },
-            {
-              label: 'Capital Invertido',
-              data: investedValues,
-              borderColor: '#f59e0b',
-              backgroundColor: 'transparent',
-              borderWidth: 1.5,
-              tension: 0.3,
-              fill: false,
-              pointRadius: 0,
-              pointHoverRadius: 4,
-              order: 3
-            }
-          ]
+          datasets: datasets
         },
         options: {
           responsive: true,
@@ -2347,6 +3535,7 @@ function showError(msg) {
       });
     }
 
+    
     function filterHistoryByRange(data, range) {
       if (range === 'ALL' || data.length === 0) return data;
       
@@ -2377,6 +3566,112 @@ function showError(msg) {
     setHistoryRange('ALL');
 
     loadData();
+
+    // ===== PERFORMANCE OPTIMIZATIONS =====
+    
+    // 1. Debounce helper para eventos frecuentes
+    function debounce(func, wait) {
+      let timeout;
+      return function executedFunction(...args) {
+        const later = () => {
+          clearTimeout(timeout);
+          func.apply(this, args);
+        };
+        clearTimeout(timeout);
+        timeout = setTimeout(later, wait);
+      };
+    }
+
+    // 2. Throttle helper para scroll
+    function throttle(func, limit) {
+      let inThrottle;
+      return function(...args) {
+        if (!inThrottle) {
+          func.apply(this, args);
+          inThrottle = true;
+          setTimeout(() => (inThrottle = false), limit);
+        }
+      };
+    }
+
+    // 3. Cache para charts con memoización
+    const chartCache = {
+      data: new Map(),
+      lastHash: new Map(),
+      
+      hash: function(data) {
+        return JSON.stringify(data).length;
+      },
+      
+      shouldUpdate: function(key, newData) {
+        const newHash = this.hash(newData);
+        const oldHash = this.lastHash.get(key);
+        const hasChanged = newHash !== oldHash;
+        if (hasChanged) {
+          this.lastHash.set(key, newHash);
+        }
+        return hasChanged;
+      }
+    };
+
+    // 4. Debounce resize para redibujados de charts
+    const debouncedResize = debounce(() => {
+      if (charts.history) {
+        renderHistoryChart();
+      }
+    }, 300);
+
+    window.addEventListener('resize', debouncedResize, { passive: true });
+
+    // 5. Detectar scroll y desactivar blur dinámicamente
+    let scrollTimeout;
+    const scrollListener = throttle(() => {
+      document.body.classList.add('is-scrolling');
+      clearTimeout(scrollTimeout);
+      scrollTimeout = setTimeout(() => {
+        document.body.classList.remove('is-scrolling');
+      }, 150);
+    }, 100);
+
+    document.addEventListener('scroll', scrollListener, { passive: true });
+
+    // 6. Lazy load de gráficos con Intersection Observer
+    const chartContainers = document.querySelectorAll('[data-chart]');
+    if ('IntersectionObserver' in window) {
+      const chartObserver = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+          if (entry.isIntersecting) {
+            const chartId = entry.target.id;
+            // Renderizar solo cuando sea visible
+            if (chartId === 'portfolioHistoryChart') {
+              renderHistoryChart();
+            }
+            chartObserver.unobserve(entry.target);
+          }
+        });
+      }, {
+        rootMargin: '50px',
+        threshold: 0.01
+      });
+
+      chartContainers.forEach(el => {
+        if (el.dataset.chart) {
+          chartObserver.observe(el);
+        }
+      });
+    }
+
+    // 7. Memoizar renderHistoryChart para evitar recálculos
+    const originalRenderHistoryChart = renderHistoryChart;
+    renderHistoryChart = function() {
+      if (chartCache.shouldUpdate('historyChart', historyData)) {
+        originalRenderHistoryChart.apply(this, arguments);
+      }
+    };
+
+    
+
+    // ===== FIN OPTIMIZACIONES =====
   </script>
 </body>
 </html>
