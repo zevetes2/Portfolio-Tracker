@@ -1424,7 +1424,6 @@ function fetchWithJSONP(url, timeoutMs, retries) {
         var realizedPL = plData ? (plData.realizedPL || 0) : 0;
         var unrealizedPL = plData ? (plData.unrealizedPL || 0) : 0;
         var totalPL = plData ? (plData.pl || 0) : 0;
-        
         var startValue = portfolioData ? portfolioData.invested : 0;
         var endValue = portfolioData ? portfolioData.total : 0;
         var marketValue = portfolioData ? portfolioData.marketValue : 0;
