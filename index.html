@@ -4,9 +4,14 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>Portfolio Tracker Pro</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <!-- Google Fonts optimizado: solo 4 weights necesarios -->
+  <link rel="preload" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'">
+  <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"></noscript>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <script>
     tailwind.config = {
       theme: {
@@ -20,14 +25,40 @@
     }
   </script>
   <style>
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
-
     body { font-family: 'Inter', sans-serif; -webkit-tap-highlight-color: transparent; }
 
-    /* Efectos Fintech / Glassmorphism */
-    .glass-header { background: rgba(15, 23, 42, 0.85); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); border-bottom: 1px solid rgba(51, 65, 85, 0.5); }
-    .glass-card { background: rgba(30, 41, 59, 0.4); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border: 1px solid rgba(51, 65, 85, 0.5); box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06); transition: transform 0.2s ease, box-shadow 0.2s ease; }
-    .glass-card:hover { transform: translateY(-2px); box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3), 0 8px 10px -6px rgba(0, 0, 0, 0.1); border-color: rgba(71, 85, 105, 0.6); }
+    /* Efectos Fintech / Glassmorphism OPTIMIZADO */
+    .glass-header { 
+      background: rgba(15, 23, 42, 0.92); 
+      border-bottom: 1px solid rgba(51, 65, 85, 0.4); 
+      /* Blur DESACTIVADO en base, activar en hover desktop solo */
+      will-change: auto;
+    }
+    @media (hover: hover) {
+      .glass-header:hover { 
+        backdrop-filter: blur(8px); 
+        -webkit-backdrop-filter: blur(8px); 
+      }
+    }
+    
+    .glass-card { 
+      background: rgba(30, 41, 59, 0.5); 
+      border: 1px solid rgba(51, 65, 85, 0.4); 
+      box-shadow: 0 2px 4px -1px rgba(0, 0, 0, 0.1);
+      /* Usar outline en lugar de box-shadow para mejor rendimiento */
+      outline: 2px solid transparent;
+      outline-offset: -1px;
+      transition: transform 0.2s ease, outline-color 0.2s ease;
+      will-change: transform;
+    }
+    @media (hover: hover) {
+      .glass-card:hover { 
+        transform: translateY(-2px); 
+        outline-color: rgba(71, 85, 105, 0.6);
+        background: rgba(30, 41, 59, 0.65);
+        /* SIN box-shadow costoso */
+      }
+    }
 
     .gradient-text { background: linear-gradient(135deg, #60a5fa, #c084fc); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
     .animate-fade-in { animation: fadeIn 0.5s ease-out; }
@@ -142,14 +173,13 @@
       margin-bottom: 10px;
     }
 
-    /* Sticky summary on mobile */
+    /* Sticky summary on mobile - SIN BLUR */
     @media (max-width: 1023px) {
       .sticky-mobile-summary {
         position: sticky;
         top: 60px;
         z-index: 40;
         background: rgba(15, 23, 42, 0.95);
-        backdrop-filter: blur(12px);
         margin: 0 -16px;
         padding: 12px 16px;
         border-bottom: 1px solid rgba(51, 65, 85, 0.3);
@@ -237,6 +267,29 @@
       border-radius: 999px;
       height: 6px;
       overflow: hidden;
+    }
+
+    /* Favicon icons */
+    .asset-icon {
+      width: 20px;
+      height: 20px;
+      border-radius: 4px;
+      object-fit: contain;
+      flex-shrink: 0;
+    }
+    .asset-icon-sm {
+      width: 16px;
+      height: 16px;
+      border-radius: 3px;
+      object-fit: contain;
+      flex-shrink: 0;
+    }
+    .asset-icon-lg {
+      width: 24px;
+      height: 24px;
+      border-radius: 6px;
+      object-fit: contain;
+      flex-shrink: 0;
     }
     .progress-bar-fill {
       height: 100%;
@@ -328,9 +381,91 @@
         grid-template-columns: repeat(2, 1fr);
       }
     }
+    /* ===== BUFFETT PORTFOLIO LEGEND ===== */
+    .buffett-legend-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 12px;
+      background: rgba(30, 41, 59, 0.5);
+      border: 1px solid rgba(51, 65, 85, 0.4);
+      border-radius: 12px;
+      transition: all 0.2s ease;
+    }
+    /* Buffett legend hover effect */
+    .buffett-legend-item:hover {
+      background: rgba(51, 65, 85, 0.5);
+      transform: translateY(-1px);
+      border-color: rgba(71, 85, 105, 0.6);
+    }
+
+    .buffett-legend-info {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .buffett-ticker {
+      font-weight: 700;
+      font-size: 13px;
+      color: #f8fafc;
+      letter-spacing: -0.01em;
+    }
+
+    .buffett-percent {
+      font-weight: 800;
+      font-size: 14px;
+      color: #fbbf24;
+    }
+
+    .buffett-value {
+      font-size: 11px;
+      color: #64748b;
+      font-family: 'Inter', sans-serif;
+    }
+
+    /* Slice hover effect */
+    #buffettPortfolioChart {
+      cursor: pointer;
+    }
+    /* Tamaño extra para la leyenda Buffett */
+    .buffett-legend-item .asset-icon-lg {
+      width: 28px;
+      height: 28px;
+      border-radius: 8px;
+    }
+
+    /* ===== OPTIMIZACIONES DE RENDIMIENTO ===== */
+
+    /* Desactivar blur durante scroll (mejor UX en móvil) */
+    body.is-scrolling .glass-header,
+    body.is-scrolling .glass-card:hover {
+      backdrop-filter: none !important;
+      -webkit-backdrop-filter: none !important;
+    }
+
+    /* En móvil: nunca usar blur */
+    @media (max-width: 1023px) {
+      .glass-header:hover,
+      .glass-card:hover {
+        backdrop-filter: none !important;
+        -webkit-backdrop-filter: none !important;
+      }
+    }
+
+    /* GPU acceleration para animaciones smooth */
+    .glass-card,
+    .spinner,
+    .position-mobile-card {
+      transform: translateZ(0);
+      -webkit-transform: translateZ(0);
+    }
+
+    /* Evitar reflows durante scroll */
+    body.is-scrolling {
+      will-change: scroll-position;
+    }
 
   </style>
-<base target="_blank">
 <base target="_blank">
 </head>
 <body class="bg-slate-950 text-slate-200 min-h-screen selection:bg-brand-500/30">
@@ -362,7 +497,7 @@
             <span class="block text-[10px] text-slate-500 uppercase tracking-wider">Última actualización</span>
             <span id="lastUpdate" class="text-xs text-slate-300 font-medium">Actualizando...</span>
           </div>
-          <button onclick="loadData()" class="w-9 h-9 touch-btn bg-slate-800 hover:bg-slate-700 border border-slate-600 rounded-lg text-slate-300 transition-colors">
+          <button onclick="loadData(true)" class="w-9 h-9 touch-btn bg-slate-800 hover:bg-slate-700 border border-slate-600 rounded-lg text-slate-300 transition-colors">
             <i class="fas fa-sync-alt text-sm"></i>
           </button>
         </div>
@@ -482,6 +617,29 @@
         </div>
       </div>
 
+      <!-- ===== PORTFOLIO VISUAL (Estilo Buffett) ===== -->
+      <div class="glass-card rounded-2xl p-4 sm:p-6 mb-6">
+        <div class="flex items-center justify-between mb-4">
+          <h3 class="text-xs sm:text-sm font-semibold text-slate-200 uppercase tracking-wider flex items-center gap-2">
+            <i class="fas fa-chart-pie text-brand-400"></i> Distribución Visual del Portafolio
+          </h3>
+        </div>
+        
+        <div class="relative flex items-center justify-center" style="min-height: 380px; max-height: 500px;">
+          <canvas id="buffettPortfolioChart"></canvas>
+          
+          <!-- Centro del donut -->
+          <div class="absolute inset-0 flex items-center justify-center pointer-events-none">
+            <div class="w-20 h-20 sm:w-28 sm:h-28 rounded-full overflow-hidden border-4 border-slate-800 shadow-2xl bg-slate-900 flex items-center justify-center">
+              <img src="https://ui-avatars.com/api/?name=A+E&background=3b82f6&color=fff&size=128" 
+                  alt="Profile" class="w-full h-full object-cover">
+            </div>
+          </div>
+        </div>
+        
+        <!-- Leyenda custom con asset-icon -->
+        <div id="buffettLegend" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 mt-6"></div>
+      </div>
             <!-- ===== RESUMEN POR BRÓKER ===== -->
       <div id="brokersSummarySection" class="hidden">
         <h3 class="text-xs sm:text-sm font-semibold text-slate-200 uppercase tracking-wider mb-4 flex items-center gap-2">
@@ -558,7 +716,7 @@
           </div>
         </div>
         <div class="relative h-[300px] sm:h-[380px]">
-          <canvas id="portfolioHistoryChart"></canvas>
+          <canvas id="portfolioHistoryChart" data-chart="history"></canvas>
         </div>
         <div class="grid grid-cols-3 gap-3 mt-4 pt-4 border-t border-slate-700/30">
           <div class="text-center">
@@ -587,6 +745,9 @@
           </button>
           <button onclick="switchTab('transactions')" id="tab-transactions" class="tab-btn px-4 sm:px-6 py-3 sm:py-4 text-[11px] sm:text-xs font-semibold text-slate-400 hover:text-slate-200 transition-all whitespace-nowrap tracking-wider uppercase touch-btn">
             Órdenes
+          </button>
+          <button onclick="switchTab('performance')" id="tab-performance" class="tab-btn px-4 sm:px-6 py-3 sm:py-4 text-[11px] sm:text-xs font-semibold text-slate-400 hover:text-slate-200 transition-all whitespace-nowrap tracking-wider uppercase touch-btn">
+            Rendimiento
           </button>
           <button onclick="switchTab('platforms')" id="tab-platforms" class="tab-btn px-4 sm:px-6 py-3 sm:py-4 text-[11px] sm:text-xs font-semibold text-slate-400 hover:text-slate-200 transition-all whitespace-nowrap tracking-wider uppercase touch-btn">
             Brókers
@@ -638,6 +799,8 @@
                   <th class="py-3 px-3 sm:px-4 text-right sortable" onclick="sortPortfolio('currentValue')">Valor <span class="sort-icon">&#8645;</span></th>
                   <th class="py-3 px-3 sm:px-4 text-right sortable" onclick="sortPortfolio('unrealizedROI')">ROI <span class="sort-icon">&#8645;</span></th>
                   <th class="py-3 px-3 sm:px-4 text-right sortable" onclick="sortPortfolio('unrealizedPL')">P/L <span class="sort-icon">&#8645;</span></th>
+                  <th class="py-3 px-3 sm:px-4 text-right sortable" onclick="sortPortfolio('realizedPL')">Realizado <span class="sort-icon">&#8645;</span></th>
+                  <th class="py-3 px-3 sm:px-4 text-right sortable" onclick="sortPortfolio('totalPL')">Total P/L <span class="sort-icon">&#8645;</span></th>
                   <th class="py-3 px-3 sm:px-4 text-right sortable" onclick="sortPortfolio('dailyChange')">Día <span class="sort-icon">&#8645;</span></th>
                 </tr>
               </thead>
@@ -704,6 +867,115 @@
           <div id="transactionsMobileCards" class="mobile-card p-3 sm:p-4 space-y-3"></div>
         </div>
 
+
+        <!-- ===== PANEL RENDIMIENTO ===== -->
+        <div id="panel-performance" class="hidden p-0">
+
+          <!-- Resumen de Rendimiento Total -->
+          <div class="p-4 sm:p-6 border-b border-slate-700/50">
+            <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-6">
+              <div class="glass-card p-4 rounded-2xl">
+                <p class="text-[9px] sm:text-[10px] text-slate-500 uppercase font-bold tracking-wider mb-1">Retorno Total</p>
+                <p id="perfTotalReturn" class="mobile-stat-value text-white">$0.00</p>
+                <p id="perfTotalReturnPct" class="text-[10px] font-bold mt-1">0.00%</p>
+              </div>
+              <div class="glass-card p-4 rounded-2xl">
+                <p class="text-[9px] sm:text-[10px] text-slate-500 uppercase font-bold tracking-wider mb-1">Capital Invertido</p>
+                <p id="perfTotalInvested" class="mobile-stat-value text-slate-300">$0.00</p>
+                <p class="text-[10px] text-slate-500 mt-1">Base de costo</p>
+              </div>
+              <div class="glass-card p-4 rounded-2xl">
+                <p class="text-[9px] sm:text-[10px] text-slate-500 uppercase font-bold tracking-wider mb-1">Valor Actual</p>
+                <p id="perfTotalValue" class="mobile-stat-value text-white">$0.00</p>
+                <p class="text-[10px] text-slate-500 mt-1">Mercado + Cash</p>
+              </div>
+              <div class="glass-card p-4 rounded-2xl">
+                <p class="text-[9px] sm:text-[10px] text-slate-500 uppercase font-bold tracking-wider mb-1">Max Drawdown</p>
+                <p id="perfMaxDrawdown" class="mobile-stat-value text-rose-400">0.00%</p>
+                <p class="text-[10px] text-slate-500 mt-1">Desde el pico</p>
+              </div>
+            </div>
+
+            <!-- Tabla de Rendimiento por Período -->
+            <h3 class="text-xs sm:text-sm font-semibold text-slate-200 uppercase tracking-wider mb-4 flex items-center gap-2">
+              <i class="fas fa-calendar-alt text-brand-400"></i> Rendimiento por Período
+            </h3>
+            <div class="table-scroll-container">
+              <table class="w-full text-[11px] sm:text-xs text-left whitespace-nowrap">
+                <thead class="bg-slate-900/60 text-slate-400 uppercase tracking-wider font-semibold">
+                  <tr>
+                    <th class="py-3 px-3 sm:px-4">Mes</th>
+                    <th class="py-3 px-3 sm:px-4 text-right">Capital Inv.</th>
+                    <th class="py-3 px-3 sm:px-4 text-right">Patrimonio</th>
+                    <th class="py-3 px-3 sm:px-4 text-right">P/L No Realizado</th>
+                    <th class="py-3 px-3 sm:px-4 text-right">P/L Realizado</th>
+                    <th class="py-3 px-3 sm:px-4 text-right">P/L Total</th>
+                    <th class="py-3 px-3 sm:px-4 text-right hidden sm:table-cell">Mercado / Cash</th>
+                  </tr>
+                </thead>
+                <tbody id="performancePeriodsTable" class="divide-y divide-slate-800/50"></tbody>
+              </table>
+            </div>
+            <!-- Mobile cards for periods -->
+            <div id="performancePeriodsMobile" class="mobile-card mt-4 space-y-3"></div>
+          </div>
+
+          <!-- Gráfico de Rendimiento por Período -->
+          <div class="p-4 sm:p-6 border-b border-slate-700/50">
+            <h3 class="text-xs sm:text-sm font-semibold text-slate-200 uppercase tracking-wider mb-4 flex items-center gap-2">
+              <i class="fas fa-chart-bar text-emerald-400"></i> Retorno por Período
+            </h3>
+            <div class="relative h-[250px] sm:h-[300px]">
+              <canvas id="performancePeriodChart"></canvas>
+            </div>
+          </div>
+
+          <!-- Distribución de Rendimiento -->
+          <div class="p-4 sm:p-6 border-b border-slate-700/50">
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
+              <div>
+                <h3 class="text-xs sm:text-sm font-semibold text-slate-200 uppercase tracking-wider mb-4 flex items-center gap-2">
+                  <i class="fas fa-pie-chart text-purple-400"></i> Distribución de Posiciones
+                </h3>
+                <div class="relative h-[220px] sm:h-[260px]">
+                  <canvas id="performanceDistributionChart"></canvas>
+                </div>
+              </div>
+              <div>
+                <h3 class="text-xs sm:text-sm font-semibold text-slate-200 uppercase tracking-wider mb-4 flex items-center gap-2">
+                  <i class="fas fa-trophy text-yellow-400"></i> Top Performers
+                </h3>
+                <div id="topPerformersList" class="space-y-2 max-h-[260px] overflow-y-auto pr-2"></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Rendimiento por Plataforma -->
+          <div class="p-4 sm:p-6">
+            <h3 class="text-xs sm:text-sm font-semibold text-slate-200 uppercase tracking-wider mb-4 flex items-center gap-2">
+              <i class="fas fa-building-columns text-brand-400"></i> Rendimiento por Plataforma
+            </h3>
+            <div class="table-scroll-container">
+              <table class="w-full text-[11px] sm:text-xs text-left whitespace-nowrap">
+                <thead class="bg-slate-900/60 text-slate-400 uppercase tracking-wider font-semibold">
+                  <tr>
+                    <th class="py-3 px-3 sm:px-4">Plataforma</th>
+                    <th class="py-3 px-3 sm:px-4 text-right">Invertido</th>
+                    <th class="py-3 px-3 sm:px-4 text-right">Valor Actual</th>
+                    <th class="py-3 px-3 sm:px-4 text-right">P/L No Realizado</th>
+                    <th class="py-3 px-3 sm:px-4 text-right">ROI %</th>
+                    <th class="py-3 px-3 sm:px-4 text-right">P/L Realizado</th>
+                    <th class="py-3 px-3 sm:px-4 text-right">P/L Total</th>
+                    <th class="py-3 px-3 sm:px-4 text-right">Total ROI</th>
+                  </tr>
+                </thead>
+                <tbody id="performancePlatformsTable" class="divide-y divide-slate-800/50"></tbody>
+              </table>
+            </div>
+            <div id="performancePlatformsMobile" class="mobile-card mt-4 space-y-3"></div>
+          </div>
+        </div>
+
         <!-- ===== PANEL PLATAFORMAS ===== -->
         <div id="panel-platforms" class="hidden p-0">
           <!-- Desktop Table -->
@@ -730,1379 +1002,767 @@
     </div>
   </main>
 
-  <script>
+<!--
+  PORTFOLIO TRACKER PRO v7.0
+  Frontend simplificado — Solo visualización
+  Todos los cálculos se hacen en code.gs (servidor)
+-->
 
-    const API_URL = "https://script.google.com/macros/s/AKfycbzljOCK6u9cCGViOPrAXdLxmznXTAHR8YTBFZ5TQNPnuwij5b6mHKsczAvQdz2_YFaj/exec";
+<script>
+// ═════════════════════════════════════════════════════════════════════════════
+// CONFIGURACIÓN
+// ═════════════════════════════════════════════════════════════════════════════
 
-    let charts = {};
-    let allTransactions = [];
-    let portfolioData = [];
-    let portfolioSummary = {};
-    let txPage = 0;
-    const TX_PER_PAGE = 25;
-    let currentCurrency = "USD";
-    let currentRate = null;
-    let showSoldPositionsFlag = false;
-    let portfolioSort = { field: 'currentValue', dir: 'desc' };
-    let portfolioFilter = '';
-    let mobileViewMode = 'cards'; // 'cards' or 'table'
-    let historyRange = 'ALL';
-    let historyData = [];
-    let historicalPrices = {};
-    let historicalDates = [];
+const API_URL = "https://script.google.com/macros/s/AKfycbzljOCK6u9cCGViOPrAXdLxmznXTAHR8YTBFZ5TQNPnuwij5b6mHKsczAvQdz2_YFaj/exec";
 
+let charts = {};
+let currentCurrency = "USD";
+let currentRate = null;
+let dashboardData = null;
+let txPage = 0;
+const TX_PER_PAGE = 25;
+let portfolioSort = { field: 'currentValue', dir: 'desc' };
+let portfolioFilter = '';
+let showSoldPositionsFlag = false;
+let mobileViewMode = 'cards';
+let historyRange = 'ALL';
 
-    Chart.defaults.color = '#94a3b8'; 
-    Chart.defaults.font.family = "'Inter', sans-serif";
-    const chartTooltipConfig = {
-      backgroundColor: 'rgba(15, 23, 42, 0.95)',
-      titleColor: '#f8fafc',
-      bodyColor: '#cbd5e1',
-      borderColor: '#334155',
-      borderWidth: 1,
-      padding: 12,
-      cornerRadius: 8,
-      boxPadding: 4
-    };
-
-    function setCurrency(currency) {
-      if (currency === currentCurrency) return;
-      currentCurrency = currency;
-
-      document.getElementById('btn-usd').className = currency === 'USD' 
-        ? "px-2.5 sm:px-3 py-1.5 rounded-md text-[11px] sm:text-xs font-semibold transition-all bg-brand-500 text-white shadow-sm touch-btn" 
-        : "px-2.5 sm:px-3 py-1.5 rounded-md text-[11px] sm:text-xs font-semibold transition-all text-slate-400 hover:text-slate-200 touch-btn";
-
-      document.getElementById('btn-dop').className = currency === 'DOP' 
-        ? "px-2.5 sm:px-3 py-1.5 rounded-md text-[11px] sm:text-xs font-semibold transition-all bg-brand-500 text-white shadow-sm touch-btn" 
-        : "px-2.5 sm:px-3 py-1.5 rounded-md text-[11px] sm:text-xs font-semibold transition-all text-slate-400 hover:text-slate-200 touch-btn";
-
-      loadData();
-    }
-
-    function setMobileView(mode) {
-      mobileViewMode = mode;
-      document.getElementById('view-cards').classList.toggle('active', mode === 'cards');
-      document.getElementById('view-table').classList.toggle('active', mode === 'table');
-
-      const tableEl = document.querySelector('#panel-portfolio .desktop-table');
-      const cardsEl = document.getElementById('portfolioMobileCards');
-
-      if (mode === 'cards') {
-        if (tableEl) tableEl.style.display = 'none';
-        cardsEl.style.display = 'block';
-      } else {
-        if (tableEl) tableEl.style.display = 'block';
-        cardsEl.style.display = 'none';
+// Cache del navegador (sessionStorage)
+const clientCache = {
+  get: function(key) {
+    try {
+      var item = sessionStorage.getItem('pt_' + key);
+      if (!item) return null;
+      var parsed = JSON.parse(item);
+      if (Date.now() - parsed.time > 5 * 60 * 1000) { // 5 min TTL
+        sessionStorage.removeItem('pt_' + key);
+        return null;
       }
+      return parsed.data;
+    } catch (e) { return null; }
+  },
+  set: function(key, data) {
+    try {
+      sessionStorage.setItem('pt_' + key, JSON.stringify({ time: Date.now(), data: data }));
+    } catch (e) {}
+  }
+};
+
+// ═════════════════════════════════════════════════════════════════════════════
+// DATA LOADING
+// ═════════════════════════════════════════════════════════════════════════════
+
+async function loadData(forceRefresh = false) {
+  showLoading();
+
+  var cacheKey = currentCurrency + '_' + (forceRefresh ? 'f' : 'c');
+  var cached = forceRefresh ? null : clientCache.get(cacheKey);
+
+  if (cached) {
+    dashboardData = cached;
+    renderDashboard(cached);
+    document.getElementById('lastUpdate').textContent = 
+      new Date(cached.meta.timestamp).toLocaleTimeString('es-DO', { hour: '2-digit', minute: '2-digit' }) + ' (caché)';
+    showContent();
+    return;
+  }
+
+  try {
+    var url = API_URL + "?action=dashboard&currency=" + currentCurrency;
+    if (currentCurrency !== "USD" && currentRate) {
+      url += "&rate=" + currentRate;
+    }
+    if (forceRefresh) {
+      url += "&forceRefresh=true";
     }
 
-    async function loadData() {
-      showLoading();
-      console.log("loadData called, currentCurrency=" + currentCurrency + ", currentRate=" + currentRate);
+    var data = await fetchWithJSONP(url);
 
-      try {
-        var url = API_URL + "?action=dashboard&currency=" + currentCurrency;
-        if (currentCurrency !== "USD" && currentRate) {
-          url += "&rate=" + currentRate;
-          console.log("Adding rate to URL: " + currentRate);
-        } else {
-          console.log("NOT adding rate. currentCurrency=" + currentCurrency + ", currentRate=" + currentRate);
-        }
+    if (data.error) throw new Error(data.error);
 
-        const data = await fetchWithJSONP(url);
+    if (data.meta && data.meta.exchangeRate) {
+      currentRate = data.meta.exchangeRate;
+    }
 
-        if (data.error) throw new Error(data.error);
-        console.log("API response meta:", data.meta);
-        if (data.meta && data.meta.exchangeRate) {
-        currentRate = data.meta.exchangeRate;
-        console.log("Saved currentRate:", currentRate);
+    dashboardData = data;
+    clientCache.set(cacheKey, data);
+
+    renderDashboard(data);
+    document.getElementById('lastUpdate').textContent = 
+      new Date().toLocaleTimeString('es-DO', { hour: '2-digit', minute: '2-digit' });
+    showContent();
+
+  } catch (error) {
+    console.error("Error:", error);
+    showError(error.message);
+  }
 }
 
+function fetchWithJSONP(url) {
+  return new Promise(function(resolve, reject) {
+    var scriptId = 'jsonp_' + Date.now();
+    var script = document.createElement('script');
 
+    window[scriptId] = function(data) {
+      cleanup();
+      resolve(data);
+    };
 
-        allTransactions = data.allTransactions || [];
-        txPage = 0;
+    var timeout = setTimeout(function() {
+      cleanup();
+      reject(new Error('Timeout - La API no respondió en 30s.'));
+    }, 30000);
 
-        if (data.portfolio) {
-          portfolioData = data.portfolio.portfolio || [];
-          portfolioSummary = data.portfolio.summary || {};
-        }
-
-        renderDashboard(data);
-        document.getElementById('lastUpdate').textContent = new Date().toLocaleTimeString('es-DO', { hour: '2-digit', minute: '2-digit' });
-        showContent();
-      } catch (error) {
-        console.error("Error:", error);
-        showError(error.message);
-      }
+    function cleanup() {
+      clearTimeout(timeout);
+      if (script.parentNode) script.parentNode.removeChild(script);
+      delete window[scriptId];
     }
 
-    function fetchWithJSONP(url) {
-      return new Promise(function(resolve, reject) {
-        var scriptId = 'jsonp_' + Date.now();
-        var script = document.createElement('script');
+    script.onerror = function() {
+      cleanup();
+      reject(new Error('Fallo de red al intentar contactar Google Apps Script.'));
+    };
 
-        window[scriptId] = function(data) {
-          cleanup();
-          resolve(data);
-        };
+    var separator = url.indexOf('?') !== -1 ? '&' : '?';
+    script.src = url + separator + 'callback=' + scriptId;
+    document.head.appendChild(script);
+  });
+}
 
-        var timeout = setTimeout(function() {
-          cleanup();
-          reject(new Error('Timeout - La API no respondió en 30s.'));
-        }, 30000);
+// ═════════════════════════════════════════════════════════════════════════════
+// RENDERING — Solo visualización, sin cálculos
+// ═════════════════════════════════════════════════════════════════════════════
 
-        function cleanup() {
-          clearTimeout(timeout);
-          if (script.parentNode) script.parentNode.removeChild(script);
-          delete window[scriptId];
-        }
-
-        script.onerror = function() {
-          cleanup();
-          reject(new Error('Fallo de red al intentar contactar Google Apps Script.'));
-        };
-
-        var separator = url.indexOf('?') !== -1 ? '&' : '?';
-        script.src = url + separator + 'callback=' + scriptId;
-
-        document.head.appendChild(script);
-      });
-    }
-
-    function renderDashboard(data) {
-      var rateInfo = document.getElementById('rateInfo');
-      var rateText = document.getElementById('rateText');
-
-      if (currentCurrency === 'DOP' && currentRate) {
-        rateInfo.classList.remove('hidden');
-        rateText.textContent = '1 USD = ' + currentRate.toFixed(2) + ' DOP';
-      } else {
-        rateInfo.classList.add('hidden');
-      }
-
-      if (data.portfolio && data.portfolio.summary) {
-        renderPortfolioSummary(data.portfolio.summary, data.metrics);
-        renderPortfolioCharts(data.portfolio.summary);
-        renderTopPositions(data.portfolio.summary);
-        renderLargestPositions(data.portfolio.summary);
-      }
-
-            // Guardar datos históricos y calcular evolución
-      console.log("=== renderDashboard: bloque historial ===");
-      console.log("data.history existe?", !!data.history);
-      console.log("data.history.dates?", data.history ? data.history.dates : null);
-      console.log("data.history.dates length?", data.history && data.history.dates ? data.history.dates.length : 0);
-      console.log("data.history.prices?", data.history ? Object.keys(data.history.prices || {}).length : 0);
-      
-      if (data.history && data.history.dates && data.history.dates.length > 0 && 
-          data.history.prices && Object.keys(data.history.prices).length > 0) {
-        console.log("ENTRANDO a buildRealHistoryFromPrices");
-        historicalDates = data.history.dates;
-        historicalPrices = data.history.prices;
-        buildRealHistoryFromPrices(data.allTransactions || []);
-        renderHistoryChart();
-      } else {
-        console.log("ENTRANDO a buildHistoryFromTransactions (fallback)");
-        historicalDates = [];
-        historicalPrices = {};
-        buildHistoryFromTransactions(data.allTransactions || []);
-        renderHistoryChart();
-      }
-       // Guardar portfolioData globalmente para uso en historial
-      if (data.portfolio && data.portfolio.portfolio) {
-        window.lastPortfolioData = data.portfolio.portfolio;
-        portfolioData = data.portfolio.portfolio; // también en variable global si existe
-      }
-
-      if (data.portfolio && data.portfolio.portfolio) renderPortfolioTable(data.portfolio.portfolio);
-      renderAssetsTable(data.currentAssets || []);
-      renderTransactionsTable();
-      loadPlatforms();
-            renderBrokersSummary(data.platforms || []);
-
-    }
-
-    function renderPortfolioSummary(summary, metrics) {
-      var marketValue = summary.totalCurrentValue || 0;
-      var totalCash = metrics ? (metrics.totalCash || 0) : 0; 
-      var totalBalance = marketValue + totalCash;
-
-      document.getElementById('pfTotalBalance').textContent = formatCurrency(totalBalance);
-      document.getElementById('pfMarketValue').textContent = formatCurrency(marketValue);
-      document.getElementById('pfTotalCash').textContent = formatCurrency(totalCash);
-
-      document.getElementById('pfTotalCost').textContent = formatCurrency(summary.totalCost || 0);
-
-      var unrealizedPL = summary.totalUnrealizedPL || 0;
-      document.getElementById('pfUnrealizedPL').textContent = (unrealizedPL >= 0 ? '+' : '') + formatCurrency(unrealizedPL);
-      document.getElementById('pfUnrealizedPL').className = 'font-bold text-sm sm:text-base leading-none ' + (unrealizedPL >= 0 ? 'text-emerald-400' : 'text-rose-400');
-
-      var roi = (summary.overallUnrealizedROI || 0);
-      document.getElementById('pfUnrealizedROI').textContent = (roi >= 0 ? '+' : '') + roi.toFixed(2) + '%';
-      document.getElementById('pfUnrealizedROIContainer').className = 'px-2 py-1 rounded-md text-[10px] sm:text-xs font-bold ' + (roi >= 0 ? 'bg-emerald-500/20 text-emerald-400' : 'bg-rose-500/20 text-rose-400');
-
-      var realizedPL = summary.totalRealizedPL || 0;
-      document.getElementById('pfRealizedPL').textContent = (realizedPL >= 0 ? '+' : '') + formatCurrency(realizedPL);
-      document.getElementById('pfRealizedPL').className = 'mobile-stat-value ' + (realizedPL >= 0 ? 'text-emerald-400' : 'text-rose-400');
-
-      var totalPL = summary.totalPL || 0;
-      document.getElementById('pfTotalPL').textContent = 'P/L Histórico: ' + (totalPL >= 0 ? '+' : '') + formatCurrency(totalPL);
-
-      var dailyChange = summary.totalDailyChange || 0;
-      document.getElementById('pfDailyChange').textContent = (dailyChange >= 0 ? '+' : '') + formatCurrency(dailyChange);
-      document.getElementById('pfDailyChange').className = 'font-bold text-sm sm:text-base leading-none ' + (dailyChange >= 0 ? 'text-emerald-400' : 'text-rose-400');
-
-      var dailyPct = dailyChange / (summary.totalCurrentValue - dailyChange) * 100 || 0;
-      document.getElementById('pfDailyChangePct').textContent = (dailyPct >= 0 ? '+' : '') + dailyPct.toFixed(2) + '%';
-      document.getElementById('pfDailyChangePctContainer').className = 'px-2 py-1 rounded-md text-[10px] sm:text-xs font-bold ' + (dailyPct >= 0 ? 'bg-emerald-500/20 text-emerald-400' : 'bg-rose-500/20 text-rose-400');
-
-      document.getElementById('pfHoldings').textContent = summary.currentHoldings || 0;
-      document.getElementById('pfSold').textContent = 'Liquidadas: ' + (summary.soldPositions || 0) + ' | Total: ' + (summary.totalPositions || 0);
-
-      if (summary.topGainers && summary.topGainers.length > 0) {
-        var best = summary.topGainers[0];
-        document.getElementById('pfBestPosition').textContent = best.ticker;
-        document.getElementById('pfBestROI').textContent = '+' + (best.unrealizedROI * 100 || 0).toFixed(2) + '%';
-      } else {
-        document.getElementById('pfBestPosition').textContent = '-';
-        document.getElementById('pfBestROI').textContent = '0%';
-      }
-      if (summary.topLosers && summary.topLosers.length > 0) {
-        var worst = summary.topLosers[0];
-        document.getElementById('pfWorstPosition').textContent = worst.ticker;
-        document.getElementById('pfWorstROI').textContent = (worst.unrealizedROI * 100 || 0).toFixed(2) + '%';
-      } else {
-        document.getElementById('pfWorstPosition').textContent = '-';
-        document.getElementById('pfWorstROI').textContent = '0%';
-      }
-    }
-
-    function renderTopPositions(summary) {
-      var gainersEl = document.getElementById('topGainersList');
-      var losersEl = document.getElementById('topLosersList');
-
-      if (summary.topGainers && summary.topGainers.length > 0) {
-        gainersEl.innerHTML = summary.topGainers.map(function(p) {
-          return '<div class="flex items-center justify-between group">' +
-            '<div class="flex items-center gap-2.5">' +
-              '<div class="w-2 h-2 rounded-full bg-emerald-500"></div>' +
-              '<div><p class="font-bold text-xs text-slate-200">' + p.ticker + '</p></div>' +
-            '</div>' +
-            '<div class="text-right">' +
-              '<p class="font-bold text-xs text-emerald-400">+' + (p.unrealizedROI * 100 || 0).toFixed(2) + '%</p>' +
-            '</div>' +
-          '</div>';
-        }).join('');
-      } else { gainersEl.innerHTML = '<p class="text-slate-600 text-xs italic">N/A</p>'; }
-
-      if (summary.topLosers && summary.topLosers.length > 0) {
-        losersEl.innerHTML = summary.topLosers.map(function(p) {
-          return '<div class="flex items-center justify-between group">' +
-            '<div class="flex items-center gap-2.5">' +
-              '<div class="w-2 h-2 rounded-full bg-rose-500"></div>' +
-              '<div><p class="font-bold text-xs text-slate-200">' + p.ticker + '</p></div>' +
-            '</div>' +
-            '<div class="text-right">' +
-              '<p class="font-bold text-xs text-rose-400">' + (p.unrealizedROI * 100 || 0).toFixed(2) + '%</p>' +
-            '</div>' +
-          '</div>';
-        }).join('');
-      } else { losersEl.innerHTML = '<p class="text-slate-600 text-xs italic">N/A</p>'; }
-    }
-    function renderLargestPositions(summary) {
-      var el = document.getElementById('largestPositionsList');
-      var data = summary.largestPositions;
-      var title = 'Top Posiciones';
-      var totalValue = summary.totalCurrentValue || 0;
-      
-      // Fallback: si no hay largestPositions pero sí byAssetClass, usar eso
-      if ((!data || data.length === 0) && summary.byAssetClass && summary.byAssetClass.length > 0) {
-        data = summary.byAssetClass;
-        title = 'Por Clase de Activo';
-        totalValue = data.reduce(function(s, item) { return s + (item.value || 0); }, 0);
-      }
-      
-      if (data && data.length > 0) {
-        el.innerHTML = data.map(function(p, idx) {
-          var displayName = p.ticker || p.name || 'Sin nombre';
-          var value = p.currentValue !== undefined ? p.currentValue : p.value;
-          var weight = totalValue > 0 ? ((value || 0) / totalValue * 100).toFixed(1) : 0;
-          var palette = ['#3b82f6', '#8b5cf6', '#10b981', '#f59e0b', '#f43f5e', '#0ea5e9', '#6366f1'];
-          var color = p.ticker ? '#3b82f6' : (palette[idx % palette.length]);
-          
-          return '<div class="bg-slate-800/40 rounded-xl p-3 border border-slate-700/50 hover:bg-slate-800/60 transition-colors">' +
-            '<div class="flex items-center justify-between mb-1.5">' +
-              '<span class="font-bold text-sm text-slate-200">' + displayName + '</span>' +
-              '<span class="text-[10px] font-medium text-slate-400 bg-slate-900 px-1.5 py-0.5 rounded">' + weight + '%</span>' +
-            '</div>' +
-            '<p class="text-sm font-semibold text-slate-300 mb-2">' + formatCurrency(value) + '</p>' +
-            '<div class="w-full bg-slate-900 rounded-full h-1 overflow-hidden">' +
-              '<div class="h-1 rounded-full" style="width:' + weight + '%; background-color: ' + color + '"></div>' +
-            '</div>' +
-          '</div>';
-        }).join('');
-      } else { 
-        el.innerHTML = '<div class="col-span-full flex flex-col items-center justify-center py-8 text-center">' +
-          '<div class="w-12 h-12 bg-slate-800/60 rounded-full flex items-center justify-center mb-3">' +
-            '<i class="fas fa-pie-chart text-slate-500 text-lg"></i>' +
-          '</div>' +
-          '<p class="text-slate-400 text-sm font-medium mb-1">Sin datos de exposición</p>' +
-          '<p class="text-slate-600 text-xs">Agrega activos a tu portafolio para ver la distribución</p>' +
-        '</div>'; 
-      }
-    }
-
-function renderPortfolioCharts(summary) {
-  var palette = ['#3b82f6', '#8b5cf6', '#10b981', '#f59e0b', '#f43f5e', '#0ea5e9', '#6366f1'];
-
-  var totalAssetValue = 0;
-  var totalSectorValue = 0;
-
-  if (summary.byAssetClass && summary.byAssetClass.length > 0) {
-    totalAssetValue = summary.byAssetClass.reduce(function(sum, item) {
-      return sum + (item.value || 0);
-    }, 0);
+function renderDashboard(data) {
+  // Rate info
+  var rateInfo = document.getElementById('rateInfo');
+  var rateText = document.getElementById('rateText');
+  if (currentCurrency === 'DOP' && currentRate) {
+    rateInfo.classList.remove('hidden');
+    rateText.textContent = '1 USD = ' + currentRate.toFixed(2) + ' DOP';
+  } else {
+    rateInfo.classList.add('hidden');
   }
 
-  if (summary.bySector && summary.bySector.length > 0) {
-    totalSectorValue = summary.bySector.reduce(function(sum, item) {
-      return sum + (item.value || 0);
-    }, 0);
+  // Portfolio summary
+  if (data.portfolio && data.portfolio.summary) {
+    renderPortfolioSummary(data.portfolio.summary, data.metrics);
+    renderPortfolioCharts(data.portfolio.summary);
+    renderTopPositions(data.portfolio.summary);
+    renderLargestPositions(data.portfolio.summary);
+    renderBuffettPortfolio(data.portfolio.positions);
   }
 
-  // Plugin para forzar color de leyenda
-  var legendColorPlugin = {
-    id: 'legendColor',
-    afterDraw: function(chart) {
-      var legend = chart.legend;
-      if (!legend) return;
-      var ctx = chart.ctx;
-      ctx.save();
-      ctx.fillStyle = '#94a3b8';
-      legend.legendItems.forEach(function(item) {
-        // Chart.js ya dibujó el texto, no podemos cambiarlo fácilmente aquí
-        // En su lugar, usaremos otra aproximación
-      });
-      ctx.restore();
-    }
-  };
-
-  if (summary.byAssetClass && summary.byAssetClass.length > 0) {
-    var ctx = document.getElementById('portfolioAssetClassChart').getContext('2d');
-    if (charts.portfolioAssetClass) charts.portfolioAssetClass.destroy();
-    charts.portfolioAssetClass = new Chart(ctx, {
-      type: 'doughnut',
-      data: {
-        labels: summary.byAssetClass.map(function(d) { return d.name; }),
-        datasets: [{
-          data: summary.byAssetClass.map(function(d) { return d.value; }),
-          backgroundColor: palette,
-          borderWidth: 0,
-          hoverOffset: 6
-        }]
-      },
-      options: {
-        responsive: true, 
-        maintainAspectRatio: false, 
-        cutout: '70%',
-        plugins: {
-          legend: { 
-            position: window.innerWidth < 640 ? 'bottom' : 'right', 
-            labels: { 
-              color: '#94a3b8',
-              usePointStyle: true, 
-              pointStyle: 'circle', 
-              font: { size: window.innerWidth < 640 ? 10 : 11 },
-              padding: window.innerWidth < 640 ? 10 : 16,
-              boxWidth: window.innerWidth < 640 ? 8 : 10,
-              generateLabels: function(chart) {
-                var data = chart.data;
-                if (data.labels.length && data.datasets.length) {
-                  return data.labels.map(function(label, i) {
-                    var meta = chart.getDatasetMeta(0);
-                    var style = meta.controller.getStyle(i);
-                    var value = data.datasets[0].data[i] || 0;
-                    var percentage = totalAssetValue > 0 ? ((value / totalAssetValue) * 100).toFixed(1) : '0.0';
-                    return {
-                      text: label + ' (' + percentage + '%)',
-                      fillStyle: style.backgroundColor,
-                      strokeStyle: style.borderColor,
-                      lineWidth: style.borderWidth,
-                      hidden: isNaN(data.datasets[0].data[i]) || meta.data[i].hidden,
-                      index: i,
-                      fontColor: '#94a3b8'
-                    };
-                  });
-                }
-                return [];
-              }
-            } 
-          },
-          tooltip: chartTooltipConfig
-        }
-      },
-      plugins: [{
-        id: 'customLegendColor',
-        afterUpdate: function(chart) {
-          var legend = chart.legend;
-          if (legend && legend.legendItems) {
-            legend.legendItems.forEach(function(item) {
-              item.fontColor = '#94a3b8';
-              item.color = '#94a3b8';
-            });
-          }
-        }
-      }]
-    });
+  // History chart (datos pre-calculados del servidor)
+  if (data.history && data.history.data && data.history.data.length > 0) {
+    renderHistoryChart(data.history.data);
+    document.getElementById('historyMax').textContent = formatCurrency(
+      Math.max.apply(null, data.history.data.map(function(d) { return d.total; }))
+    );
+    document.getElementById('historyMin').textContent = formatCurrency(
+      Math.min.apply(null, data.history.data.map(function(d) { return d.total; }))
+    );
+    var first = data.history.data[0].total;
+    var last = data.history.data[data.history.data.length - 1].total;
+    var growth = first > 0 ? ((last - first) / first) * 100 : 0;
+    document.getElementById('historyGrowth').textContent = (growth >= 0 ? '+' : '') + growth.toFixed(2) + '%';
+    document.getElementById('historyGrowth').className = 'text-sm font-bold ' + (growth >= 0 ? 'text-emerald-400' : 'text-rose-400');
   }
 
-  if (summary.bySector && summary.bySector.length > 0) {
-    var ctx = document.getElementById('portfolioSectorChart').getContext('2d');
-    if (charts.portfolioSector) charts.portfolioSector.destroy();
-    charts.portfolioSector = new Chart(ctx, {
-      type: 'doughnut',
-      data: {
-        labels: summary.bySector.map(function(d) { return d.name; }),
-        datasets: [{
-          data: summary.bySector.map(function(d) { return d.value; }),
-          backgroundColor: palette.slice().reverse(),
-          borderWidth: 0,
-          hoverOffset: 6
-        }]
-      },
-      options: {
-        responsive: true, 
-        maintainAspectRatio: false, 
-        cutout: '70%',
-        plugins: {
-          legend: { 
-            position: window.innerWidth < 640 ? 'bottom' : 'right', 
-            labels: { 
-              color: '#94a3b8',
-              usePointStyle: true, 
-              pointStyle: 'circle', 
-              font: { size: window.innerWidth < 640 ? 10 : 11 },
-              padding: window.innerWidth < 640 ? 10 : 16,
-              boxWidth: window.innerWidth < 640 ? 8 : 10,
-              generateLabels: function(chart) {
-                var data = chart.data;
-                if (data.labels.length && data.datasets.length) {
-                  return data.labels.map(function(label, i) {
-                    var meta = chart.getDatasetMeta(0);
-                    var style = meta.controller.getStyle(i);
-                    var value = data.datasets[0].data[i] || 0;
-                    var percentage = totalSectorValue > 0 ? ((value / totalSectorValue) * 100).toFixed(1) : '0.0';
-                    return {
-                      text: label + ' (' + percentage + '%)',
-                      fillStyle: style.backgroundColor,
-                      strokeStyle: style.borderColor,
-                      lineWidth: style.borderWidth,
-                      hidden: isNaN(data.datasets[0].data[i]) || meta.data[i].hidden,
-                      index: i,
-                      fontColor: '#94a3b8'
-                    };
-                  });
-                }
-                return [];
-              }
-            } 
-          },
-          tooltip: chartTooltipConfig
-        }
-      },
-      plugins: [{
-        id: 'customLegendColor',
-        afterUpdate: function(chart) {
-          var legend = chart.legend;
-          if (legend && legend.legendItems) {
-            legend.legendItems.forEach(function(item) {
-              item.fontColor = '#94a3b8';
-              item.color = '#94a3b8';
-            });
-          }
-        }
-      }]
-    });
+  // Performance
+  if (data.performance) {
+    renderPerformance(data.performance);
   }
-}    
-    function renderPortfolioTable(portfolio) {
-      var tbody = document.getElementById('portfolioTable');
-      var mobileContainer = document.getElementById('portfolioMobileCards');
-      var countSpan = document.getElementById('pfCount');
 
-      if (!portfolio || portfolio.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="12" class="py-12 text-center text-slate-500 text-sm">No hay activos registrados en el portafolio.</td></tr>';
-        mobileContainer.innerHTML = '<p class="text-slate-500 text-sm text-center py-8">No hay activos registrados.</p>';
-        countSpan.textContent = '0';
-        return;
-      }
-
-      var filtered = portfolio.filter(function(p) {
-        if (!showSoldPositionsFlag && p.isSold) return false;
-        if (portfolioFilter) {
-          var search = portfolioFilter.toLowerCase();
-          return (p.ticker && p.ticker.toLowerCase().includes(search)) ||
-                 (p.assetName && p.assetName.toLowerCase().includes(search));
-        }
-        return true;
-      });
-
-      filtered.sort(function(a, b) {
-        var va = a[portfolioSort.field];
-        var vb = b[portfolioSort.field];
-        if (typeof va === 'string') va = va.toLowerCase();
-        if (typeof vb === 'string') vb = vb.toLowerCase();
-        if (va === null || va === undefined) va = -Infinity;
-        if (vb === null || vb === undefined) vb = -Infinity;
-        return portfolioSort.dir === 'asc' ? (va > vb ? 1 : va < vb ? -1 : 0) : (va < vb ? 1 : va > vb ? -1 : 0);
-      });
-
-      countSpan.textContent = filtered.length;
-
-      // Desktop table
-      tbody.innerHTML = filtered.map(function(p) {
-        var roiClass = p.unrealizedROI > 0 ? 'text-emerald-400' : p.unrealizedROI < 0 ? 'text-rose-400' : 'text-slate-400';
-        var plClass = p.unrealizedPL > 0 ? 'text-emerald-400' : p.unrealizedPL < 0 ? 'text-rose-400' : 'text-slate-400';
-        var dailyClass = p.dailyChange > 0 ? 'text-emerald-400' : p.dailyChange < 0 ? 'text-rose-400' : 'text-slate-400';
-        var soldBadge = p.isSold ? '<span class="ml-2 px-1.5 py-0.5 bg-slate-800 text-slate-500 rounded text-[9px] font-bold tracking-wider">CERRADA</span>' : '';
-
-        return '<tr class="hover:bg-slate-800/40 transition-colors group">' +
-          '<td class="py-3 px-3 sm:px-4 font-bold text-brand-400">' + (p.ticker || '-') + soldBadge + '</td>' +
-          '<td class="py-3 px-3 sm:px-4 text-slate-300 truncate max-w-[120px] sm:max-w-[150px]">' + (p.assetName || '-') + '</td>' +
-          '<td class="py-3 px-3 sm:px-4"><span class="badge bg-slate-800 border-slate-700/50 text-slate-400">' + (p.assetClass || '-') + '</span></td>' +
-          '<td class="py-3 px-3 sm:px-4 text-slate-500 hidden lg:table-cell text-[11px]">' + (p.sector || '-') + '</td>' +
-          '<td class="py-3 px-3 sm:px-4 text-right font-mono text-slate-300">' + (p.isSold ? '<span class="text-slate-600">0.0000</span>' : (p.quantityNum || 0).toFixed(4)) + '</td>' +
-          '<td class="py-3 px-3 sm:px-4 text-right font-mono text-slate-400">' + formatCurrency(p.avgPurchasePrice) + '</td>' +
-          '<td class="py-3 px-3 sm:px-4 text-right font-mono text-slate-200">' + formatCurrency(p.currentPrice) + '</td>' +
-          '<td class="py-3 px-3 sm:px-4 text-right font-mono text-slate-400">' + formatCurrency(p.cost) + '</td>' +
-          '<td class="py-3 px-3 sm:px-4 text-right font-mono font-bold text-white">' + formatCurrency(p.currentValue) + '</td>' +
-          '<td class="py-3 px-3 sm:px-4 text-right font-mono font-medium ' + roiClass + '">' + (p.unrealizedROI !== null ? (p.unrealizedROI > 0 ? '+' : '') + p.unrealizedROI.toFixed(2) + '%' : '-') + '</td>' +
-          '<td class="py-3 px-3 sm:px-4 text-right font-mono font-medium ' + plClass + '">' + (p.unrealizedPL !== null ? (p.unrealizedPL > 0 ? '+' : '') + formatCurrency(p.unrealizedPL) : '-') + '</td>' +
-          '<td class="py-3 px-3 sm:px-4 text-right font-mono font-medium ' + dailyClass + '">' + (p.dailyChange !== null ? (p.dailyChange > 0 ? '+' : '') + formatCurrency(p.dailyChange) : '-') + '</td>' +
-        '</tr>';
-      }).join('');
-
-      // Mobile cards
-      mobileContainer.innerHTML = filtered.map(function(p, idx) {
-        var roiClass = p.unrealizedROI > 0 ? 'text-emerald-400' : p.unrealizedROI < 0 ? 'text-rose-400' : 'text-slate-400';
-        var plClass = p.unrealizedPL > 0 ? 'text-emerald-400' : p.unrealizedPL < 0 ? 'text-rose-400' : 'text-slate-400';
-        var dailyClass = p.dailyChange > 0 ? 'text-emerald-400' : p.dailyChange < 0 ? 'text-rose-400' : 'text-slate-400';
-        var soldBadge = p.isSold ? '<span class="ml-2 px-1.5 py-0.5 bg-slate-800 text-slate-500 rounded text-[9px] font-bold tracking-wider">CERRADA</span>' : '';
-
-        return '<div class="position-mobile-card" onclick="toggleCardDetails(this)">' +
-          '<div class="flex items-center justify-between">' +
-            '<div class="flex items-center gap-2">' +
-              '<span class="font-bold text-sm text-brand-400">' + (p.ticker || '-') + '</span>' + soldBadge +
-              '<span class="badge bg-slate-800 border-slate-700/50 text-slate-400">' + (p.assetClass || '-') + '</span>' +
-            '</div>' +
-            '<div class="text-right">' +
-              '<p class="font-bold text-sm text-white">' + formatCurrency(p.currentValue) + '</p>' +
-              '<p class="text-[10px] font-mono ' + roiClass + '">' + (p.unrealizedROI !== null ? (p.unrealizedROI > 0 ? '+' : '') + p.unrealizedROI.toFixed(2) + '%' : '-') + '</p>' +
-            '</div>' +
-          '</div>' +
-          '<div class="card-details">' +
-            '<div class="grid grid-cols-2 gap-3 text-xs">' +
-              '<div><p class="text-[10px] text-slate-500 uppercase">Activo</p><p class="text-slate-300 font-medium truncate">' + (p.assetName || '-') + '</p></div>' +
-              '<div><p class="text-[10px] text-slate-500 uppercase">Sector</p><p class="text-slate-300 font-medium">' + (p.sector || '-') + '</p></div>' +
-              '<div><p class="text-[10px] text-slate-500 uppercase">Cantidad</p><p class="text-slate-300 font-mono">' + (p.isSold ? '0.0000' : (p.quantityNum || 0).toFixed(4)) + '</p></div>' +
-              '<div><p class="text-[10px] text-slate-500 uppercase">Precio Prom.</p><p class="text-slate-300 font-mono">' + formatCurrency(p.avgPurchasePrice) + '</p></div>' +
-              '<div><p class="text-[10px] text-slate-500 uppercase">Precio Mercado</p><p class="text-slate-300 font-mono">' + formatCurrency(p.currentPrice) + '</p></div>' +
-              '<div><p class="text-[10px] text-slate-500 uppercase">Costo</p><p class="text-slate-300 font-mono">' + formatCurrency(p.cost) + '</p></div>' +
-              '<div><p class="text-[10px] text-slate-500 uppercase">P/L</p><p class="font-mono font-medium ' + plClass + '">' + (p.unrealizedPL !== null ? (p.unrealizedPL > 0 ? '+' : '') + formatCurrency(p.unrealizedPL) : '-') + '</p></div>' +
-              '<div><p class="text-[10px] text-slate-500 uppercase">Día</p><p class="font-mono font-medium ' + dailyClass + '">' + (p.dailyChange !== null ? (p.dailyChange > 0 ? '+' : '') + formatCurrency(p.dailyChange) : '-') + '</p></div>' +
-            '</div>' +
-          '</div>' +
-        '</div>';
-      }).join('');
-    }
-
-    function toggleCardDetails(card) {
-      var details = card.querySelector('.card-details');
-      var isExpanded = details.classList.contains('expanded');
-
-      // Close all other cards
-      document.querySelectorAll('.card-details.expanded').forEach(function(el) {
-        if (el !== details) el.classList.remove('expanded');
-      });
-
-      details.classList.toggle('expanded', !isExpanded);
-    }
-
-    function sortPortfolio(field) {
-      if (portfolioSort.field === field) {
-        portfolioSort.dir = portfolioSort.dir === 'asc' ? 'desc' : 'asc';
-      } else {
-        portfolioSort.field = field;
-        portfolioSort.dir = 'desc';
-      }
-      renderPortfolioTable(portfolioData);
-    }
-
-    function toggleSoldPositions() {
-      showSoldPositionsFlag = document.getElementById('showSold').checked;
-      renderPortfolioTable(portfolioData);
-    }
-
-    function filterPortfolio() {
-      portfolioFilter = document.getElementById('pfSearch').value;
-      renderPortfolioTable(portfolioData);
-    }
-
-    function renderBrokersSummary(platforms) {
-      var section = document.getElementById('brokersSummarySection');
-      var grid = document.getElementById('brokersSummaryGrid');
-
-      if (!platforms || platforms.length === 0) {
-        section.classList.add('hidden');
-        return;
-      }
-
-      section.classList.remove('hidden');
-
-      var colors = {
-        'ETORO': { bg: 'rgba(59, 130, 246, 0.15)', icon: 'fa-globe', color: '#60a5fa' },
-        'HAPI':  { bg: 'rgba(16, 185, 129, 0.15)', icon: 'fa-bolt', color: '#34d399' },
-        'TRADESTATION': { bg: 'rgba(245, 158, 11, 0.15)', icon: 'fa-chart-line', color: '#fbbf24' },
-        'default': { bg: 'rgba(99, 102, 241, 0.15)', icon: 'fa-building', color: '#818cf8' }
-      };
-
-      grid.innerHTML = platforms.map(function(p) {
-        var key = (p.platform || 'default').toUpperCase();
-        var style = colors[key] || colors['default'];
-
-        var unrealizedPL = p.unrealizedPL || 0;
-        var realizedPL = p.realizedPL || 0;
-        var dayChange = p.dayChange || 0;
-        var dayChangePct = p.dayChangePct || 0;
-        var unrealizedROI = p.unrealizedROI || 0;
-        var realizedROI = p.realizedROI || 0;
-        var cash = p.cash || 0;
-        var totalValue = p.totalValue || (p.marketValue + cash) || 0;
-
-        var unrealizedClass = unrealizedPL >= 0 ? 'text-emerald-400' : 'text-rose-400';
-        var realizedClass = realizedPL >= 0 ? 'text-emerald-400' : 'text-rose-400';
-        var dayClass = dayChange >= 0 ? 'text-emerald-400' : 'text-rose-400';
-        var daySign = dayChange >= 0 ? '+' : '';
-        var cashClass = cash >= 0 ? 'text-slate-300' : 'text-rose-400';
-
-        return '<div class="broker-summary-card">' +
-          '<div class="broker-header">' +
-            '<div class="broker-icon" style="background:' + style.bg + '; color:' + style.color + '">' +
-              '<i class="fas ' + style.icon + '"></i>' +
-            '</div>' +
-            '<span class="broker-name">' + (p.platform || 'Sin nombre') + '</span>' +
-          '</div>' +
-          '<div class="text-center mb-3">' +
-            '<p class="text-[10px] text-slate-500 uppercase font-bold tracking-wider mb-1">Valor Total</p>' +
-            '<p class="text-xl sm:text-2xl font-extrabold text-white tracking-tight">' + formatCurrency(totalValue) + '</p>' +
-          '</div>' +
-          '<div class="broker-grid">' +
-            '<div class="broker-stat">' +
-              '<div class="broker-stat-label">Cost Basis</div>' +
-              '<div class="broker-stat-value text-slate-300">' + formatCurrency(p.totalInvested || 0) + '</div>' +
-            '</div>' +
-            '<div class="broker-stat">' +
-              '<div class="broker-stat-label">Market Value</div>' +
-              '<div class="broker-stat-value text-white">' + formatCurrency(p.marketValue || 0) + '</div>' +
-            '</div>' +
-            '<div class="broker-stat">' +
-              '<div class="broker-stat-label">Cash</div>' +
-              '<div class="broker-stat-value ' + cashClass + '">' + formatCurrency(cash) + '</div>' +
-            '</div>' +
-          '</div>' +
-          '<div class="broker-divider"></div>' +
-          '<div class="broker-grid">' +
-            '<div class="broker-stat">' +
-              '<div class="broker-stat-label">Day Change</div>' +
-              '<div class="broker-stat-value ' + dayClass + '">' + daySign + formatCurrency(dayChange) + '</div>' +
-              '<div class="broker-stat-sub ' + dayClass + '">' + daySign + dayChangePct.toFixed(2) + '%</div>' +
-            '</div>' +
-            '<div class="broker-stat">' +
-              '<div class="broker-stat-label">Unrealized</div>' +
-              '<div class="broker-stat-value ' + unrealizedClass + '">' + (unrealizedPL >= 0 ? '+' : '') + formatCurrency(unrealizedPL) + '</div>' +
-              '<div class="broker-stat-sub ' + unrealizedClass + '">' + (unrealizedROI >= 0 ? '+' : '') + unrealizedROI.toFixed(2) + '%</div>' +
-            '</div>' +
-            '<div class="broker-stat">' +
-              '<div class="broker-stat-label">Realized</div>' +
-              '<div class="broker-stat-value ' + realizedClass + '">' + (realizedPL >= 0 ? '+' : '') + formatCurrency(realizedPL) + '</div>' +
-              '<div class="broker-stat-sub ' + realizedClass + '">' + (realizedROI >= 0 ? '+' : '') + realizedROI.toFixed(2) + '%</div>' +
-            '</div>' +
-          '</div>' +
-          '<div class="mt-2 text-center">' +
-            '<span class="text-[10px] text-slate-500 font-medium">' + (p.symbols || 0) + ' símbolos</span>' +
-          '</div>' +
-        '</div>';
-      }).join('');
-    }
-    
-
-    async function loadPlatforms() {
-      try {
-        var url = API_URL + "?action=platforms&currency=" + currentCurrency;
-        if (currentCurrency !== "USD" && currentRate) url += "&rate=" + currentRate;
-        const data = await fetchWithJSONP(url);
-        renderPlatformsTable(data.platforms || []);
-      } catch (e) { console.error(e); }
-    }
-
-    function changeTxPage(delta) {
-      var maxPage = Math.ceil(allTransactions.length / TX_PER_PAGE) - 1;
-      txPage = Math.max(0, Math.min(txPage + delta, maxPage));
-      renderTransactionsTable();
-    }
-
-    function renderTransactionsTable() {
-      var tbody = document.getElementById('transactionsTable');
-      var mobileContainer = document.getElementById('transactionsMobileCards');
-      var countSpan = document.getElementById('txCount');
-      var pageSpan = document.getElementById('txPage');
-      var prevBtn = document.getElementById('txPrev');
-      var nextBtn = document.getElementById('txNext');
-
-      if (!allTransactions || allTransactions.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="7" class="py-12 text-center text-slate-500 text-sm">No hay transacciones registradas</td></tr>';
-        mobileContainer.innerHTML = '<p class="text-slate-500 text-sm text-center py-8">No hay transacciones registradas.</p>';
-        countSpan.textContent = '0';
-        return;
-      }
-
-      countSpan.textContent = allTransactions.length;
-
-      var start = txPage * TX_PER_PAGE;
-      var end = Math.min(start + TX_PER_PAGE, allTransactions.length);
-      var pageTransactions = allTransactions.slice(start, end);
-
-      pageSpan.textContent = 'Pág. ' + (txPage + 1) + ' / ' + Math.ceil(allTransactions.length / TX_PER_PAGE);
-      prevBtn.disabled = txPage === 0;
-      nextBtn.disabled = end >= allTransactions.length;
-
-      // Desktop table
-      tbody.innerHTML = pageTransactions.map(function(t) {
-        return '<tr class="hover:bg-slate-800/40 transition-colors">' +
-          '<td class="py-3 px-3 sm:px-4 text-slate-400 text-[11px] font-mono">' + (t.date || '-') + '</td>' +
-          '<td class="py-3 px-3 sm:px-4 font-bold text-slate-200">' + (t.ticker || t.assetName || '-') + '</td>' +
-          '<td class="py-3 px-3 sm:px-4 text-center">' + getActionBadge(t.action) + '</td>' +
-          '<td class="py-3 px-3 sm:px-4 text-right font-mono text-slate-300">' + (t.quantity || 0) + '</td>' +
-          '<td class="py-3 px-3 sm:px-4 text-right font-mono text-slate-400">' + formatCurrency(t.displayPrice || t.price) + '</td>' +
-          '<td class="py-3 px-3 sm:px-4 text-right font-mono font-semibold text-white">' + formatCurrency(Math.abs(t.displayTotal || t.totalUSD || t.total || 0)) + '</td>' +
-          '<td class="py-3 px-3 sm:px-4 text-center text-slate-500 text-[11px]">' + (t.platform || '-') + '</td>' +
-        '</tr>';
-      }).join('');
-
-      // Mobile cards
-      mobileContainer.innerHTML = pageTransactions.map(function(t) {
-        return '<div class="tx-mobile-card">' +
-          '<div class="flex items-center justify-between mb-2">' +
-            '<div class="flex items-center gap-2">' +
-              '<span class="font-bold text-sm text-slate-200">' + (t.ticker || t.assetName || '-') + '</span>' +
-              getActionBadge(t.action) +
-            '</div>' +
-            '<span class="text-[10px] text-slate-500 font-mono">' + (t.date || '-') + '</span>' +
-          '</div>' +
-          '<div class="grid grid-cols-3 gap-2 text-xs">' +
-            '<div><p class="text-[10px] text-slate-500 uppercase">Cantidad</p><p class="text-slate-300 font-mono">' + (t.quantity || 0) + '</p></div>' +
-            '<div><p class="text-[10px] text-slate-500 uppercase">Precio</p><p class="text-slate-300 font-mono">' + formatCurrency(t.displayPrice || t.price) + '</p></div>' +
-            '<div class="text-right"><p class="text-[10px] text-slate-500 uppercase">Total</p><p class="text-white font-mono font-semibold">' + formatCurrency(Math.abs(t.displayTotal || t.totalUSD || t.total || 0)) + '</p></div>' +
-          '</div>' +
-          '<div class="mt-2 pt-2 border-t border-slate-700/30 flex justify-between items-center">' +
-            '<span class="text-[10px] text-slate-500">' + (t.platform || '-') + '</span>' +
-            '<span class="text-[10px] text-slate-500 font-mono">' + (t.currency || 'USD') + '</span>' +
-          '</div>' +
-        '</div>';
-      }).join('');
-    }
-
-    function renderAssetsTable(assets) {
-      var tbody = document.getElementById('assetsTable');
-      var mobileContainer = document.getElementById('assetsMobileCards');
-
-      if (!assets || assets.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="8" class="py-12 text-center text-slate-500 text-sm">No hay activos en cartera</td></tr>';
-        mobileContainer.innerHTML = '<p class="text-slate-500 text-sm text-center py-8">No hay activos en cartera.</p>';
-        return;
-      }
-
-      // Desktop table
-      tbody.innerHTML = assets.map(function(a) {
-        return '<tr class="hover:bg-slate-800/40 transition-colors">' +
-          '<td class="py-3 px-3 sm:px-4 font-bold text-brand-400">' + (a.ticker || '-') + '</td>' +
-          '<td class="py-3 px-3 sm:px-4 text-slate-300">' + (a.name || '-') + '</td>' +
-          '<td class="py-3 px-3 sm:px-4"><span class="badge bg-slate-800 border-slate-700/50 text-slate-400">' + (a.class || '-') + '</span></td>' +
-          '<td class="py-3 px-3 sm:px-4 text-slate-500 text-[11px]">' + (a.sector || '-') + '</td>' +
-          '<td class="py-3 px-3 sm:px-4 text-right font-mono text-slate-200">' + ((a.quantity || 0).toFixed(4)) + '</td>' +
-          '<td class="py-3 px-3 sm:px-4 text-right font-mono text-slate-400">' + formatCurrency(a.costBasis) + '</td>' +
-          '<td class="py-3 px-3 sm:px-4 text-center font-mono text-[10px] text-slate-500">' + (a.originalCurrency || a.currency || '-') + '</td>' +
-          '<td class="py-3 px-3 sm:px-4 text-center text-slate-400 text-[11px]">' + (a.platform || '-') + '</td>' +
-        '</tr>';
-      }).join('');
-
-      // Mobile cards
-      mobileContainer.innerHTML = assets.map(function(a) {
-        return '<div class="position-mobile-card">' +
-          '<div class="flex items-center justify-between mb-2">' +
-            '<div class="flex items-center gap-2">' +
-              '<span class="font-bold text-sm text-brand-400">' + (a.ticker || '-') + '</span>' +
-              '<span class="badge bg-slate-800 border-slate-700/50 text-slate-400">' + (a.class || '-') + '</span>' +
-            '</div>' +
-            '<span class="text-[10px] text-slate-500 font-mono">' + (a.originalCurrency || a.currency || '-') + '</span>' +
-          '</div>' +
-          '<p class="text-xs text-slate-300 mb-2 truncate">' + (a.name || '-') + '</p>' +
-          '<div class="grid grid-cols-2 gap-2 text-xs">' +
-            '<div><p class="text-[10px] text-slate-500 uppercase">Cantidad</p><p class="text-slate-300 font-mono">' + ((a.quantity || 0).toFixed(4)) + '</p></div>' +
-            '<div><p class="text-[10px] text-slate-500 uppercase">Costo Base</p><p class="text-slate-300 font-mono">' + formatCurrency(a.costBasis) + '</p></div>' +
-            '<div><p class="text-[10px] text-slate-500 uppercase">Sector</p><p class="text-slate-300">' + (a.sector || '-') + '</p></div>' +
-            '<div><p class="text-[10px] text-slate-500 uppercase">Plataforma</p><p class="text-slate-300">' + (a.platform || '-') + '</p></div>' +
-          '</div>' +
-        '</div>';
-      }).join('');
-    }
-
-    function renderPlatformsTable(platforms) {
-      var tbody = document.getElementById('platformsTable');
-      var mobileContainer = document.getElementById('platformsMobileCards');
-
-      if (!platforms || platforms.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="7" class="py-12 text-center text-slate-500 text-sm">No hay plataformas registradas</td></tr>';
-        mobileContainer.innerHTML = '<p class="text-slate-500 text-sm text-center py-8">No hay plataformas registradas.</p>';
-        return;
-      }
-
-      // Desktop table
-      tbody.innerHTML = platforms.map(function(p) {
-        return '<tr class="hover:bg-slate-800/40 transition-colors">' +
-          '<td class="py-3 px-3 sm:px-4 font-bold text-slate-200">' + (p.platform || '-') + '</td>' +
-          '<td class="py-3 px-3 sm:px-4 text-center font-mono text-[10px] text-slate-500">' + (p.originalCurrency || p.currency || '-') + '</td>' +
-          '<td class="py-3 px-3 sm:px-4 text-right font-mono text-slate-300">' + (p.transactions || 0) + '</td>' +
-          '<td class="py-3 px-3 sm:px-4 text-right font-mono text-emerald-400/80">' + formatCurrency(p.totalDeposits) + '</td>' +
-          '<td class="py-3 px-3 sm:px-4 text-right font-mono text-brand-400/80">' + formatCurrency(p.totalInvested) + '</td>' +
-          '<td class="py-3 px-3 sm:px-4 text-right font-mono text-purple-400/80">' + formatCurrency(p.totalSold + p.totalDividends) + '</td>' +
-          '<td class="py-3 px-3 sm:px-4 text-right font-mono font-bold text-white">' + formatCurrency(p.netFlow) + '</td>' +
-        '</tr>';
-      }).join('');
-
-      // Mobile cards
-      mobileContainer.innerHTML = platforms.map(function(p) {
-        var netFlowClass = p.netFlow >= 0 ? 'text-emerald-400' : 'text-rose-400';
-        return '<div class="platform-mobile-card">' +
-          '<div class="flex items-center justify-between mb-3">' +
-            '<span class="font-bold text-sm text-slate-200">' + (p.platform || '-') + '</span>' +
-            '<span class="text-[10px] text-slate-500 font-mono">' + (p.originalCurrency || p.currency || '-') + '</span>' +
-          '</div>' +
-          '<div class="grid grid-cols-2 gap-3 text-xs">' +
-            '<div><p class="text-[10px] text-slate-500 uppercase">Órdenes</p><p class="text-slate-300 font-mono">' + (p.transactions || 0) + '</p></div>' +
-            '<div><p class="text-[10px] text-slate-500 uppercase">Fondeo</p><p class="text-emerald-400/80 font-mono">' + formatCurrency(p.totalDeposits) + '</p></div>' +
-            '<div><p class="text-[10px] text-slate-500 uppercase">Invertido</p><p class="text-brand-400/80 font-mono">' + formatCurrency(p.totalInvested) + '</p></div>' +
-            '<div><p class="text-[10px] text-slate-500 uppercase">Retornos</p><p class="text-purple-400/80 font-mono">' + formatCurrency(p.totalSold + p.totalDividends) + '</p></div>' +
-          '</div>' +
-          '<div class="mt-3 pt-3 border-t border-slate-700/30 flex justify-between items-center">' +
-            '<span class="text-[10px] text-slate-500 uppercase">Flujo Neto</span>' +
-            '<span class="font-mono font-bold ' + netFlowClass + '">' + formatCurrency(p.netFlow) + '</span>' +
-          '</div>' +
-        '</div>';
-      }).join('');
-    }
-
-    function getActionBadge(action) {
-      var b = 'px-2 py-0.5 rounded text-[10px] font-bold tracking-wider ';
-      var badges = {
-        'Buy': '<span class="' + b + 'bg-brand-500/20 text-brand-400 border border-brand-500/30">COMPRA</span>',
-        'Sell': '<span class="' + b + 'bg-rose-500/20 text-rose-400 border border-rose-500/30">VENTA</span>',
-        'Cash Deposit': '<span class="' + b + 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">FONDEO</span>',
-        'Cash Withdrawal': '<span class="' + b + 'bg-orange-500/20 text-orange-400 border border-orange-500/30">RETIRO</span>',
-        'Transfer Send': '<span class="' + b + 'bg-slate-500/20 text-slate-400 border border-slate-500/30">TRF OUT</span>',
-        'Transfer Deposit': '<span class="' + b + 'bg-slate-500/20 text-slate-400 border border-slate-500/30">TRF IN</span>',
-        'Dividend': '<span class="' + b + 'bg-purple-500/20 text-purple-400 border border-purple-500/30">DIVIDENDO</span>',
-        'DRIP': '<span class="' + b + 'bg-indigo-500/20 text-indigo-400 border border-indigo-500/30">DRIP</span>',
-        'Crypto Interest': '<span class="' + b + 'bg-yellow-500/20 text-yellow-400 border border-yellow-500/30">YIELD</span>'
-      };
-      return badges[action] || '<span class="' + b + 'bg-slate-800 text-slate-400">' + (action || '-') + '</span>';
-    }
-
-    function formatCurrency(value) {
-      if (value === undefined || value === null || isNaN(value)) {
-        return currentCurrency === 'DOP' ? 'DOP$0.00' : '$0.00';
-      }
-      
-      if (currentCurrency === 'DOP') {
-        return 'DOP$' + new Intl.NumberFormat('en-US', { 
-          minimumFractionDigits: 2,
-          maximumFractionDigits: 2
-        }).format(value);
-      }
-      
-      return '$' + new Intl.NumberFormat('en-US', { 
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2
-      }).format(value);
-    }
-
-    function switchTab(tab) {
-      var tabs = ['portfolio', 'assets', 'transactions', 'platforms'];
-      tabs.forEach(function(t) {
-        document.getElementById('panel-' + t).classList.add('hidden');
-        document.getElementById('tab-' + t).classList.remove('tab-active');
-        document.getElementById('tab-' + t).classList.remove('text-brand-400');
-      });
-      document.getElementById('panel-' + tab).classList.remove('hidden');
-      document.getElementById('tab-' + tab).classList.add('tab-active');
-      document.getElementById('tab-' + tab).classList.add('text-brand-400');
-
-      // Re-apply mobile view mode if on portfolio tab
-      if (tab === 'portfolio' && window.innerWidth < 768) {
-        setMobileView(mobileViewMode);
-      }
-    }
-
-    function showLoading() {
-      document.getElementById('loadingState').classList.remove('hidden');
-      document.getElementById('errorState').classList.add('hidden');
-      document.getElementById('content').classList.add('hidden');
-    }
-
-    function showContent() {
-      document.getElementById('loadingState').classList.add('hidden');
-      document.getElementById('errorState').classList.add('hidden');
-      document.getElementById('content').classList.remove('hidden');
-    }
-
-    function showError(msg) {
-      document.getElementById('loadingState').classList.add('hidden');
-      document.getElementById('errorState').classList.remove('hidden');
-      document.getElementById('errorMessage').textContent = msg;
-    }
-
-    // Handle window resize for charts
-    var resizeTimeout;
-    window.addEventListener('resize', function() {
-      clearTimeout(resizeTimeout);
-      resizeTimeout = setTimeout(function() {
-        if (portfolioSummary && portfolioSummary.byAssetClass) {
-          renderPortfolioCharts(portfolioSummary);
-        }
-      }, 250);
-    });
-
-        function buildHistoryFromTransactions(transactions) {
-      if (!transactions || transactions.length === 0) {
-        historyData = [];
-        return;
-      }
-
-      var sorted = transactions.slice().sort(function(a, b) {
-        return new Date(a.dateRaw || a.date) - new Date(b.dateRaw || b.date);
-      });
-
-      var monthlyData = {};
-      var runningInvested = 0;
-      var runningCash = 0;
-
-      sorted.forEach(function(tx) {
-        var date = new Date(tx.dateRaw || tx.date);
-        var monthKey = date.getFullYear() + '-' + String(date.getMonth() + 1).padStart(2, '0');
-        var amount = Math.abs(tx.displayTotal || tx.totalUSD || tx.total || 0);
-        var action = tx.action || '';
-
-        if (action === 'Buy') {
-          runningInvested += amount;
-          runningCash -= amount;
-        } else if (action === 'Sell') {
-          runningInvested -= amount;
-          runningCash += amount;
-        } else if (action === 'Cash Deposit' || action === 'Transfer Deposit') {
-          runningCash += amount;
-        } else if (action === 'Cash Withdrawal') {
-          runningCash -= amount;
-        } else if (action === 'Dividend' || action === 'Crypto Interest') {
-          runningCash += amount;
-        }
-
-        monthlyData[monthKey] = {
-          date: monthKey,
-          marketValue: runningInvested,
-          cash: runningCash,
-          total: runningInvested + runningCash,
-          invested: runningInvested
-        };
-      });
-
-      historyData = Object.keys(monthlyData).sort().map(function(key) {
-        return monthlyData[key];
-      });
-    }
-
-    function buildRealHistoryFromPrices(transactions) {
-      if (!transactions || transactions.length === 0 || historicalDates.length === 0) {
-        historyData = [];
-        return;
-      }
-
-      // Obtener precios actuales de la hoja Portfolio
-      var currentPricesFromPortfolio = {};
-      if (typeof portfolioData !== 'undefined' && portfolioData && portfolioData.length > 0) {
-        portfolioData.forEach(function(p) {
-          if (!p.isSold && p.ticker) {
-            currentPricesFromPortfolio[p.ticker.toUpperCase()] = {
-              price: p.currentPrice,
-              quantity: p.quantityNum,
-              currency: p.currency || 'USD'
-            };
-          }
-        });
-      } else if (typeof window.lastPortfolioData !== 'undefined' && window.lastPortfolioData) {
-        window.lastPortfolioData.forEach(function(p) {
-          if (!p.isSold && p.ticker) {
-            currentPricesFromPortfolio[p.ticker.toUpperCase()] = {
-              price: p.currentPrice,
-              quantity: p.quantityNum,
-              currency: p.currency || 'USD'
-            };
-          }
-        });
-      }
-
-      var sorted = transactions.slice().sort(function(a, b) {
-        return new Date(a.dateRaw || a.date) - new Date(b.dateRaw || b.date);
-      });
-
-      var monthlyPortfolio = {};
-      var lastDateKey = historicalDates[historicalDates.length - 1];
-
-      historicalDates.forEach(function(dateKey) {
-        // Calcular efectivo por bróker hasta este mes
-        var cashByBroker = {};
-        var runningPositions = {};
-        
-        // Primera pasada: calcular efectivo acumulado por bróker
-        sorted.forEach(function(tx) {
-          var txDate = new Date(tx.dateRaw || tx.date);
-          var txYear = txDate.getFullYear();
-          var txMonth = txDate.getMonth() + 1;
-          var txKey = txYear + '-' + String(txMonth).padStart(2, '0');
-          
-          if (txKey > dateKey) return;
-
-          var broker = (tx.platform || "Sin Plataforma").toUpperCase();
-          var action = tx.action || '';
-          var amount = Math.abs(tx.displayTotal || tx.totalUSD || tx.total || 0);
-          var ticker = (tx.ticker || "").toUpperCase();
-          var quantity = parseFloat(tx.quantity) || 0;
-
-          if (!cashByBroker[broker]) cashByBroker[broker] = 0;
-
-          if (action === 'Cash Deposit' || action === 'Transfer Deposit') {
-            cashByBroker[broker] += amount;
-          } else if (action === 'Cash Withdrawal') {
-            cashByBroker[broker] -= amount;
-          } else if (action === 'Dividend' || action === 'Crypto Interest') {
-            // Dividendos en efectivo aumentan el cash
-            cashByBroker[broker] += amount;
-          } else if (action === 'Buy') {
-            cashByBroker[broker] -= amount;
-            // Trackear posición
-            if (!runningPositions[ticker]) runningPositions[ticker] = {};
-            if (!runningPositions[ticker][broker]) {
-              runningPositions[ticker][broker] = { quantity: 0, invested: 0 };
-            }
-            runningPositions[ticker][broker].quantity += quantity;
-            runningPositions[ticker][broker].invested += amount;
-          } else if (action === 'Sell') {
-            cashByBroker[broker] += amount;
-            // Reducir posición
-            if (runningPositions[ticker] && runningPositions[ticker][broker]) {
-              var pos = runningPositions[ticker][broker];
-              var costBasisSold = pos.quantity > 0 ? (pos.invested / pos.quantity) * quantity : 0;
-              pos.quantity -= quantity;
-              pos.invested -= costBasisSold;
-              if (pos.quantity <= 0) {
-                delete runningPositions[ticker][broker];
-                if (Object.keys(runningPositions[ticker]).length === 0) {
-                  delete runningPositions[ticker];
-                }
-              }
-            }
-          } else if (action === 'DRIP') {
-            // DRIP: no afecta el cash (dividendo reinvertido)
-            if (!runningPositions[ticker]) runningPositions[ticker] = {};
-            if (!runningPositions[ticker][broker]) {
-              runningPositions[ticker][broker] = { quantity: 0, invested: 0 };
-            }
-            runningPositions[ticker][broker].quantity += quantity;
-            // El invested del DRIP es 0 porque no salió cash
-          }
-        });
-
-        // Calcular valor de mercado
-        var marketValue = 0;
-        var currentInvested = 0;
-        
-        for (var ticker in runningPositions) {
-          for (var broker in runningPositions[ticker]) {
-            var pos = runningPositions[ticker][broker];
-            if (pos.quantity > 0) {
-              currentInvested += pos.invested;
-              
-              var price = null;
-              
-              // PRIORIDAD 1: Si es el mes más reciente, usar precio actual de Portfolio
-              if (dateKey === lastDateKey && currentPricesFromPortfolio[ticker]) {
-                price = currentPricesFromPortfolio[ticker].price;
-              }
-              
-              // PRIORIDAD 2: Precio histórico de FECHAS
-              if (price === null && historicalPrices[ticker] && historicalPrices[ticker][broker] && historicalPrices[ticker][broker][dateKey]) {
-                price = historicalPrices[ticker][broker][dateKey];
-              }
-              
-              // PRIORIDAD 3: Último precio histórico conocido anterior
-              if (price === null) {
-                var tickerPrices = historicalPrices[ticker];
-                if (tickerPrices && tickerPrices[broker]) {
-                  var brokerPrices = tickerPrices[broker];
-                  var availableDates = Object.keys(brokerPrices).sort();
-                  for (var i = availableDates.length - 1; i >= 0; i--) {
-                    if (availableDates[i] <= dateKey) {
-                      price = brokerPrices[availableDates[i]];
-                      break;
-                    }
-                  }
-                }
-              }
-
-              // PRIORIDAD 4: Costo promedio como fallback
-              if (price === null) {
-                price = pos.invested / pos.quantity;
-              }
-
-              if (price !== null) {
-                marketValue += pos.quantity * price;
-              }
-            }
-          }
-        }
-
-        // Efectivo total = suma de efectivo por bróker
-        var cash = 0;
-        for (var broker in cashByBroker) {
-          cash += cashByBroker[broker];
-        }
-
-        monthlyPortfolio[dateKey] = {
-          date: dateKey,
-          marketValue: marketValue,
-          cash: cash,
-          total: marketValue + cash,
-          invested: currentInvested
-        };
-      });
-
-      historyData = historicalDates.map(function(dateKey) {
-        return monthlyPortfolio[dateKey] || { date: dateKey, marketValue: 0, cash: 0, total: 0, invested: 0 };
-      }).filter(function(d) { return d.total !== 0 || d.invested !== 0; });
-    }    
-    function setHistoryRange(range) {
-      historyRange = range;
-      
-      ['1M','3M','6M','1Y','ALL'].forEach(function(r) {
-        var btn = document.getElementById('range-' + r);
-        if (btn) {
-          if (r === range) {
-            btn.classList.add('active');
-            btn.classList.remove('text-slate-400');
-          } else {
-            btn.classList.remove('active');
-            btn.classList.add('text-slate-400');
-          }
-        }
-      });
-
-      renderHistoryChart();
-
-      
-    }
-
-    function renderHistoryChart() {
-      var ctx = document.getElementById('portfolioHistoryChart');
-      if (!ctx) return;
-
-      var filteredData = filterHistoryByRange(historyData, historyRange);
-      
-      if (filteredData.length === 0) {
-        if (charts.history) charts.history.destroy();
-        return;
-      }
-
-      var labels = filteredData.map(function(d) {
-        var parts = d.date.split('-');
-        var monthNames = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
-        return monthNames[parseInt(parts[1]) - 1] + " '" + parts[0].slice(2);
-      });
-      
-      var totalValues = filteredData.map(function(d) { return d.total; });
-      var marketValues = filteredData.map(function(d) { return d.marketValue; });
-      var cashValues = filteredData.map(function(d) { return d.cash; });
-      var investedValues = filteredData.map(function(d) { return d.invested; });
-
-      // Calcular métricas
-      var maxVal = Math.max.apply(null, totalValues);
-      var minVal = Math.min.apply(null, totalValues);
-      var firstVal = totalValues[0] || 0;
-      var lastVal = totalValues[totalValues.length - 1] || 0;
-      var growth = firstVal > 0 ? ((lastVal - firstVal) / firstVal) * 100 : 0;
-
-      document.getElementById('historyMax').textContent = formatCurrency(maxVal);
-      document.getElementById('historyMin').textContent = formatCurrency(minVal);
-      document.getElementById('historyGrowth').textContent = (growth >= 0 ? '+' : '') + growth.toFixed(2) + '%';
-      document.getElementById('historyGrowth').className = 'text-sm font-bold ' + (growth >= 0 ? 'text-emerald-400' : 'text-rose-400');
-
-      if (charts.history) charts.history.destroy();
-
-      charts.history = new Chart(ctx.getContext('2d'), {
-        type: 'line',
-        data: {
-          labels: labels,
-          datasets: [
-            {
-              label: 'Patrimonio Total',
-              data: totalValues,
-              borderColor: '#3b82f6',
-              backgroundColor: 'rgba(59, 130, 246, 0.08)',
-              borderWidth: 2.5,
-              tension: 0.3,
-              fill: true,
-              pointRadius: 3,
-              pointHoverRadius: 6,
-              pointBackgroundColor: '#3b82f6',
-              pointBorderColor: '#0f172a',
-              pointBorderWidth: 2,
-              order: 1
-            },
-            {
-              label: 'Valor de Mercado',
-              data: marketValues,
-              borderColor: '#10b981',
-              backgroundColor: 'transparent',
-              borderWidth: 2,
-              borderDash: [5, 5],
-              tension: 0.3,
-              fill: false,
-              pointRadius: 0,
-              pointHoverRadius: 4,
-              order: 2
-            },
-            {
-              label: 'Capital Invertido',
-              data: investedValues,
-              borderColor: '#f59e0b',
-              backgroundColor: 'transparent',
-              borderWidth: 1.5,
-              tension: 0.3,
-              fill: false,
-              pointRadius: 0,
-              pointHoverRadius: 4,
-              order: 3
-            }
-          ]
+  // Tables
+  if (data.portfolio && data.portfolio.positions) {
+    renderPortfolioTable(data.portfolio.positions);
+  }
+  if (data.assets) {
+    renderAssetsTable(data.assets);
+  }
+  if (data.transactions) {
+    renderTransactionsTable(data.transactions);
+  }
+  if (data.platforms) {
+    renderBrokersSummary(data.platforms);
+    renderPlatformsTable(data.platforms);
+  }
+}
+
+// ═════════════════════════════════════════════════════════════════════════════
+// PORTFOLIO SUMMARY — Datos directos del servidor
+// ═════════════════════════════════════════════════════════════════════════════
+
+function renderPortfolioSummary(summary, metrics) {
+  var marketValue = summary.totalCurrentValue || 0;
+  var totalCash = metrics ? (metrics.totalCash || 0) : 0;
+  var totalBalance = marketValue + totalCash;
+
+  document.getElementById('pfTotalBalance').textContent = formatCurrency(totalBalance);
+  document.getElementById('pfMarketValue').textContent = formatCurrency(marketValue);
+  document.getElementById('pfTotalCash').textContent = formatCurrency(totalCash);
+  document.getElementById('pfTotalCost').textContent = formatCurrency(summary.totalCost || 0);
+
+  var unrealizedPL = summary.totalUnrealizedPL || 0;
+  document.getElementById('pfUnrealizedPL').textContent = (unrealizedPL >= 0 ? '+' : '') + formatCurrency(unrealizedPL);
+  document.getElementById('pfUnrealizedPL').className = 'font-bold text-sm sm:text-base leading-none ' + (unrealizedPL >= 0 ? 'text-emerald-400' : 'text-rose-400');
+
+  var roi = summary.overallUnrealizedROI || 0;
+  document.getElementById('pfUnrealizedROI').textContent = (roi >= 0 ? '+' : '') + roi.toFixed(2) + '%';
+  document.getElementById('pfUnrealizedROIContainer').className = 'px-2 py-1 rounded-md text-[10px] sm:text-xs font-bold ' + (roi >= 0 ? 'bg-emerald-500/20 text-emerald-400' : 'bg-rose-500/20 text-rose-400');
+
+  var realizedPL = summary.totalRealizedPL || 0;
+  document.getElementById('pfRealizedPL').textContent = (realizedPL >= 0 ? '+' : '') + formatCurrency(realizedPL);
+  document.getElementById('pfRealizedPL').className = 'mobile-stat-value ' + (realizedPL >= 0 ? 'text-emerald-400' : 'text-rose-400');
+
+  var totalPL = summary.totalPL || 0;
+  document.getElementById('pfTotalPL').textContent = 'P/L Histórico: ' + (totalPL >= 0 ? '+' : '') + formatCurrency(totalPL);
+
+  var dailyChange = summary.totalDailyChange || 0;
+  document.getElementById('pfDailyChange').textContent = (dailyChange >= 0 ? '+' : '') + formatCurrency(dailyChange);
+  document.getElementById('pfDailyChange').className = 'font-bold text-sm sm:text-base leading-none ' + (dailyChange >= 0 ? 'text-emerald-400' : 'text-rose-400');
+
+  var dailyPct = summary.overallDailyChangePct || 0;
+  document.getElementById('pfDailyChangePct').textContent = (dailyPct >= 0 ? '+' : '') + dailyPct.toFixed(2) + '%';
+  document.getElementById('pfDailyChangePctContainer').className = 'px-2 py-1 rounded-md text-[10px] sm:text-xs font-bold ' + (dailyPct >= 0 ? 'bg-emerald-500/20 text-emerald-400' : 'bg-rose-500/20 text-rose-400');
+
+  document.getElementById('pfHoldings').textContent = summary.currentHoldings || 0;
+  document.getElementById('pfSold').textContent = 'Liquidadas: ' + (summary.soldPositions || 0) + ' | Total: ' + (summary.totalPositions || 0);
+
+  if (summary.topGainers && summary.topGainers.length > 0) {
+    document.getElementById('pfBestPosition').textContent = summary.topGainers[0].ticker;
+    document.getElementById('pfBestROI').textContent = '+' + summary.topGainers[0].unrealizedROI.toFixed(2) + '%';
+  }
+  if (summary.topLosers && summary.topLosers.length > 0) {
+    document.getElementById('pfWorstPosition').textContent = summary.topLosers[0].ticker;
+    document.getElementById('pfWorstROI').textContent = summary.topLosers[0].unrealizedROI.toFixed(2) + '%';
+  }
+}
+
+// ═════════════════════════════════════════════════════════════════════════════
+// HISTORY CHART — Datos pre-calculados del servidor
+// ═════════════════════════════════════════════════════════════════════════════
+
+function renderHistoryChart(historyData) {
+  var ctx = document.getElementById('portfolioHistoryChart');
+  if (!ctx) return;
+
+  var filteredData = filterHistoryByRange(historyData, historyRange);
+  if (filteredData.length === 0) {
+    if (charts.history) charts.history.destroy();
+    return;
+  }
+
+  var labels = filteredData.map(function(d) { return d.label; });
+  var totalValues = filteredData.map(function(d) { return d.total; });
+  var marketValues = filteredData.map(function(d) { return d.marketValue; });
+  var cashValues = filteredData.map(function(d) { return d.cash; });
+  var investedValues = filteredData.map(function(d) { return d.invested; });
+
+  if (charts.history) charts.history.destroy();
+
+  charts.history = new Chart(ctx.getContext('2d'), {
+    type: 'line',
+    data: {
+      labels: labels,
+      datasets: [
+        {
+          label: 'Patrimonio Total',
+          data: totalValues,
+          borderColor: '#3b82f6',
+          backgroundColor: 'rgba(59, 130, 246, 0.08)',
+          borderWidth: 2.5,
+          tension: 0.3,
+          fill: true,
+          pointRadius: 3,
+          pointHoverRadius: 6,
+          pointBackgroundColor: '#3b82f6',
+          pointBorderColor: '#0f172a',
+          pointBorderWidth: 2,
+          order: 1
         },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          interaction: {
-            mode: 'index',
-            intersect: false
-          },
-          plugins: {
-            legend: {
-              position: 'top',
-              align: 'end',
-              labels: {
-                color: '#94a3b8',
-                usePointStyle: true,
-                pointStyle: 'circle',
-                font: { size: 11 },
-                padding: 16,
-                boxWidth: 8
-              }
-            },
-            tooltip: {
-              backgroundColor: 'rgba(15, 23, 42, 0.95)',
-              titleColor: '#f8fafc',
-              bodyColor: '#cbd5e1',
-              borderColor: '#334155',
-              borderWidth: 1,
-              padding: 12,
-              cornerRadius: 8,
-              callbacks: {
-                label: function(context) {
-                  return context.dataset.label + ': ' + formatCurrency(context.parsed.y);
-                }
-              }
-            }
-          },
-          scales: {
-            x: {
-              grid: {
-                color: 'rgba(51, 65, 85, 0.15)',
-                drawBorder: false
-              },
-              ticks: {
-                color: '#64748b',
-                font: { size: 10 },
-                maxRotation: 45,
-                minRotation: 45
-              }
-            },
-            y: {
-              grid: {
-                color: 'rgba(51, 65, 85, 0.15)',
-                drawBorder: false
-              },
-              ticks: {
-                color: '#64748b',
-                font: { size: 10 },
-                callback: function(value) {
-                  if (Math.abs(value) >= 1000000) return '$' + (value / 1000000).toFixed(1) + 'M';
-                  if (Math.abs(value) >= 1000) return '$' + (value / 1000).toFixed(1) + 'k';
-                  return '$' + value.toFixed(0);
-                }
-              }
+        {
+          label: 'Valor de Mercado',
+          data: marketValues,
+          borderColor: '#10b981',
+          backgroundColor: 'transparent',
+          borderWidth: 2,
+          borderDash: [5, 5],
+          tension: 0.3,
+          fill: false,
+          pointRadius: 0,
+          pointHoverRadius: 4,
+          order: 2
+        },
+        {
+          label: 'Capital Invertido',
+          data: investedValues,
+          borderColor: '#f59e0b',
+          backgroundColor: 'transparent',
+          borderWidth: 1.5,
+          tension: 0.3,
+          fill: false,
+          pointRadius: 0,
+          pointHoverRadius: 4,
+          order: 3
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      interaction: { mode: 'index', intersect: false },
+      plugins: {
+        legend: {
+          position: 'top',
+          align: 'end',
+          labels: { color: '#94a3b8', usePointStyle: true, pointStyle: 'circle', font: { size: 11 }, padding: 16, boxWidth: 8 }
+        },
+        tooltip: {
+          backgroundColor: 'rgba(15, 23, 42, 0.95)',
+          titleColor: '#f8fafc',
+          bodyColor: '#cbd5e1',
+          borderColor: '#334155',
+          borderWidth: 1,
+          padding: 12,
+          cornerRadius: 8,
+          callbacks: {
+            label: function(context) {
+              return context.dataset.label + ': ' + formatCurrency(context.parsed.y);
             }
           }
         }
-      });
-    }
-
-    function filterHistoryByRange(data, range) {
-      if (range === 'ALL' || data.length === 0) return data;
-      
-      var now = new Date();
-      var cutoff = new Date();
-      
-      switch(range) {
-        case '1M': cutoff.setMonth(now.getMonth() - 1); break;
-        case '3M': cutoff.setMonth(now.getMonth() - 3); break;
-        case '6M': cutoff.setMonth(now.getMonth() - 6); break;
-        case '1Y': cutoff.setFullYear(now.getFullYear() - 1); break;
-        default: return data;
+      },
+      scales: {
+        x: {
+          grid: { color: 'rgba(51, 65, 85, 0.15)', drawBorder: false },
+          ticks: { color: '#64748b', font: { size: 10 }, maxRotation: 45, minRotation: 45 }
+        },
+        y: {
+          grid: { color: 'rgba(51, 65, 85, 0.15)', drawBorder: false },
+          ticks: {
+            color: '#64748b',
+            font: { size: 10 },
+            callback: function(value) {
+              if (Math.abs(value) >= 1000000) return '$' + (value / 1000000).toFixed(1) + 'M';
+              if (Math.abs(value) >= 1000) return '$' + (value / 1000).toFixed(1) + 'k';
+              return '$' + value.toFixed(0);
+            }
+          }
+        }
       }
-
-      var cutoffStr = cutoff.getFullYear() + '-' + String(cutoff.getMonth() + 1).padStart(2, '0');
-
-      var filtered = data.filter(function(d) {
-        return d.date >= cutoffStr;
-      });
-
-      if (filtered.length < 2) {
-        return data.slice(-3);
-      }
-
-      return filtered;
     }
+  });
+}
 
-    setHistoryRange('ALL');
+function filterHistoryByRange(data, range) {
+  if (range === 'ALL' || data.length === 0) return data;
 
-    loadData();
-  </script>
+  var now = new Date();
+  var cutoff = new Date();
+
+  switch(range) {
+    case '1M': cutoff.setMonth(now.getMonth() - 1); break;
+    case '3M': cutoff.setMonth(now.getMonth() - 3); break;
+    case '6M': cutoff.setMonth(now.getMonth() - 6); break;
+    case '1Y': cutoff.setFullYear(now.getFullYear() - 1); break;
+    default: return data;
+  }
+
+  var cutoffStr = cutoff.getFullYear() + '-' + String(cutoff.getMonth() + 1).padStart(2, '0');
+  var filtered = data.filter(function(d) { return d.date >= cutoffStr; });
+
+  return filtered.length < 2 ? data.slice(-3) : filtered;
+}
+
+// ═════════════════════════════════════════════════════════════════════════════
+// PERFORMANCE — Datos pre-calculados del servidor
+// ═════════════════════════════════════════════════════════════════════════════
+
+function renderPerformance(data) {
+  if (!data) return;
+
+  var summary = data.summary || {};
+  var periods = data.periods || [];
+
+  // Resumen
+  var totalReturn = summary.totalReturn || 0;
+  document.getElementById('perfTotalReturn').textContent = (totalReturn >= 0 ? '+' : '') + formatCurrency(totalReturn);
+  document.getElementById('perfTotalReturn').className = 'mobile-stat-value ' + (totalReturn >= 0 ? 'text-emerald-400' : 'text-rose-400');
+  document.getElementById('perfTotalReturnPct').textContent = (totalReturn >= 0 ? '+' : '') + summary.totalReturnPct.toFixed(2) + '%';
+  document.getElementById('perfTotalReturnPct').className = 'text-[10px] font-bold mt-1 ' + (totalReturn >= 0 ? 'text-emerald-400' : 'text-rose-400');
+
+  document.getElementById('perfTotalInvested').textContent = formatCurrency(summary.totalInvested || 0);
+  document.getElementById('perfTotalValue').textContent = formatCurrency(summary.totalPortfolioValue || 0);
+  document.getElementById('perfMaxDrawdown').textContent = summary.maxDrawdown !== null ? summary.maxDrawdown.toFixed(2) + '%' : 'N/A';
+
+  // Tabla de períodos
+  renderPerformancePeriods(periods);
+  renderPerformancePeriodChart(periods);
+  renderPerformanceDistribution(data.distribution);
+  renderTopPerformers(data.assetPerformance);
+  renderPerformancePlatforms(data.platformPerformance);
+}
+
+function renderPerformancePeriods(periods) {
+  var tbody = document.getElementById('performancePeriodsTable');
+  var mobileContainer = document.getElementById('performancePeriodsMobile');
+
+  if (!periods || periods.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="7" class="py-12 text-center text-slate-500 text-sm">No hay datos de rendimiento</td></tr>';
+    mobileContainer.innerHTML = '<p class="text-slate-500 text-sm text-center py-8">No hay datos de rendimiento.</p>';
+    return;
+  }
+
+  tbody.innerHTML = periods.map(function(p) {
+    var realizedClass = p.realizedPL >= 0 ? 'text-emerald-400' : 'text-rose-400';
+    var unrealizedClass = p.unrealizedPL >= 0 ? 'text-emerald-400' : 'text-rose-400';
+    var totalClass = p.totalPL >= 0 ? 'text-emerald-400' : 'text-rose-400';
+
+    return '<tr class="hover:bg-slate-800/40 transition-colors">' +
+      '<td class="py-3 px-3 sm:px-4 font-bold text-slate-200">' + p.label + '</td>' +
+      '<td class="py-3 px-3 sm:px-4 text-right font-mono text-slate-400">' + formatCurrency(p.startValue) + '</td>' +
+      '<td class="py-3 px-3 sm:px-4 text-right font-mono text-white">' + formatCurrency(p.endValue) + '</td>' +
+      '<td class="py-3 px-3 sm:px-4 text-right font-mono font-bold ' + unrealizedClass + '">' + (p.unrealizedPL >= 0 ? '+' : '') + formatCurrency(p.unrealizedPL) + '</td>' +
+      '<td class="py-3 px-3 sm:px-4 text-right font-mono font-bold ' + realizedClass + '">' + (p.realizedPL >= 0 ? '+' : '') + formatCurrency(p.realizedPL) + '</td>' +
+      '<td class="py-3 px-3 sm:px-4 text-right font-mono font-bold ' + totalClass + '">' + (p.totalPL >= 0 ? '+' : '') + formatCurrency(p.totalPL) + '</td>' +
+      '<td class="py-3 px-3 sm:px-4 text-right font-mono text-slate-500 text-[10px]">' + formatCurrency(p.marketValue) + ' / ' + formatCurrency(p.cash) + '</td>' +
+    '</tr>';
+  }).join('');
+
+  mobileContainer.innerHTML = periods.map(function(p) {
+    var totalClass = p.totalPL >= 0 ? 'text-emerald-400' : 'text-rose-400';
+    return '<div class="tx-mobile-card">' +
+      '<div class="flex items-center justify-between mb-2">' +
+        '<span class="font-bold text-sm text-slate-200">' + p.label + '</span>' +
+        '<span class="font-mono font-bold ' + totalClass + '">' + (p.totalPL >= 0 ? '+' : '') + formatCurrency(p.totalPL) + '</span>' +
+      '</div>' +
+      '<div class="grid grid-cols-2 gap-2 text-xs">' +
+        '<div><p class="text-[10px] text-slate-500 uppercase">No Realizado</p><p class="font-mono font-bold ' + (p.unrealizedPL >= 0 ? 'text-emerald-400' : 'text-rose-400') + '">' + (p.unrealizedPL >= 0 ? '+' : '') + formatCurrency(p.unrealizedPL) + '</p></div>' +
+        '<div><p class="text-[10px] text-slate-500 uppercase">Realizado</p><p class="font-mono font-bold ' + (p.realizedPL >= 0 ? 'text-emerald-400' : 'text-rose-400') + '">' + (p.realizedPL >= 0 ? '+' : '') + formatCurrency(p.realizedPL) + '</p></div>' +
+        '<div><p class="text-[10px] text-slate-500 uppercase">Mercado</p><p class="text-slate-300 font-mono">' + formatCurrency(p.marketValue) + '</p></div>' +
+        '<div><p class="text-[10px] text-slate-500 uppercase">Cash</p><p class="text-slate-300 font-mono">' + formatCurrency(p.cash) + '</p></div>' +
+      '</div>' +
+    '</div>';
+  }).join('');
+}
+
+function renderPerformancePeriodChart(periods) {
+  var ctx = document.getElementById('performancePeriodChart');
+  if (!ctx || !periods || periods.length === 0) return;
+
+  if (charts.performancePeriod) charts.performancePeriod.destroy();
+
+  var labels = periods.map(function(p) { return p.label; });
+  var unrealized = periods.map(function(p) { return p.unrealizedPL; });
+  var realized = periods.map(function(p) { return p.realizedPL; });
+
+  charts.performancePeriod = new Chart(ctx.getContext('2d'), {
+    type: 'bar',
+    data: {
+      labels: labels,
+      datasets: [
+        {
+          label: 'No Realizado',
+          data: unrealized,
+          backgroundColor: unrealized.map(function(v) { return v >= 0 ? 'rgba(59, 130, 246, 0.7)' : 'rgba(244, 63, 94, 0.7)'; }),
+          borderColor: unrealized.map(function(v) { return v >= 0 ? '#3b82f6' : '#f43f5e'; }),
+          borderWidth: 1,
+          borderRadius: 4,
+          stack: 'stack1'
+        },
+        {
+          label: 'Realizado',
+          data: realized,
+          backgroundColor: realized.map(function(v) { return v >= 0 ? 'rgba(16, 185, 129, 0.7)' : 'rgba(245, 158, 11, 0.7)'; }),
+          borderColor: realized.map(function(v) { return v >= 0 ? '#10b981' : '#f59e0b'; }),
+          borderWidth: 1,
+          borderRadius: 4,
+          stack: 'stack1'
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: {
+          position: 'top',
+          labels: { color: '#94a3b8', usePointStyle: true, font: { size: 11 } }
+        },
+        tooltip: {
+          backgroundColor: 'rgba(15, 23, 42, 0.95)',
+          titleColor: '#f8fafc',
+          bodyColor: '#cbd5e1',
+          borderColor: '#334155',
+          borderWidth: 1,
+          padding: 12,
+          cornerRadius: 8,
+          callbacks: {
+            label: function(context) {
+              var val = context.parsed.y;
+              return context.dataset.label + ': ' + (val >= 0 ? '+' : '') + formatCurrency(val);
+            }
+          }
+        }
+      },
+      scales: {
+        x: {
+          stacked: true,
+          grid: { color: 'rgba(51, 65, 85, 0.15)', drawBorder: false },
+          ticks: { color: '#64748b', font: { size: 10 } }
+        },
+        y: {
+          stacked: true,
+          grid: { color: 'rgba(51, 65, 85, 0.15)', drawBorder: false },
+          ticks: { color: '#64748b', font: { size: 10 }, callback: function(value) { return formatCurrency(value); } }
+        }
+      }
+    }
+  });
+}
+
+function renderPerformanceDistribution(distribution) {
+  var ctx = document.getElementById('performanceDistributionChart');
+  if (!ctx) return;
+
+  if (charts.performanceDistribution) charts.performanceDistribution.destroy();
+
+  var data = [
+    distribution.excellentCount || 0,
+    distribution.goodCount || 0,
+    distribution.neutralCount || 0,
+    distribution.badCount || 0,
+    distribution.terribleCount || 0
+  ];
+
+  var total = data.reduce(function(a, b) { return a + b; }, 0);
+  if (total === 0) {
+    ctx.parentElement.innerHTML = '<div class="flex items-center justify-center h-full text-slate-500 text-sm">Sin datos de distribución</div>';
+    return;
+  }
+
+  charts.performanceDistribution = new Chart(ctx.getContext('2d'), {
+    type: 'doughnut',
+    data: {
+      labels: ['Excelente (+50%)', 'Bueno (+10%)', 'Neutral (±10%)', 'Malo (-10%)', 'Pésimo (-30%)'],
+      datasets: [{
+        data: data,
+        backgroundColor: ['#10b981', '#3b82f6', '#f59e0b', '#f43f5e', '#7c2d12'],
+        borderWidth: 0,
+        hoverOffset: 6
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      cutout: '65%',
+      plugins: {
+        legend: {
+          position: window.innerWidth < 640 ? 'bottom' : 'right',
+          labels: { color: '#94a3b8', usePointStyle: true, pointStyle: 'circle', font: { size: window.innerWidth < 640 ? 10 : 11 }, padding: window.innerWidth < 640 ? 10 : 16, boxWidth: window.innerWidth < 640 ? 8 : 10 }
+        },
+        tooltip: {
+          backgroundColor: 'rgba(15, 23, 42, 0.95)',
+          titleColor: '#f8fafc',
+          bodyColor: '#cbd5e1',
+          borderColor: '#334155',
+          borderWidth: 1,
+          padding: 12,
+          cornerRadius: 8,
+          callbacks: {
+            label: function(context) {
+              var value = context.parsed;
+              var pct = total > 0 ? ((value / total) * 100).toFixed(1) : 0;
+              return context.label + ': ' + value + ' posiciones (' + pct + '%)';
+            }
+          }
+        }
+      }
+    }
+  });
+}
+
+// ═════════════════════════════════════════════════════════════════════════════
+// TABLES — Solo renderizado, datos del servidor
+// ═════════════════════════════════════════════════════════════════════════════
+
+function renderPortfolioTable(portfolio) {
+  var tbody = document.getElementById('portfolioTable');
+  var mobileContainer = document.getElementById('portfolioMobileCards');
+  var countSpan = document.getElementById('pfCount');
+
+  if (!portfolio || portfolio.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="14" class="py-12 text-center text-slate-500 text-sm">No hay activos registrados.</td></tr>';
+    mobileContainer.innerHTML = '<p class="text-slate-500 text-sm text-center py-8">No hay activos registrados.</p>';
+    countSpan.textContent = '0';
+    return;
+  }
+
+  var filtered = portfolio.filter(function(p) {
+    if (!showSoldPositionsFlag && p.isSold) return false;
+    if (portfolioFilter) {
+      var search = portfolioFilter.toLowerCase();
+      return (p.ticker && p.ticker.toLowerCase().includes(search)) ||
+             (p.assetName && p.assetName.toLowerCase().includes(search));
+    }
+    return true;
+  });
+
+  filtered.sort(function(a, b) {
+    var va = a[portfolioSort.field];
+    var vb = b[portfolioSort.field];
+    if (typeof va === 'string') va = va.toLowerCase();
+    if (typeof vb === 'string') vb = vb.toLowerCase();
+    if (va === null || va === undefined) va = -Infinity;
+    if (vb === null || vb === undefined) vb = -Infinity;
+    return portfolioSort.dir === 'asc' ? (va > vb ? 1 : va < vb ? -1 : 0) : (va < vb ? 1 : va > vb ? -1 : 0);
+  });
+
+  countSpan.textContent = filtered.length;
+
+  // Desktop table
+  tbody.innerHTML = filtered.map(function(p) {
+    var roiClass = p.unrealizedROI > 0 ? 'text-emerald-400' : p.unrealizedROI < 0 ? 'text-rose-400' : 'text-slate-400';
+    var plClass = p.unrealizedPL > 0 ? 'text-emerald-400' : p.unrealizedPL < 0 ? 'text-rose-400' : 'text-slate-400';
+    var realizedClass = p.realizedPL > 0 ? 'text-emerald-400' : p.realizedPL < 0 ? 'text-rose-400' : 'text-slate-400';
+    var totalPLClass = p.totalPL > 0 ? 'text-emerald-400' : p.totalPL < 0 ? 'text-rose-400' : 'text-slate-400';
+    var dailyClass = p.dailyChange > 0 ? 'text-emerald-400' : p.dailyChange < 0 ? 'text-rose-400' : 'text-slate-400';
+    var soldBadge = p.isSold ? '<span class="ml-2 px-1.5 py-0.5 bg-slate-800 text-slate-500 rounded text-[9px] font-bold tracking-wider">CERRADA</span>' : '';
+
+    return '<tr class="hover:bg-slate-800/40 transition-colors group">' +
+      '<td class="py-3 px-3 sm:px-4 font-bold text-brand-400">' + (p.ticker || '-') + soldBadge + '</td>' +
+      '<td class="py-3 px-3 sm:px-4 text-slate-300 truncate max-w-[120px] sm:max-w-[150px]">' + (p.assetName || '-') + '</td>' +
+      '<td class="py-3 px-3 sm:px-4"><span class="badge bg-slate-800 border-slate-700/50 text-slate-400">' + (p.assetClass || '-') + '</span></td>' +
+      '<td class="py-3 px-3 sm:px-4 text-slate-500 hidden lg:table-cell text-[11px]">' + (p.sector || '-') + '</td>' +
+      '<td class="py-3 px-3 sm:px-4 text-right font-mono text-slate-300">' + (p.isSold ? '<span class="text-slate-600">0.0000</span>' : (p.quantityNum || 0).toFixed(4)) + '</td>' +
+      '<td class="py-3 px-3 sm:px-4 text-right font-mono text-slate-400">' + formatCurrency(p.avgPurchasePrice) + '</td>' +
+      '<td class="py-3 px-3 sm:px-4 text-right font-mono text-slate-200">' + formatCurrency(p.currentPrice) + '</td>' +
+      '<td class="py-3 px-3 sm:px-4 text-right font-mono text-slate-400">' + formatCurrency(p.cost) + '</td>' +
+      '<td class="py-3 px-3 sm:px-4 text-right font-mono font-bold text-white">' + formatCurrency(p.currentValue) + '</td>' +
+      '<td class="py-3 px-3 sm:px-4 text-right font-mono font-medium ' + roiClass + '">' + (p.unrealizedROI !== null ? (p.unrealizedROI > 0 ? '+' : '') + p.unrealizedROI.toFixed(2) + '%' : '-') + '</td>' +
+      '<td class="py-3 px-3 sm:px-4 text-right font-mono font-medium ' + plClass + '">' + (p.unrealizedPL !== null ? (p.unrealizedPL > 0 ? '+' : '') + formatCurrency(p.unrealizedPL) : '-') + '</td>' +
+      '<td class="py-3 px-3 sm:px-4 text-right font-mono font-medium ' + realizedClass + '">' + (p.realizedPL !== null ? (p.realizedPL > 0 ? '+' : '') + formatCurrency(p.realizedPL) : '-') + '</td>' +
+      '<td class="py-3 px-3 sm:px-4 text-right font-mono font-bold ' + totalPLClass + '">' + (p.totalPL !== null ? (p.totalPL > 0 ? '+' : '') + formatCurrency(p.totalPL) : '-') + '</td>' +
+      '<td class="py-3 px-3 sm:px-4 text-right font-mono font-medium ' + dailyClass + '">' + (p.dailyChange !== null ? (p.dailyChange > 0 ? '+' : '') + formatCurrency(p.dailyChange) : '-') + '</td>' +
+    '</tr>';
+  }).join('');
+
+  // Mobile cards (simplificado)
+  mobileContainer.innerHTML = filtered.map(function(p) {
+    var roiClass = p.unrealizedROI > 0 ? 'text-emerald-400' : p.unrealizedROI < 0 ? 'text-rose-400' : 'text-slate-400';
+    var soldBadge = p.isSold ? '<span class="ml-2 px-1.5 py-0.5 bg-slate-800 text-slate-500 rounded text-[9px] font-bold tracking-wider">CERRADA</span>' : '';
+
+    return '<div class="position-mobile-card" onclick="toggleCardDetails(this)">' +
+      '<div class="flex items-center justify-between">' +
+        '<div class="flex items-center gap-2">' +
+          '<span class="font-bold text-sm text-brand-400">' + (p.ticker || '-') + '</span>' + soldBadge +
+          '<span class="badge bg-slate-800 border-slate-700/50 text-slate-400">' + (p.assetClass || '-') + '</span>' +
+        '</div>' +
+        '<div class="text-right">' +
+          '<p class="font-bold text-sm text-white">' + formatCurrency(p.currentValue) + '</p>' +
+          '<p class="text-[10px] font-mono ' + roiClass + '">' + (p.unrealizedROI !== null ? (p.unrealizedROI > 0 ? '+' : '') + p.unrealizedROI.toFixed(2) + '%' : '-') + '</p>' +
+        '</div>' +
+      '</div>' +
+      '<div class="card-details">' +
+        '<div class="grid grid-cols-2 gap-3 text-xs">' +
+          '<div><p class="text-[10px] text-slate-500 uppercase">Activo</p><p class="text-slate-300 font-medium truncate">' + (p.assetName || '-') + '</p></div>' +
+          '<div><p class="text-[10px] text-slate-500 uppercase">Sector</p><p class="text-slate-300 font-medium">' + (p.sector || '-') + '</p></div>' +
+          '<div><p class="text-[10px] text-slate-500 uppercase">Cantidad</p><p class="text-slate-300 font-mono">' + (p.isSold ? '0.0000' : (p.quantityNum || 0).toFixed(4)) + '</p></div>' +
+          '<div><p class="text-[10px] text-slate-500 uppercase">Precio Prom.</p><p class="text-slate-300 font-mono">' + formatCurrency(p.avgPurchasePrice) + '</p></div>' +
+          '<div><p class="text-[10px] text-slate-500 uppercase">Precio Mercado</p><p class="text-slate-300 font-mono">' + formatCurrency(p.currentPrice) + '</p></div>' +
+          '<div><p class="text-[10px] text-slate-500 uppercase">Costo</p><p class="text-slate-300 font-mono">' + formatCurrency(p.cost) + '</p></div>' +
+        '</div>' +
+      '</div>' +
+    '</div>';
+  }).join('');
+}
+
+// ═════════════════════════════════════════════════════════════════════════════
+// UTILITY FUNCTIONS (sin cambios)
+// ═════════════════════════════════════════════════════════════════════════════
+
+function formatCurrency(value) {
+  if (value === undefined || value === null || isNaN(value)) {
+    return currentCurrency === 'DOP' ? 'DOP$0.00' : '$0.00';
+  }
+
+  if (currentCurrency === 'DOP') {
+    return 'DOP$' + new Intl.NumberFormat('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(value);
+  }
+
+  return '$' + new Intl.NumberFormat('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(value);
+}
+
+function setCurrency(currency) {
+  if (currency === currentCurrency) return;
+  currentCurrency = currency;
+
+  document.getElementById('btn-usd').className = currency === 'USD' 
+    ? "px-2.5 sm:px-3 py-1.5 rounded-md text-[11px] sm:text-xs font-semibold transition-all bg-brand-500 text-white shadow-sm touch-btn" 
+    : "px-2.5 sm:px-3 py-1.5 rounded-md text-[11px] sm:text-xs font-semibold transition-all text-slate-400 hover:text-slate-200 touch-btn";
+  document.getElementById('btn-dop').className = currency === 'DOP' 
+    ? "px-2.5 sm:px-3 py-1.5 rounded-md text-[11px] sm:text-xs font-semibold transition-all bg-brand-500 text-white shadow-sm touch-btn" 
+    : "px-2.5 sm:px-3 py-1.5 rounded-md text-[11px] sm:text-xs font-semibold transition-all text-slate-400 hover:text-slate-200 touch-btn";
+
+  loadData();
+}
+
+function switchTab(tab) {
+  var tabs = ['portfolio', 'assets', 'transactions', 'performance', 'platforms'];
+  tabs.forEach(function(t) {
+    document.getElementById('panel-' + t).classList.add('hidden');
+    document.getElementById('tab-' + t).classList.remove('tab-active');
+    document.getElementById('tab-' + t).classList.remove('text-brand-400');
+  });
+  document.getElementById('panel-' + tab).classList.remove('hidden');
+  document.getElementById('tab-' + tab).classList.add('tab-active');
+  document.getElementById('tab-' + tab).classList.add('text-brand-400');
+}
+
+function showLoading() {
+  document.getElementById('loadingState').classList.remove('hidden');
+  document.getElementById('errorState').classList.add('hidden');
+  document.getElementById('content').classList.add('hidden');
+}
+
+function showContent() {
+  document.getElementById('loadingState').classList.add('hidden');
+  document.getElementById('errorState').classList.add('hidden');
+  document.getElementById('content').classList.remove('hidden');
+}
+
+function showError(msg) {
+  document.getElementById('loadingState').classList.add('hidden');
+  document.getElementById('errorState').classList.remove('hidden');
+  document.getElementById('errorMessage').textContent = msg;
+}
+
+function setHistoryRange(range) {
+  historyRange = range;
+  ['1M','3M','6M','1Y','ALL'].forEach(function(r) {
+    var btn = document.getElementById('range-' + r);
+    if (btn) {
+      if (r === range) {
+        btn.classList.add('active');
+        btn.classList.remove('text-slate-400');
+      } else {
+        btn.classList.remove('active');
+        btn.classList.add('text-slate-400');
+      }
+    }
+  });
+
+  if (dashboardData && dashboardData.history) {
+    renderHistoryChart(dashboardData.history.data);
+  }
+}
+
+// Inicializar
+loadData();
+</script>
+
 </body>
 </html>

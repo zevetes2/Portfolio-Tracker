@@ -1,0 +1,3677 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Portfolio Tracker Pro</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <!-- Google Fonts optimizado: solo 4 weights necesarios -->
+  <link rel="preload" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'">
+  <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"></noscript>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: { sans: ['Inter', 'sans-serif'] },
+          colors: {
+            brand: { 400: '#60a5fa', 500: '#3b82f6', 600: '#2563eb' }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    body { font-family: 'Inter', sans-serif; -webkit-tap-highlight-color: transparent; }
+
+    /* Efectos Fintech / Glassmorphism OPTIMIZADO */
+    .glass-header { 
+      background: rgba(15, 23, 42, 0.92); 
+      border-bottom: 1px solid rgba(51, 65, 85, 0.4); 
+      /* Blur DESACTIVADO en base, activar en hover desktop solo */
+      will-change: auto;
+    }
+    @media (hover: hover) {
+      .glass-header:hover { 
+        backdrop-filter: blur(8px); 
+        -webkit-backdrop-filter: blur(8px); 
+      }
+    }
+    
+    .glass-card { 
+      background: rgba(30, 41, 59, 0.5); 
+      border: 1px solid rgba(51, 65, 85, 0.4); 
+      box-shadow: 0 2px 4px -1px rgba(0, 0, 0, 0.1);
+      /* Usar outline en lugar de box-shadow para mejor rendimiento */
+      outline: 2px solid transparent;
+      outline-offset: -1px;
+      transition: transform 0.2s ease, outline-color 0.2s ease;
+      will-change: transform;
+    }
+    @media (hover: hover) {
+      .glass-card:hover { 
+        transform: translateY(-2px); 
+        outline-color: rgba(71, 85, 105, 0.6);
+        background: rgba(30, 41, 59, 0.65);
+        /* SIN box-shadow costoso */
+      }
+    }
+
+    .gradient-text { background: linear-gradient(135deg, #60a5fa, #c084fc); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+    .animate-fade-in { animation: fadeIn 0.5s ease-out; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+
+    /* Pestañas */
+    .tab-active { border-bottom: 2px solid #3b82f6; color: #60a5fa; background: linear-gradient(to top, rgba(59, 130, 246, 0.1) 0%, transparent 100%); }
+
+    /* Scrollbar estilizado */
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: #0f172a; }
+    ::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
+    ::-webkit-scrollbar-thumb:hover { background: #475569; }
+
+    /* Loader */
+    .spinner { border: 3px solid rgba(51, 65, 85, 0.5); border-top: 3px solid #3b82f6; border-radius: 50%; animation: spin 1s linear infinite; }
+    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+    .sortable { cursor: pointer; user-select: none; transition: color 0.2s; }
+    .sortable:hover { color: #f8fafc; }
+    .sort-icon { opacity: 0.4; font-size: 0.7em; margin-left: 4px; }
+
+    /* ===== RESPONSIVE IMPROVEMENTS ===== */
+
+    /* Mobile cards for portfolio */
+    .mobile-card {
+      display: none;
+    }
+
+    /* Table horizontal scroll container */
+    .table-scroll-container {
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+      scrollbar-width: thin;
+    }
+
+    .table-scroll-container::-webkit-scrollbar {
+      height: 4px;
+    }
+
+    /* Smooth tab scrolling */
+    .tabs-scroll {
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+      scrollbar-width: none;
+      -ms-overflow-style: none;
+    }
+    .tabs-scroll::-webkit-scrollbar { display: none; }
+
+    /* View toggle button */
+    .view-toggle-btn {
+      padding: 6px 12px;
+      border-radius: 8px;
+      font-size: 11px;
+      font-weight: 600;
+      transition: all 0.2s;
+      border: 1px solid rgba(51, 65, 85, 0.5);
+      background: rgba(30, 41, 59, 0.6);
+      color: #94a3b8;
+      cursor: pointer;
+    }
+    .view-toggle-btn.active {
+      background: rgba(59, 130, 246, 0.2);
+      border-color: rgba(59, 130, 246, 0.5);
+      color: #60a5fa;
+    }
+
+    /* Mobile position card */
+    .position-mobile-card {
+      background: rgba(30, 41, 59, 0.6);
+      border: 1px solid rgba(51, 65, 85, 0.5);
+      border-radius: 16px;
+      padding: 16px;
+      margin-bottom: 12px;
+      transition: all 0.2s;
+    }
+    .position-mobile-card:active {
+      transform: scale(0.98);
+      background: rgba(30, 41, 59, 0.8);
+    }
+
+    /* Expandable card details */
+    .card-details {
+      max-height: 0;
+      overflow: hidden;
+      transition: max-height 0.3s ease-out, opacity 0.3s ease-out, padding 0.3s ease-out;
+      opacity: 0;
+    }
+    .card-details.expanded {
+      max-height: 500px;
+      opacity: 1;
+      padding-top: 12px;
+      margin-top: 12px;
+      border-top: 1px solid rgba(51, 65, 85, 0.3);
+    }
+
+    /* Mobile transaction card */
+    .tx-mobile-card {
+      background: rgba(30, 41, 59, 0.6);
+      border: 1px solid rgba(51, 65, 85, 0.5);
+      border-radius: 12px;
+      padding: 14px;
+      margin-bottom: 10px;
+    }
+
+    /* Platform mobile card */
+    .platform-mobile-card {
+      background: rgba(30, 41, 59, 0.6);
+      border: 1px solid rgba(51, 65, 85, 0.5);
+      border-radius: 14px;
+      padding: 16px;
+      margin-bottom: 10px;
+    }
+
+    /* Sticky summary on mobile - SIN BLUR */
+    @media (max-width: 1023px) {
+      .sticky-mobile-summary {
+        position: sticky;
+        top: 60px;
+        z-index: 40;
+        background: rgba(15, 23, 42, 0.95);
+        margin: 0 -16px;
+        padding: 12px 16px;
+        border-bottom: 1px solid rgba(51, 65, 85, 0.3);
+      }
+    }
+
+    /* Hide table on small screens, show cards */
+    @media (max-width: 767px) {
+      .desktop-table { display: none !important; }
+      .mobile-card { display: block; }
+      .view-toggle-container { display: flex !important; }
+    }
+
+    /* Show table on larger screens */
+    @media (min-width: 768px) {
+      .desktop-table { display: block; }
+      .mobile-card { display: none !important; }
+      .view-toggle-container { display: none !important; }
+    }
+
+    /* Touch-friendly buttons */
+    .touch-btn {
+      min-height: 44px;
+      min-width: 44px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    /* Pull to refresh indicator */
+    .pull-indicator {
+      text-align: center;
+      padding: 8px;
+      color: #64748b;
+      font-size: 12px;
+      opacity: 0;
+      transition: opacity 0.3s;
+    }
+    .pull-indicator.visible {
+      opacity: 1;
+    }
+
+    /* Better number display on small screens */
+    .mobile-stat-value {
+      font-size: 1.5rem;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+    }
+
+    @media (max-width: 640px) {
+      .mobile-stat-value {
+        font-size: 1.25rem;
+      }
+    }
+
+    /* Horizontal snap scrolling for stats */
+    .stats-scroll {
+      display: flex;
+      gap: 12px;
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+      scrollbar-width: none;
+      padding-bottom: 4px;
+    }
+    .stats-scroll::-webkit-scrollbar { display: none; }
+    .stats-scroll > * {
+      flex-shrink: 0;
+    }
+
+    /* Asset class badge */
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      padding: 2px 8px;
+      border-radius: 6px;
+      font-size: 10px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    /* Progress bar for mobile */
+    .progress-bar-bg {
+      background: rgba(15, 23, 42, 0.8);
+      border-radius: 999px;
+      height: 6px;
+      overflow: hidden;
+    }
+
+    /* Favicon icons */
+    .asset-icon {
+      width: 20px;
+      height: 20px;
+      border-radius: 4px;
+      object-fit: contain;
+      flex-shrink: 0;
+    }
+    .asset-icon-sm {
+      width: 16px;
+      height: 16px;
+      border-radius: 3px;
+      object-fit: contain;
+      flex-shrink: 0;
+    }
+    .asset-icon-lg {
+      width: 24px;
+      height: 24px;
+      border-radius: 6px;
+      object-fit: contain;
+      flex-shrink: 0;
+    }
+    .progress-bar-fill {
+      height: 100%;
+      border-radius: 999px;
+      transition: width 0.5s ease;
+    }
+    .range-btn {
+      min-height: 28px;
+      border: 1px solid transparent;
+    }
+    .range-btn.active {
+      background: rgba(59, 130, 246, 0.2);
+      border-color: rgba(59, 130, 246, 0.5);
+      color: #60a5fa;
+    }
+  
+    /* ===== TARJETAS DE RESUMEN POR BRÓKER ===== */
+    .broker-summary-card {
+      background: rgba(30, 41, 59, 0.5);
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(51, 65, 85, 0.5);
+      border-radius: 16px;
+      padding: 16px;
+      transition: all 0.2s ease;
+    }
+    .broker-summary-card:hover {
+      transform: translateY(-2px);
+      border-color: rgba(71, 85, 105, 0.7);
+      box-shadow: 0 8px 20px -4px rgba(0, 0, 0, 0.3);
+    }
+    .broker-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 14px;
+    }
+    .broker-icon {
+      width: 32px;
+      height: 32px;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+    }
+    .broker-name {
+      font-weight: 700;
+      font-size: 15px;
+      color: #f8fafc;
+    }
+    .broker-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+    }
+    .broker-stat {
+      text-align: center;
+    }
+    .broker-stat-label {
+      font-size: 9px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: #64748b;
+      margin-bottom: 4px;
+    }
+    .broker-stat-value {
+      font-size: 13px;
+      font-weight: 700;
+      font-family: 'Inter', sans-serif;
+    }
+    .broker-stat-sub {
+      font-size: 10px;
+      font-weight: 600;
+      margin-top: 2px;
+    }
+    .broker-divider {
+      height: 1px;
+      background: rgba(51, 65, 85, 0.4);
+      margin: 12px 0;
+    }
+    .broker-footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    @media (max-width: 640px) {
+      .broker-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+    /* ===== BUFFETT PORTFOLIO LEGEND ===== */
+    .buffett-legend-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 12px;
+      background: rgba(30, 41, 59, 0.5);
+      border: 1px solid rgba(51, 65, 85, 0.4);
+      border-radius: 12px;
+      transition: all 0.2s ease;
+    }
+    /* Buffett legend hover effect */
+    .buffett-legend-item:hover {
+      background: rgba(51, 65, 85, 0.5);
+      transform: translateY(-1px);
+      border-color: rgba(71, 85, 105, 0.6);
+    }
+
+    .buffett-legend-info {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .buffett-ticker {
+      font-weight: 700;
+      font-size: 13px;
+      color: #f8fafc;
+      letter-spacing: -0.01em;
+    }
+
+    .buffett-percent {
+      font-weight: 800;
+      font-size: 14px;
+      color: #fbbf24;
+    }
+
+    .buffett-value {
+      font-size: 11px;
+      color: #64748b;
+      font-family: 'Inter', sans-serif;
+    }
+
+    /* Slice hover effect */
+    #buffettPortfolioChart {
+      cursor: pointer;
+    }
+    /* Tamaño extra para la leyenda Buffett */
+    .buffett-legend-item .asset-icon-lg {
+      width: 28px;
+      height: 28px;
+      border-radius: 8px;
+    }
+
+    /* ===== OPTIMIZACIONES DE RENDIMIENTO ===== */
+
+    /* Desactivar blur durante scroll (mejor UX en móvil) */
+    body.is-scrolling .glass-header,
+    body.is-scrolling .glass-card:hover {
+      backdrop-filter: none !important;
+      -webkit-backdrop-filter: none !important;
+    }
+
+    /* En móvil: nunca usar blur */
+    @media (max-width: 1023px) {
+      .glass-header:hover,
+      .glass-card:hover {
+        backdrop-filter: none !important;
+        -webkit-backdrop-filter: none !important;
+      }
+    }
+
+    /* GPU acceleration para animaciones smooth */
+    .glass-card,
+    .spinner,
+    .position-mobile-card {
+      transform: translateZ(0);
+      -webkit-transform: translateZ(0);
+    }
+
+    /* Evitar reflows durante scroll */
+    body.is-scrolling {
+      will-change: scroll-position;
+    }
+
+  </style>
+<base target="_blank">
+</head>
+<body class="bg-slate-950 text-slate-200 min-h-screen selection:bg-brand-500/30">
+
+  <header class="glass-header sticky top-0 z-50">
+    <div class="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between flex-wrap gap-3">
+      <div class="flex items-center gap-3">
+        <div class="w-9 h-9 sm:w-10 sm:h-10 bg-gradient-to-tr from-brand-600 to-purple-600 rounded-xl flex items-center justify-center shadow-lg shadow-brand-500/20">
+          <i class="fas fa-layer-group text-white text-sm sm:text-lg"></i>
+        </div>
+        <div>
+          <h1 class="text-base sm:text-xl font-bold tracking-tight text-white">A&E Portfolio <span class="text-brand-400">Tracker</span></h1>
+          <p class="text-[10px] text-slate-400 uppercase tracking-widest font-semibold hidden sm:block" id="subtitle">Dashboard en tiempo real</p>
+        </div>
+      </div>
+
+      <div class="flex items-center gap-2 sm:gap-4">
+        <div class="flex bg-slate-900 rounded-lg p-1 border border-slate-700/50 shadow-inner">
+          <button onclick="setCurrency('USD')" id="btn-usd" class="px-2.5 sm:px-3 py-1.5 rounded-md text-[11px] sm:text-xs font-semibold transition-all bg-brand-500 text-white shadow-sm touch-btn">
+            USD
+          </button>
+          <button onclick="setCurrency('DOP')" id="btn-dop" class="px-2.5 sm:px-3 py-1.5 rounded-md text-[11px] sm:text-xs font-semibold transition-all text-slate-400 hover:text-slate-200 touch-btn">
+            DOP
+          </button>
+        </div>
+
+        <div class="flex items-center gap-2 sm:gap-3">
+          <div class="text-right hidden md:block">
+            <span class="block text-[10px] text-slate-500 uppercase tracking-wider">Última actualización</span>
+            <span id="lastUpdate" class="text-xs text-slate-300 font-medium">Actualizando...</span>
+          </div>
+          <button onclick="loadData(true)" class="w-9 h-9 touch-btn bg-slate-800 hover:bg-slate-700 border border-slate-600 rounded-lg text-slate-300 transition-colors">
+            <i class="fas fa-sync-alt text-sm"></i>
+          </button>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main class="max-w-7xl mx-auto px-4 py-6 sm:py-8">
+
+    <div id="loadingState" class="flex flex-col items-center justify-center py-24 sm:py-32 animate-fade-in">
+      <div class="spinner w-10 h-10 mb-6"></div>
+      <p class="text-slate-400 font-medium tracking-wide text-sm">Sincronizando con el portafolio...</p>
+    </div>
+
+    <div id="errorState" class="hidden glass-card !border-rose-500/30 !bg-rose-950/20 rounded-2xl p-6 sm:p-8 text-center max-w-lg mx-auto mt-12">
+      <div class="w-14 h-14 sm:w-16 sm:h-16 bg-rose-500/10 rounded-full flex items-center justify-center mx-auto mb-4">
+        <i class="fas fa-exclamation-triangle text-rose-400 text-xl sm:text-2xl"></i>
+      </div>
+      <h3 class="text-base sm:text-lg font-semibold text-rose-300 mb-2">Error de conexión</h3>
+      <p id="errorMessage" class="text-rose-400/80 text-xs sm:text-sm mb-6"></p>
+      <button onclick="loadData()" class="px-5 py-2.5 bg-rose-600/20 hover:bg-rose-600/30 text-rose-300 border border-rose-500/50 rounded-lg text-sm font-medium transition-colors touch-btn">
+        Reintentar conexión
+      </button>
+    </div>
+
+    <div id="content" class="hidden space-y-6 sm:space-y-8 animate-fade-in">
+
+      <div id="rateInfo" class="hidden bg-brand-900/20 border border-brand-500/20 rounded-lg px-4 py-2.5 text-xs text-brand-300 flex items-center gap-2 max-w-max">
+        <i class="fas fa-info-circle"></i>
+        <span id="rateText" class="font-medium"></span>
+      </div>
+
+      <!-- ===== RESUMEN DEL PORTAFOLIO ===== -->
+      <div id="portfolioSummary">
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
+
+          <!-- Tarjeta principal: Patrimonio Total -->
+          <div class="glass-card lg:col-span-2 p-5 sm:p-8 rounded-2xl sm:rounded-3xl relative overflow-hidden flex flex-col justify-between">
+            <div class="absolute top-0 right-0 -mr-16 -mt-16 w-48 h-48 sm:w-64 sm:h-64 bg-brand-500/10 rounded-full blur-3xl pointer-events-none"></div>
+            <div class="absolute bottom-0 left-0 -ml-16 -mb-16 w-32 h-32 sm:w-48 sm:h-48 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none"></div>
+
+            <div>
+              <p class="text-slate-400 text-[10px] sm:text-xs font-semibold uppercase tracking-widest mb-2 flex items-center gap-2">
+                <i class="fas fa-wallet text-brand-400"></i> Patrimonio Total
+              </p>
+              <h2 id="pfTotalBalance" class="text-3xl sm:text-4xl lg:text-6xl font-extrabold text-white tracking-tight mb-3">$0.00</h2>
+
+              <!-- Stats scrollable en móvil -->
+              <div class="stats-scroll sm:inline-flex sm:bg-slate-900/60 sm:px-4 sm:py-2 sm:rounded-xl sm:border sm:border-slate-700/50 sm:backdrop-blur-md mb-4 sm:mb-6">
+                <div class="flex items-center gap-2 bg-slate-900/60 sm:bg-transparent px-3 py-2 rounded-xl border border-slate-700/50 sm:border-0 sm:px-0 sm:py-0">
+                  <i class="fas fa-chart-pie text-brand-400 text-xs"></i>
+                  <span class="text-[10px] sm:text-[11px] text-slate-400 whitespace-nowrap">Mercado: <span id="pfMarketValue" class="text-white font-bold">$0.00</span></span>
+                </div>
+                <div class="w-px h-4 bg-slate-600/60 hidden sm:block"></div>
+                <div class="flex items-center gap-2 bg-slate-900/60 sm:bg-transparent px-3 py-2 rounded-xl border border-slate-700/50 sm:border-0 sm:px-0 sm:py-0">
+                  <i class="fas fa-money-bill-wave text-emerald-400 text-xs"></i>
+                  <span class="text-[10px] sm:text-[11px] text-slate-400 whitespace-nowrap">Efectivo: <span id="pfTotalCash" class="text-white font-bold">$0.00</span></span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Métricas scrollable en móvil -->
+            <div class="stats-scroll sm:flex-wrap sm:overflow-visible">
+              <div class="flex items-center gap-3 bg-slate-900/60 backdrop-blur-md px-3 sm:px-4 py-2.5 rounded-2xl border border-slate-700/50">
+                <div>
+                  <p class="text-[9px] sm:text-[10px] text-slate-400 uppercase tracking-wider font-semibold mb-0.5">Día</p>
+                  <p id="pfDailyChange" class="font-bold text-sm sm:text-base leading-none">$0.00</p>
+                </div>
+                <div id="pfDailyChangePctContainer" class="px-2 py-1 rounded-md bg-slate-800 text-[10px] sm:text-xs font-bold">
+                  <span id="pfDailyChangePct">0.00%</span>
+                </div>
+              </div>
+
+              <div class="flex items-center gap-3 bg-slate-900/60 backdrop-blur-md px-3 sm:px-4 py-2.5 rounded-2xl border border-slate-700/50">
+                <div>
+                  <p class="text-[9px] sm:text-[10px] text-slate-400 uppercase tracking-wider font-semibold mb-0.5">Retorno</p>
+                  <p id="pfUnrealizedPL" class="font-bold text-sm sm:text-base leading-none">$0.00</p>
+                </div>
+                <div id="pfUnrealizedROIContainer" class="px-2 py-1 rounded-md bg-slate-800 text-[10px] sm:text-xs font-bold">
+                  <span id="pfUnrealizedROI">0.00%</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Grid de 4 métricas -->
+          <div class="grid grid-cols-2 gap-3 sm:gap-4">
+            <div class="glass-card p-4 sm:p-5 rounded-2xl flex flex-col justify-center">
+              <p class="text-slate-400 text-[9px] sm:text-[10px] font-bold uppercase tracking-widest mb-1">Capital Invertido</p>
+              <p id="pfTotalCost" class="mobile-stat-value text-white">$0.00</p>
+            </div>
+            <div class="glass-card p-4 sm:p-5 rounded-2xl flex flex-col justify-center">
+              <p class="text-slate-400 text-[9px] sm:text-[10px] font-bold uppercase tracking-widest mb-1">Beneficio Cerrado</p>
+              <p id="pfRealizedPL" class="mobile-stat-value text-white">$0.00</p>
+              <p id="pfTotalPL" class="text-[9px] sm:text-[10px] text-slate-500 mt-1 truncate">Total: $0.00</p>
+            </div>
+            <div class="glass-card p-4 sm:p-5 rounded-2xl flex flex-col justify-center">
+              <p class="text-slate-400 text-[9px] sm:text-[10px] font-bold uppercase tracking-widest mb-1">Posiciones</p>
+              <p id="pfHoldings" class="mobile-stat-value text-white">0</p>
+              <p id="pfSold" class="text-[9px] sm:text-[10px] text-slate-500 mt-1">Activas vs Históricas</p>
+            </div>
+            <div class="glass-card p-3 sm:p-4 rounded-2xl flex flex-col justify-between">
+              <div class="flex justify-between items-center mb-1.5 sm:mb-2">
+                <span class="text-[9px] sm:text-[10px] font-bold text-emerald-400 uppercase"><i class="fas fa-caret-up"></i> Top</span>
+                <span id="pfBestPosition" class="text-xs sm:text-sm font-bold text-white">-</span>
+                <span id="pfBestROI" class="text-[10px] text-emerald-400 font-medium">0%</span>
+              </div>
+              <div class="w-full h-px bg-slate-700/50 my-1"></div>
+              <div class="flex justify-between items-center mt-1.5 sm:mt-2">
+                <span class="text-[9px] sm:text-[10px] font-bold text-rose-400 uppercase"><i class="fas fa-caret-down"></i> Low</span>
+                <span id="pfWorstPosition" class="text-xs sm:text-sm font-bold text-white">-</span>
+                <span id="pfWorstROI" class="text-[10px] text-rose-400 font-medium">0%</span>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- ===== PORTFOLIO VISUAL (Estilo Buffett) ===== -->
+      <div class="glass-card rounded-2xl p-4 sm:p-6 mb-6">
+        <div class="flex items-center justify-between mb-4">
+          <h3 class="text-xs sm:text-sm font-semibold text-slate-200 uppercase tracking-wider flex items-center gap-2">
+            <i class="fas fa-chart-pie text-brand-400"></i> Distribución Visual del Portafolio
+          </h3>
+        </div>
+        
+        <div class="relative flex items-center justify-center" style="min-height: 380px; max-height: 500px;">
+          <canvas id="buffettPortfolioChart"></canvas>
+          
+          <!-- Centro del donut -->
+          <div class="absolute inset-0 flex items-center justify-center pointer-events-none">
+            <div class="w-20 h-20 sm:w-28 sm:h-28 rounded-full overflow-hidden border-4 border-slate-800 shadow-2xl bg-slate-900 flex items-center justify-center">
+              <img src="https://ui-avatars.com/api/?name=A+E&background=3b82f6&color=fff&size=128" 
+                  alt="Profile" class="w-full h-full object-cover">
+            </div>
+          </div>
+        </div>
+        
+        <!-- Leyenda custom con asset-icon -->
+        <div id="buffettLegend" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 mt-6"></div>
+      </div>
+            <!-- ===== RESUMEN POR BRÓKER ===== -->
+      <div id="brokersSummarySection" class="hidden">
+        <h3 class="text-xs sm:text-sm font-semibold text-slate-200 uppercase tracking-wider mb-4 flex items-center gap-2">
+          <i class="fas fa-building-columns text-brand-400"></i> Resumen por Plataforma
+        </h3>
+        <div id="brokersSummaryGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          <!-- Se llena dinámicamente -->
+        </div>
+      </div>
+
+<!-- ===== ASIGNACIÓN Y MOVIMIENTOS ===== -->
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
+        <div class="glass-card lg:col-span-2 rounded-2xl p-4 sm:p-6">
+          <div class="flex items-center justify-between mb-4 sm:mb-5">
+            <h3 class="text-xs sm:text-sm font-semibold text-slate-200 uppercase tracking-wider flex items-center gap-2">
+              <i class="fas fa-chart-pie text-brand-400"></i> Asignación Principal
+            </h3>
+          </div>
+          <div id="largestPositionsList" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4"></div>
+        </div>
+
+        <div class="glass-card rounded-2xl p-0 overflow-hidden flex flex-col">
+          <div class="border-b border-slate-700/50 p-3 sm:p-4 bg-slate-800/20">
+            <h3 class="text-xs sm:text-sm font-semibold text-slate-200 uppercase tracking-wider flex items-center gap-2">
+              <i class="fas fa-fire text-orange-400"></i> Movimientos
+            </h3>
+          </div>
+          <div class="p-3 sm:p-4 space-y-3 sm:space-y-4 flex-1">
+            <div>
+              <p class="text-[9px] sm:text-[10px] text-slate-500 uppercase font-bold mb-2">Ganadoras</p>
+              <div id="topGainersList" class="space-y-2"></div>
+            </div>
+            <div class="w-full h-px bg-slate-700/30"></div>
+            <div>
+              <p class="text-[9px] sm:text-[10px] text-slate-500 uppercase font-bold mb-2">Perdedoras</p>
+              <div id="topLosersList" class="space-y-2"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+            <!-- ===== GRÁFICOS ===== -->
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
+        <div class="glass-card rounded-2xl p-4 sm:p-6">
+          <h3 class="text-xs sm:text-sm font-semibold text-slate-300 uppercase tracking-wider mb-4 sm:mb-6 flex items-center gap-2">
+            <i class="fas fa-cube text-indigo-400"></i> Distribución por Activo
+          </h3>
+          <div class="relative h-[220px] sm:h-[280px]">
+            <canvas id="portfolioAssetClassChart"></canvas>
+          </div>
+        </div>
+        <div class="glass-card rounded-2xl p-4 sm:p-6">
+          <h3 class="text-xs sm:text-sm font-semibold text-slate-300 uppercase tracking-wider mb-4 sm:mb-6 flex items-center gap-2">
+            <i class="fas fa-building text-brand-400"></i> Exposición Sectorial
+          </h3>
+          <div class="relative h-[220px] sm:h-[280px]">
+            <canvas id="portfolioSectorChart"></canvas>
+          </div>
+        </div>
+      </div>
+
+      <!-- ===== GRÁFICO EVOLUCIÓN HISTÓRICA ===== -->
+      <div class="glass-card rounded-2xl p-4 sm:p-6">
+        <div class="flex items-center justify-between mb-4 sm:mb-6">
+          <h3 class="text-xs sm:text-sm font-semibold text-slate-300 uppercase tracking-wider flex items-center gap-2">
+            <i class="fas fa-chart-line text-emerald-400"></i> Evolución del Patrimonio
+          </h3>
+          <div class="flex gap-1">
+            <button onclick="setHistoryRange('1M')" id="range-1M" class="range-btn px-2.5 py-1 rounded-md text-[10px] font-semibold transition-all text-slate-400 hover:text-slate-200">1M</button>
+            <button onclick="setHistoryRange('3M')" id="range-3M" class="range-btn px-2.5 py-1 rounded-md text-[10px] font-semibold transition-all text-slate-400 hover:text-slate-200">3M</button>
+            <button onclick="setHistoryRange('6M')" id="range-6M" class="range-btn px-2.5 py-1 rounded-md text-[10px] font-semibold transition-all text-slate-400 hover:text-slate-200">6M</button>
+            <button onclick="setHistoryRange('1Y')" id="range-1Y" class="range-btn px-2.5 py-1 rounded-md text-[10px] font-semibold transition-all text-slate-400 hover:text-slate-200">1A</button>
+            <button onclick="setHistoryRange('ALL')" id="range-ALL" class="range-btn active px-2.5 py-1 rounded-md text-[10px] font-semibold transition-all bg-brand-500/20 text-brand-400 border border-brand-500/30">TODO</button>
+          </div>
+        </div>
+        <div class="relative h-[300px] sm:h-[380px]">
+          <canvas id="portfolioHistoryChart" data-chart="history"></canvas>
+        </div>
+        <div class="grid grid-cols-3 gap-3 mt-4 pt-4 border-t border-slate-700/30">
+          <div class="text-center">
+            <p class="text-[9px] text-slate-500 uppercase font-bold mb-1">Máximo Histórico</p>
+            <p id="historyMax" class="text-sm font-bold text-emerald-400">$0.00</p>
+          </div>
+          <div class="text-center">
+            <p class="text-[9px] text-slate-500 uppercase font-bold mb-1">Mínimo</p>
+            <p id="historyMin" class="text-sm font-bold text-rose-400">$0.00</p>
+          </div>
+          <div class="text-center">
+            <p class="text-[9px] text-slate-500 uppercase font-bold mb-1">Crecimiento Total</p>
+            <p id="historyGrowth" class="text-sm font-bold text-white">0.00%</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- ===== TABS Y TABLAS ===== -->
+      <div class="glass-card rounded-2xl overflow-hidden mt-6 sm:mt-8">
+        <div class="tabs-scroll flex border-b border-slate-700/50 bg-slate-900/50">
+          <button onclick="switchTab('portfolio')" id="tab-portfolio" class="tab-btn px-4 sm:px-6 py-3 sm:py-4 text-[11px] sm:text-xs font-semibold text-slate-400 hover:text-slate-200 transition-all tab-active whitespace-nowrap tracking-wider uppercase touch-btn">
+            Portafolio
+          </button>
+          <button onclick="switchTab('assets')" id="tab-assets" class="tab-btn px-4 sm:px-6 py-3 sm:py-4 text-[11px] sm:text-xs font-semibold text-slate-400 hover:text-slate-200 transition-all whitespace-nowrap tracking-wider uppercase touch-btn">
+            Activos
+          </button>
+          <button onclick="switchTab('transactions')" id="tab-transactions" class="tab-btn px-4 sm:px-6 py-3 sm:py-4 text-[11px] sm:text-xs font-semibold text-slate-400 hover:text-slate-200 transition-all whitespace-nowrap tracking-wider uppercase touch-btn">
+            Órdenes
+          </button>
+          <button onclick="switchTab('performance')" id="tab-performance" class="tab-btn px-4 sm:px-6 py-3 sm:py-4 text-[11px] sm:text-xs font-semibold text-slate-400 hover:text-slate-200 transition-all whitespace-nowrap tracking-wider uppercase touch-btn">
+            Rendimiento
+          </button>
+          <button onclick="switchTab('platforms')" id="tab-platforms" class="tab-btn px-4 sm:px-6 py-3 sm:py-4 text-[11px] sm:text-xs font-semibold text-slate-400 hover:text-slate-200 transition-all whitespace-nowrap tracking-wider uppercase touch-btn">
+            Brókers
+          </button>
+        </div>
+
+        <!-- ===== PANEL PORTAFOLIO ===== -->
+        <div id="panel-portfolio" class="p-0">
+          <div class="p-3 sm:p-4 border-b border-slate-700/50 bg-slate-800/20 flex items-center justify-between flex-wrap gap-3">
+            <div class="flex items-center gap-3">
+              <span class="px-2.5 py-1 bg-slate-800 text-slate-300 text-[11px] font-bold rounded-md border border-slate-700"><span id="pfCount">0</span> POS.</span>
+              <label class="flex items-center gap-2 text-[11px] font-medium text-slate-400 cursor-pointer hover:text-slate-200 transition-colors">
+                <input type="checkbox" id="showSold" onchange="toggleSoldPositions()" class="rounded bg-slate-800 border-slate-600 text-brand-500 focus:ring-brand-500/50 cursor-pointer w-4 h-4">
+                <span class="hidden sm:inline">Incluir Históricas</span>
+                <span class="sm:hidden">Históricas</span>
+              </label>
+            </div>
+            <div class="flex items-center gap-2">
+              <!-- View toggle (mobile only) -->
+              <div class="view-toggle-container hidden items-center gap-1 mr-2">
+                <button onclick="setMobileView('cards')" id="view-cards" class="view-toggle-btn active touch-btn">
+                  <i class="fas fa-th-large mr-1"></i>Cards
+                </button>
+                <button onclick="setMobileView('table')" id="view-table" class="view-toggle-btn touch-btn">
+                  <i class="fas fa-list mr-1"></i>Tabla
+                </button>
+              </div>
+              <div class="relative">
+                <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 text-xs"></i>
+                <input type="text" id="pfSearch" placeholder="Filtrar ticker..." oninput="filterPortfolio()" 
+                  class="pl-9 pr-4 py-2 bg-slate-900/80 border border-slate-700 rounded-lg text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 transition-all w-40 sm:w-48 md:w-64">
+              </div>
+            </div>
+          </div>
+
+          <!-- Desktop Table -->
+          <div class="desktop-table table-scroll-container">
+            <table class="w-full text-[11px] sm:text-xs text-left whitespace-nowrap">
+              <thead class="bg-slate-900/60 text-slate-400 uppercase tracking-wider font-semibold">
+                <tr>
+                  <th class="py-3 px-3 sm:px-4 sortable" onclick="sortPortfolio('ticker')">Símbolo <span class="sort-icon">&#8645;</span></th>
+                  <th class="py-3 px-3 sm:px-4 sortable" onclick="sortPortfolio('assetName')">Activo <span class="sort-icon">&#8645;</span></th>
+                  <th class="py-3 px-3 sm:px-4 sortable" onclick="sortPortfolio('assetClass')">Clase <span class="sort-icon">&#8645;</span></th>
+                  <th class="py-3 px-3 sm:px-4 sortable hidden lg:table-cell" onclick="sortPortfolio('sector')">Sector <span class="sort-icon">&#8645;</span></th>
+                  <th class="py-3 px-3 sm:px-4 text-right sortable" onclick="sortPortfolio('quantityNum')">Cant. <span class="sort-icon">&#8645;</span></th>
+                  <th class="py-3 px-3 sm:px-4 text-right sortable" onclick="sortPortfolio('avgPurchasePrice')">Precio Prom. <span class="sort-icon">&#8645;</span></th>
+                  <th class="py-3 px-3 sm:px-4 text-right sortable" onclick="sortPortfolio('currentPrice')">Mercado <span class="sort-icon">&#8645;</span></th>
+                  <th class="py-3 px-3 sm:px-4 text-right sortable" onclick="sortPortfolio('cost')">Costo <span class="sort-icon">&#8645;</span></th>
+                  <th class="py-3 px-3 sm:px-4 text-right sortable" onclick="sortPortfolio('currentValue')">Valor <span class="sort-icon">&#8645;</span></th>
+                  <th class="py-3 px-3 sm:px-4 text-right sortable" onclick="sortPortfolio('unrealizedROI')">ROI <span class="sort-icon">&#8645;</span></th>
+                  <th class="py-3 px-3 sm:px-4 text-right sortable" onclick="sortPortfolio('unrealizedPL')">P/L <span class="sort-icon">&#8645;</span></th>
+                  <th class="py-3 px-3 sm:px-4 text-right sortable" onclick="sortPortfolio('realizedPL')">Realizado <span class="sort-icon">&#8645;</span></th>
+                  <th class="py-3 px-3 sm:px-4 text-right sortable" onclick="sortPortfolio('totalPL')">Total P/L <span class="sort-icon">&#8645;</span></th>
+                  <th class="py-3 px-3 sm:px-4 text-right sortable" onclick="sortPortfolio('dailyChange')">Día <span class="sort-icon">&#8645;</span></th>
+                </tr>
+              </thead>
+              <tbody id="portfolioTable" class="divide-y divide-slate-800/50"></tbody>
+            </table>
+          </div>
+
+          <!-- Mobile Cards -->
+          <div id="portfolioMobileCards" class="mobile-card p-3 sm:p-4 space-y-3"></div>
+        </div>
+
+        <!-- ===== PANEL ACTIVOS ===== -->
+        <div id="panel-assets" class="hidden p-0">
+          <!-- Desktop Table -->
+          <div class="desktop-table table-scroll-container">
+            <table class="w-full text-[11px] sm:text-xs text-left whitespace-nowrap">
+              <thead class="bg-slate-900/60 text-slate-400 uppercase tracking-wider font-semibold">
+                <tr>
+                  <th class="py-3 px-3 sm:px-4">Símbolo</th>
+                  <th class="py-3 px-3 sm:px-4">Nombre</th>
+                  <th class="py-3 px-3 sm:px-4">Clase</th>
+                  <th class="py-3 px-3 sm:px-4">Sector</th>
+                  <th class="py-3 px-3 sm:px-4 text-right">Cantidad</th>
+                  <th class="py-3 px-3 sm:px-4 text-right">Costo Base</th>
+                  <th class="py-3 px-3 sm:px-4 text-center">Moneda</th>
+                  <th class="py-3 px-3 sm:px-4 text-center">Plataforma</th>
+                </tr>
+              </thead>
+              <tbody id="assetsTable" class="divide-y divide-slate-800/50"></tbody>
+            </table>
+          </div>
+          <!-- Mobile Cards -->
+          <div id="assetsMobileCards" class="mobile-card p-3 sm:p-4 space-y-3"></div>
+        </div>
+
+        <!-- ===== PANEL TRANSACCIONES ===== -->
+        <div id="panel-transactions" class="hidden p-0">
+          <div class="p-3 sm:p-4 border-b border-slate-700/50 bg-slate-800/20 flex items-center justify-between flex-wrap gap-3">
+            <span class="px-2.5 py-1 bg-slate-800 text-slate-300 text-[11px] font-bold rounded-md border border-slate-700"><span id="txCount">0</span> REGISTROS</span>
+            <div class="flex gap-2">
+              <button onclick="changeTxPage(-1)" id="txPrev" class="px-3 py-2 touch-btn bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-md text-xs font-medium text-slate-300 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"><i class="fas fa-chevron-left"></i></button>
+              <span id="txPage" class="px-3 py-2 text-xs text-slate-400 font-medium flex items-center">Pág. 1</span>
+              <button onclick="changeTxPage(1)" id="txNext" class="px-3 py-2 touch-btn bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-md text-xs font-medium text-slate-300 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"><i class="fas fa-chevron-right"></i></button>
+            </div>
+          </div>
+          <!-- Desktop Table -->
+          <div class="desktop-table table-scroll-container">
+            <table class="w-full text-[11px] sm:text-xs text-left whitespace-nowrap">
+              <thead class="bg-slate-900/60 text-slate-400 uppercase tracking-wider font-semibold">
+                <tr>
+                  <th class="py-3 px-3 sm:px-4">Fecha</th>
+                  <th class="py-3 px-3 sm:px-4">Activo</th>
+                  <th class="py-3 px-3 sm:px-4 text-center">Acción</th>
+                  <th class="py-3 px-3 sm:px-4 text-right">Cantidad</th>
+                  <th class="py-3 px-3 sm:px-4 text-right">Precio</th>
+                  <th class="py-3 px-3 sm:px-4 text-right">Total</th>
+                  <th class="py-3 px-3 sm:px-4 text-center">Bróker</th>
+                </tr>
+              </thead>
+              <tbody id="transactionsTable" class="divide-y divide-slate-800/50"></tbody>
+            </table>
+          </div>
+          <!-- Mobile Cards -->
+          <div id="transactionsMobileCards" class="mobile-card p-3 sm:p-4 space-y-3"></div>
+        </div>
+
+
+        <!-- ===== PANEL RENDIMIENTO ===== -->
+        <div id="panel-performance" class="hidden p-0">
+
+          <!-- Resumen de Rendimiento Total -->
+          <div class="p-4 sm:p-6 border-b border-slate-700/50">
+            <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-6">
+              <div class="glass-card p-4 rounded-2xl">
+                <p class="text-[9px] sm:text-[10px] text-slate-500 uppercase font-bold tracking-wider mb-1">Retorno Total</p>
+                <p id="perfTotalReturn" class="mobile-stat-value text-white">$0.00</p>
+                <p id="perfTotalReturnPct" class="text-[10px] font-bold mt-1">0.00%</p>
+              </div>
+              <div class="glass-card p-4 rounded-2xl">
+                <p class="text-[9px] sm:text-[10px] text-slate-500 uppercase font-bold tracking-wider mb-1">Capital Invertido</p>
+                <p id="perfTotalInvested" class="mobile-stat-value text-slate-300">$0.00</p>
+                <p class="text-[10px] text-slate-500 mt-1">Base de costo</p>
+              </div>
+              <div class="glass-card p-4 rounded-2xl">
+                <p class="text-[9px] sm:text-[10px] text-slate-500 uppercase font-bold tracking-wider mb-1">Valor Actual</p>
+                <p id="perfTotalValue" class="mobile-stat-value text-white">$0.00</p>
+                <p class="text-[10px] text-slate-500 mt-1">Mercado + Cash</p>
+              </div>
+              <div class="glass-card p-4 rounded-2xl">
+                <p class="text-[9px] sm:text-[10px] text-slate-500 uppercase font-bold tracking-wider mb-1">Max Drawdown</p>
+                <p id="perfMaxDrawdown" class="mobile-stat-value text-rose-400">0.00%</p>
+                <p class="text-[10px] text-slate-500 mt-1">Desde el pico</p>
+              </div>
+            </div>
+
+            <!-- Tabla de Rendimiento por Período -->
+            <h3 class="text-xs sm:text-sm font-semibold text-slate-200 uppercase tracking-wider mb-4 flex items-center gap-2">
+              <i class="fas fa-calendar-alt text-brand-400"></i> Rendimiento por Período
+            </h3>
+            <div class="table-scroll-container">
+              <table class="w-full text-[11px] sm:text-xs text-left whitespace-nowrap">
+                <thead class="bg-slate-900/60 text-slate-400 uppercase tracking-wider font-semibold">
+                  <tr>
+                    <th class="py-3 px-3 sm:px-4">Mes</th>
+                    <th class="py-3 px-3 sm:px-4 text-right">Capital Inv.</th>
+                    <th class="py-3 px-3 sm:px-4 text-right">Patrimonio</th>
+                    <th class="py-3 px-3 sm:px-4 text-right">P/L No Realizado</th>
+                    <th class="py-3 px-3 sm:px-4 text-right">P/L Realizado</th>
+                    <th class="py-3 px-3 sm:px-4 text-right">P/L Total</th>
+                    <th class="py-3 px-3 sm:px-4 text-right hidden sm:table-cell">Mercado / Cash</th>
+                  </tr>
+                </thead>
+                <tbody id="performancePeriodsTable" class="divide-y divide-slate-800/50"></tbody>
+              </table>
+            </div>
+            <!-- Mobile cards for periods -->
+            <div id="performancePeriodsMobile" class="mobile-card mt-4 space-y-3"></div>
+          </div>
+
+          <!-- Gráfico de Rendimiento por Período -->
+          <div class="p-4 sm:p-6 border-b border-slate-700/50">
+            <h3 class="text-xs sm:text-sm font-semibold text-slate-200 uppercase tracking-wider mb-4 flex items-center gap-2">
+              <i class="fas fa-chart-bar text-emerald-400"></i> Retorno por Período
+            </h3>
+            <div class="relative h-[250px] sm:h-[300px]">
+              <canvas id="performancePeriodChart"></canvas>
+            </div>
+          </div>
+
+          <!-- Distribución de Rendimiento -->
+          <div class="p-4 sm:p-6 border-b border-slate-700/50">
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
+              <div>
+                <h3 class="text-xs sm:text-sm font-semibold text-slate-200 uppercase tracking-wider mb-4 flex items-center gap-2">
+                  <i class="fas fa-pie-chart text-purple-400"></i> Distribución de Posiciones
+                </h3>
+                <div class="relative h-[220px] sm:h-[260px]">
+                  <canvas id="performanceDistributionChart"></canvas>
+                </div>
+              </div>
+              <div>
+                <h3 class="text-xs sm:text-sm font-semibold text-slate-200 uppercase tracking-wider mb-4 flex items-center gap-2">
+                  <i class="fas fa-trophy text-yellow-400"></i> Top Performers
+                </h3>
+                <div id="topPerformersList" class="space-y-2 max-h-[260px] overflow-y-auto pr-2"></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Rendimiento por Plataforma -->
+          <div class="p-4 sm:p-6">
+            <h3 class="text-xs sm:text-sm font-semibold text-slate-200 uppercase tracking-wider mb-4 flex items-center gap-2">
+              <i class="fas fa-building-columns text-brand-400"></i> Rendimiento por Plataforma
+            </h3>
+            <div class="table-scroll-container">
+              <table class="w-full text-[11px] sm:text-xs text-left whitespace-nowrap">
+                <thead class="bg-slate-900/60 text-slate-400 uppercase tracking-wider font-semibold">
+                  <tr>
+                    <th class="py-3 px-3 sm:px-4">Plataforma</th>
+                    <th class="py-3 px-3 sm:px-4 text-right">Invertido</th>
+                    <th class="py-3 px-3 sm:px-4 text-right">Valor Actual</th>
+                    <th class="py-3 px-3 sm:px-4 text-right">P/L No Realizado</th>
+                    <th class="py-3 px-3 sm:px-4 text-right">ROI %</th>
+                    <th class="py-3 px-3 sm:px-4 text-right">P/L Realizado</th>
+                    <th class="py-3 px-3 sm:px-4 text-right">P/L Total</th>
+                    <th class="py-3 px-3 sm:px-4 text-right">Total ROI</th>
+                  </tr>
+                </thead>
+                <tbody id="performancePlatformsTable" class="divide-y divide-slate-800/50"></tbody>
+              </table>
+            </div>
+            <div id="performancePlatformsMobile" class="mobile-card mt-4 space-y-3"></div>
+          </div>
+        </div>
+
+        <!-- ===== PANEL PLATAFORMAS ===== -->
+        <div id="panel-platforms" class="hidden p-0">
+          <!-- Desktop Table -->
+          <div class="desktop-table table-scroll-container">
+            <table class="w-full text-[11px] sm:text-xs text-left whitespace-nowrap">
+              <thead class="bg-slate-900/60 text-slate-400 uppercase tracking-wider font-semibold">
+                <tr>
+                  <th class="py-3 px-3 sm:px-4">Plataforma</th>
+                  <th class="py-3 px-3 sm:px-4 text-center">Moneda</th>
+                  <th class="py-3 px-3 sm:px-4 text-right">Órdenes</th>
+                  <th class="py-3 px-3 sm:px-4 text-right">Fondeo</th>
+                  <th class="py-3 px-3 sm:px-4 text-right">Invertido</th>
+                  <th class="py-3 px-3 sm:px-4 text-right">Retornos</th>
+                  <th class="py-3 px-3 sm:px-4 text-right">Flujo Neto</th>
+                </tr>
+              </thead>
+              <tbody id="platformsTable" class="divide-y divide-slate-800/50"></tbody>
+            </table>
+          </div>
+          <!-- Mobile Cards -->
+          <div id="platformsMobileCards" class="mobile-card p-3 sm:p-4 space-y-3"></div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <script>
+
+    const API_URL = "https://script.google.com/macros/s/AKfycbzljOCK6u9cCGViOPrAXdLxmznXTAHR8YTBFZ5TQNPnuwij5b6mHKsczAvQdz2_YFaj/exec";
+
+    // Añade al inicio de tu <script>
+    let cache = {
+      USD: null,
+      DOP: null
+    };
+    let perfCache = {
+      USD: null,
+      DOP: null
+    };
+    let lastFetchTime = 0;
+    const CACHE_TTL = 5 * 60 * 1000; // 5 minutos
+
+    // Reemplaza tu loadData actual con esto:
+
+
+  async function loadData(forceRefresh = false) {
+    showLoading();
+    console.log("loadData called, currentCurrency=" + currentCurrency + ", forceRefresh=" + forceRefresh);
+
+    const now = Date.now();
+    
+    // Usar caché si existe y no ha expirado
+    if (!forceRefresh && cache[currentCurrency] && (now - lastFetchTime) < CACHE_TTL) {
+      console.log("Usando caché para " + currentCurrency);
+      var cachedData = cache[currentCurrency];
+      
+      allTransactions = cachedData.allTransactions || [];
+      txPage = 0;
+      
+      if (cachedData.portfolio) {
+        portfolioData = cachedData.portfolio.portfolio || [];
+        portfolioSummary = cachedData.portfolio.summary || {};
+      }
+      
+      renderDashboard(cachedData);
+      document.getElementById('lastUpdate').textContent = 
+        new Date(cachedData.meta?.timestamp || Date.now()).toLocaleTimeString('es-DO', { hour: '2-digit', minute: '2-digit' }) + ' (caché)';
+      showContent();
+      return;
+    }
+
+    try {
+      // ETAPA 1: Cargar TODO de una vez (tu GAS es rápido ahora con fórmulas)
+      var url = API_URL + "?action=dashboard&currency=" + currentCurrency;
+      if (currentCurrency !== "USD" && currentRate) {
+        url += "&rate=" + currentRate;
+      }
+      
+      var data = await fetchAPI(url, 30000, 2);
+      
+      if (data.error) throw new Error(data.error);
+      
+      console.log("API response meta:", data.meta);
+      if (data.meta && data.meta.exchangeRate) {
+        currentRate = data.meta.exchangeRate;
+        console.log("Saved currentRate:", currentRate);
+      }
+
+      // Guardar en caché
+      cache[currentCurrency] = data;
+      lastFetchTime = now;
+
+      allTransactions = data.allTransactions || [];
+      txPage = 0;
+
+      if (data.portfolio) {
+        portfolioData = data.portfolio.portfolio || [];
+        portfolioSummary = data.portfolio.summary || {};
+      }
+
+      renderDashboard(data);
+      document.getElementById('lastUpdate').textContent = 
+        new Date().toLocaleTimeString('es-DO', { hour: '2-digit', minute: '2-digit' });
+      showContent();
+      
+    } catch (error) {
+      console.error("Error:", error);
+      showError(error.message);
+    }
+  }
+  
+  
+  // Función separada para rendimiento
+  async function loadPerformanceData() {
+    try {
+      const perfData = await fetchAPI(
+        API_URL + "?action=performance&currency=" + currentCurrency,
+        15000,
+        1
+    );
+      renderPerformance(perfData.performance);
+    } catch (e) {
+      console.warn("No se pudo cargar rendimiento:", e);
+    }
+  }
+
+
+
+    let charts = {};
+    let allTransactions = [];
+    let portfolioData = [];
+    let portfolioSummary = {};
+    let txPage = 0;
+    const TX_PER_PAGE = 25;
+    let currentCurrency = "USD";
+    let currentRate = null;
+    let showSoldPositionsFlag = false;
+    let portfolioSort = { field: 'currentValue', dir: 'desc' };
+    let portfolioFilter = '';
+    let mobileViewMode = 'cards'; // 'cards' or 'table'
+    let historyRange = 'ALL';
+    let historyData = [];
+    let historicalPrices = {};
+    let historicalDates = [];
+
+
+    Chart.defaults.color = '#94a3b8'; 
+    Chart.defaults.font.family = "'Inter', sans-serif";
+    const chartTooltipConfig = {
+      backgroundColor: 'rgba(15, 23, 42, 0.95)',
+      titleColor: '#f8fafc',
+      bodyColor: '#cbd5e1',
+      borderColor: '#334155',
+      borderWidth: 1,
+      padding: 12,
+      cornerRadius: 8,
+      boxPadding: 4
+    };
+
+    function setCurrency(currency) {
+      if (currency === currentCurrency) return;
+      currentCurrency = currency;
+      
+      // Actualizar botones UI
+      document.getElementById('btn-usd').className = currency === 'USD' 
+        ? "px-2.5 sm:px-3 py-1.5 rounded-md text-[11px] sm:text-xs font-semibold transition-all bg-brand-500 text-white shadow-sm touch-btn" 
+        : "px-2.5 sm:px-3 py-1.5 rounded-md text-[11px] sm:text-xs font-semibold transition-all text-slate-400 hover:text-slate-200 touch-btn";
+      document.getElementById('btn-dop').className = currency === 'DOP' 
+        ? "px-2.5 sm:px-3 py-1.5 rounded-md text-[11px] sm:text-xs font-semibold transition-all bg-brand-500 text-white shadow-sm touch-btn" 
+        : "px-2.5 sm:px-3 py-1.5 rounded-md text-[11px] sm:text-xs font-semibold transition-all text-slate-400 hover:text-slate-200 touch-btn";
+
+      loadData(); // Usará caché automáticamente si existe
+    }
+
+    function setMobileView(mode) {
+      mobileViewMode = mode;
+      document.getElementById('view-cards').classList.toggle('active', mode === 'cards');
+      document.getElementById('view-table').classList.toggle('active', mode === 'table');
+
+      const tableEl = document.querySelector('#panel-portfolio .desktop-table');
+      const cardsEl = document.getElementById('portfolioMobileCards');
+
+      if (mode === 'cards') {
+        if (tableEl) tableEl.style.display = 'none';
+        cardsEl.style.display = 'block';
+      } else {
+        if (tableEl) tableEl.style.display = 'block';
+        cardsEl.style.display = 'none';
+      }
+    }
+    
+    // ============================================
+// NUEVO: fetch con fallback a JSONP
+// ============================================
+
+async function fetchAPI(url, timeoutMs, retries) {
+  timeoutMs = timeoutMs || 30000;
+  retries = retries || 2;
+  
+  console.log("fetchAPI called, URL:", url);
+  
+  // INTENTO 1: fetch moderno (CORS)
+  try {
+    const data = await fetchWithTimeout(url, timeoutMs);
+    console.log("fetchAPI: fetch exitoso");
+    return data;
+  } catch (fetchError) {
+    console.warn("fetchAPI: fetch falló:", fetchError.message);
+    
+    // INTENTO 2: JSONP como fallback
+    if (retries > 0) {
+      console.log("fetchAPI: intentando JSONP fallback...");
+      return fetchWithJSONP(url, timeoutMs, retries);
+    }
+    
+    throw fetchError;
+  }
+}
+
+async function fetchWithTimeout(url, timeoutMs) {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+  
+  try {
+    // Añadir cache-buster para evitar redirects cacheados
+    const separator = url.indexOf('?') !== -1 ? '&' : '?';
+    const urlWithCache = url + separator + '_cb=' + Date.now();
+    
+    const response = await fetch(urlWithCache, {
+      method: 'GET',
+      signal: controller.signal,
+      headers: {
+        'Accept': 'application/json'
+      }
+    });
+    
+    clearTimeout(timeoutId);
+    
+    if (!response.ok) {
+      throw new Error('HTTP ' + response.status + ' ' + response.statusText);
+    }
+    
+    const contentType = response.headers.get('content-type') || '';
+    
+    // Si devuelve JSON
+    if (contentType.includes('application/json')) {
+      return await response.json();
+    }
+    
+    // Si devuelve JavaScript (JSONP sin callback ejecutado), intentar parsear
+    const text = await response.text();
+    console.log("Response text preview:", text.substring(0, 100));
+    
+    // Intentar extraer JSON del texto
+    try {
+      return JSON.parse(text);
+    } catch {
+      throw new Error('Respuesta no es JSON válido: ' + text.substring(0, 100));
+    }
+    
+  } catch (error) {
+    clearTimeout(timeoutId);
+    throw error;
+  }
+}
+
+// ============================================
+// NUEVO: fetch con fallback a JSONP
+// ============================================
+
+async function fetchAPI(url, timeoutMs, retries) {
+  timeoutMs = timeoutMs || 30000;
+  retries = retries || 2;
+  
+  console.log("fetchAPI called, URL:", url);
+  
+  // INTENTO 1: fetch moderno (CORS)
+  try {
+    const data = await fetchWithTimeout(url, timeoutMs);
+    console.log("fetchAPI: fetch exitoso");
+    return data;
+  } catch (fetchError) {
+    console.warn("fetchAPI: fetch falló:", fetchError.message);
+    
+    // INTENTO 2: JSONP como fallback
+    if (retries > 0) {
+      console.log("fetchAPI: intentando JSONP fallback...");
+      return fetchWithJSONP(url, timeoutMs, retries);
+    }
+    
+    throw fetchError;
+  }
+}
+
+async function fetchWithTimeout(url, timeoutMs) {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+  
+  try {
+    // Añadir cache-buster para evitar redirects cacheados
+    const separator = url.indexOf('?') !== -1 ? '&' : '?';
+    const urlWithCache = url + separator + '_cb=' + Date.now();
+    
+    const response = await fetch(urlWithCache, {
+      method: 'GET',
+      signal: controller.signal,
+      headers: {
+        'Accept': 'application/json'
+      }
+    });
+    
+    clearTimeout(timeoutId);
+    
+    if (!response.ok) {
+      throw new Error('HTTP ' + response.status + ' ' + response.statusText);
+    }
+    
+    const contentType = response.headers.get('content-type') || '';
+    
+    // Si devuelve JSON
+    if (contentType.includes('application/json')) {
+      return await response.json();
+    }
+    
+    // Si devuelve JavaScript (JSONP sin callback ejecutado), intentar parsear
+    const text = await response.text();
+    console.log("Response text preview:", text.substring(0, 100));
+    
+    // Intentar extraer JSON del texto
+    try {
+      return JSON.parse(text);
+    } catch {
+      throw new Error('Respuesta no es JSON válido: ' + text.substring(0, 100));
+    }
+    
+  } catch (error) {
+    clearTimeout(timeoutId);
+    throw error;
+  }
+}
+
+// JSONP fallback (tu función original, conservada)
+function fetchWithJSONP(url, timeoutMs, retries) {
+  timeoutMs = timeoutMs || 30000;
+  retries = retries || 2;
+  
+  return new Promise(function(resolve, reject) {
+    var attempt = function(remainingRetries) {
+      var scriptId = 'jsonp_' + Date.now() + '_' + Math.random();
+      var script = document.createElement('script');
+      var timeoutId;
+      var cleanedUp = false;
+
+      window[scriptId] = function(data) {
+        if (cleanedUp) return;
+        cleanedUp = true;
+        cleanup();
+        resolve(data);
+      };
+
+      timeoutId = setTimeout(function() {
+        if (cleanedUp) return;
+        cleanedUp = true;
+        cleanup();
+        if (remainingRetries > 0) {
+          console.log('JSONP Retrying... remaining:', remainingRetries);
+          attempt(remainingRetries - 1);
+        } else {
+          reject(new Error('Timeout - La API no respondió en ' + timeoutMs + 'ms.'));
+        }
+      }, timeoutMs);
+
+      function cleanup() {
+        clearTimeout(timeoutId);
+        if (script.parentNode) script.parentNode.removeChild(script);
+        delete window[scriptId];
+      }
+
+      script.onerror = function() {
+        if (cleanedUp) return;
+        cleanedUp = true;
+        cleanup();
+        if (remainingRetries > 0) {
+          attempt(remainingRetries - 1);
+        } else {
+          reject(new Error('Fallo de red al intentar contactar Google Apps Script.'));
+        }
+      };
+
+      var separator = url.indexOf('?') !== -1 ? '&' : '?';
+      script.src = url + separator + 'callback=' + scriptId;
+
+      document.head.appendChild(script);
+    };
+    
+    attempt(retries);
+  });
+}
+
+    function calculatePeriodsFromHistory(historyData, transactions, currentTotalValue, currentCash) {
+
+      if (!historyData || historyData.length === 0 || !window.monthlyPL) return [];
+      
+      var now = new Date();
+      var currentYear = now.getFullYear();
+      var currentMonth = now.getMonth() + 1;
+      var currentKey = currentYear + '-' + String(currentMonth).padStart(2, '0');
+      
+      var allMonths = Object.keys(window.monthlyPL).sort();
+      var last12Months = [];
+      
+      var currentIdx = -1;
+      for (var i = allMonths.length - 1; i >= 0; i--) {
+        if (allMonths[i] <= currentKey) {
+          currentIdx = i;
+          break;
+        }
+      }
+      
+      if (currentIdx < 0) currentIdx = allMonths.length - 1;
+      
+      var startIdx = Math.max(0, currentIdx - 11);
+      for (var i = startIdx; i <= currentIdx; i++) {
+        last12Months.push(allMonths[i]);
+      }
+      
+      var monthNames = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+      
+      var result = last12Months.map(function(dateKey, idx) {
+        var plData = window.monthlyPL[dateKey];
+        var portfolioData = null;
+        
+        for (var i = 0; i < historyData.length; i++) {
+          if (historyData[i].date === dateKey) {
+            portfolioData = historyData[i];
+            break;
+          }
+        }
+        
+        var parts = dateKey.split('-');
+        var year = parts[0];
+        var month = parseInt(parts[1]);
+        var label = monthNames[month - 1] + " '" + year.slice(2);
+        
+        // Usar P/L ya calculado en buildRealHistoryFromPrices (exacto, por activo y FIFO)
+        var realizedPL = plData ? (plData.realizedPL || 0) : 0;
+        var unrealizedPL = plData ? (plData.unrealizedPL || 0) : 0;
+        var totalPL = plData ? (plData.pl || 0) : 0;
+        
+        var startValue = portfolioData ? portfolioData.invested : 0;
+        var endValue = portfolioData ? portfolioData.total : 0;
+        var marketValue = portfolioData ? portfolioData.marketValue : 0;
+        var cash = portfolioData ? portfolioData.cash : 0;
+        
+        return {
+          key: dateKey,
+          label: label,
+          yearMonth: dateKey,
+          startValue: Math.round(startValue * 100) / 100,
+          endValue: Math.round(endValue * 100) / 100,
+          realizedPL: Math.round(realizedPL * 100) / 100,
+          unrealizedPL: Math.round(unrealizedPL * 100) / 100,
+          totalPL: Math.round(totalPL * 100) / 100,
+          marketValue: Math.round(marketValue * 100) / 100,
+          cash: Math.round(cash * 100) / 100
+        };
+      });
+      
+      // === AJUSTAR ÚLTIMO MES PARA COINCIDIR CON DASHBOARD ===
+            // === AJUSTAR ÚLTIMO MES PARA COINCIDIR CON DASHBOARD ===
+      if (result.length > 0 && currentTotalValue > 0) {
+        var last = result[result.length - 1];
+        var prevTotal = result.length > 1 ? result[result.length - 2].endValue : last.startValue;
+        
+        // Forzar patrimonio y cash al valor real del dashboard
+        last.endValue = Math.round(currentTotalValue * 100) / 100;
+        last.cash = Math.round((currentCash || 0) * 100) / 100;
+        last.marketValue = Math.round((last.endValue - last.cash) * 100) / 100;
+        
+        // Recalcular P/L para que cuadre con el patrimonio real
+        var adjustedTotalPL = last.endValue - prevTotal;
+        last.totalPL = Math.round(adjustedTotalPL * 100) / 100;
+        last.unrealizedPL = Math.round((adjustedTotalPL - last.realizedPL) * 100) / 100;
+      }
+      // === FIN AJUSTE ===
+      
+      return result;
+    }
+    
+    function renderDashboard(data) {
+      // Validación defensiva
+      if (!data || typeof data !== 'object') {
+        console.error("renderDashboard: data inválida", data);
+        return;
+      }
+      
+      window.dashboardData = data;
+      
+      var rateInfo = document.getElementById('rateInfo');
+      var rateText = document.getElementById('rateText');
+
+      if (currentCurrency === 'DOP' && currentRate) {
+        rateInfo.classList.remove('hidden');
+        rateText.textContent = '1 USD = ' + currentRate.toFixed(2) + ' DOP';
+      } else {
+        rateInfo.classList.add('hidden');
+      }
+
+      // ===== RESUMEN DEL PORTAFOLIO =====
+      if (data.portfolio && data.portfolio.summary) {
+        renderPortfolioSummary(data.portfolio.summary, data.metrics);
+      } else if (data.summary) {
+        // Fallback: si viene estructura plana
+        renderPortfolioSummary(data.summary, data.metrics);
+      }
+
+      // ===== GRÁFICOS =====
+      if (data.portfolio && data.portfolio.summary) {
+        renderPortfolioCharts(data.portfolio.summary);
+        renderTopPositions(data.portfolio.summary);
+        renderLargestPositions(data.portfolio.summary);
+      }
+
+      // ===== BUFFETT CHART =====
+      if (data.portfolio && data.portfolio.portfolio && data.portfolio.portfolio.length > 0) {
+        renderBuffettPortfolio(data.portfolio.portfolio);
+      }
+
+      // ===== HISTORIAL PRIORIDAD 1: HISTORICO BROKERS (datos reales) =====
+      if (data.historicoBrokers && data.historicoBrokers.dates && data.historicoBrokers.dates.length > 0) {
+        console.log("Usando HISTORICO BROKERS para evolución del patrimonio");
+        
+        var hb = data.historicoBrokers;
+        historyData = [];
+        
+        for (var i = 0; i < hb.dates.length; i++) {
+          historyData.push({
+            date: hb.dates[i],
+            total: hb.totals[i] || 0,
+            marketValue: hb.totals[i] || 0, // En HISTORICO BROKERS, el total es el patrimonio
+            cash: 0, // No tenemos desglose de cash vs mercado en esta hoja
+            invested: 0 // Se puede calcular si lo necesitas
+          });
+        }
+        
+        // Si hay datos de transacciones, intentar calcular cash/invested
+        if (data.allTransactions && data.allTransactions.length > 0) {
+          // Opcional: calcular cash desde transacciones para cada mes
+          // o simplemente dejar como está
+        }
+        
+        renderHistoryChart();
+      } 
+      // ===== HISTORIAL PRIORIDAD 2: FECHAS (precios históricos) =====
+      else if (data.history && data.history.dates && data.history.dates.length > 0) {
+        historicalDates = data.history.dates;
+        historicalPrices = data.history.prices || {};
+        buildRealHistoryFromPrices(data.allTransactions || []);
+        // ... resto del código existente ...
+        renderHistoryChart();
+      } 
+      // ===== HISTORIAL PRIORIDAD 3: Transacciones (fallback) =====
+      else {
+        historicalDates = [];
+        historicalPrices = {};
+        buildHistoryFromTransactions(data.allTransactions || []);
+        renderHistoryChart();
+      }
+      // Guardar portfolioData global
+      if (data.portfolio && data.portfolio.portfolio) {
+        window.lastPortfolioData = data.portfolio.portfolio;
+        portfolioData = data.portfolio.portfolio;
+      }
+
+      // ===== TABLAS =====
+      if (data.portfolio && data.portfolio.portfolio) {
+        renderPortfolioTable(data.portfolio.portfolio);
+      }
+      
+      if (data.currentAssets) {
+        renderAssetsTable(data.currentAssets);
+      }
+      
+      renderTransactionsTable();
+      
+      if (data.platforms) {
+        renderBrokersSummary(data.platforms);
+      }
+      
+      // ===== RENDIMIENTO =====
+      if (data.performance) {
+        renderPerformance(data.performance);
+      }
+    }
+    
+
+    function renderPortfolioSummary(summary, metrics) {
+      if (!summary || typeof summary !== 'object') {
+        console.error("renderPortfolioSummary: summary inválido", summary);
+        return;
+      }
+
+      var marketValue = summary.totalCurrentValue || summary.marketValue || 0;
+      var totalCash = metrics ? (metrics.totalCash || 0) : (summary.totalCash || 0); 
+      var totalBalance = summary.totalBalance || (marketValue + totalCash);
+
+      document.getElementById('pfTotalBalance').textContent = formatCurrency(totalBalance);
+      document.getElementById('pfMarketValue').textContent = formatCurrency(marketValue);
+      document.getElementById('pfTotalCash').textContent = formatCurrency(totalCash);
+
+      document.getElementById('pfTotalCost').textContent = formatCurrency(summary.totalCost || summary.costBasis || 0);
+
+      var unrealizedPL = summary.totalUnrealizedPL || summary.unrealizedPL || 0;
+      document.getElementById('pfUnrealizedPL').textContent = (unrealizedPL >= 0 ? '+' : '') + formatCurrency(unrealizedPL);
+      document.getElementById('pfUnrealizedPL').className = 'font-bold text-sm sm:text-base leading-none ' + (unrealizedPL >= 0 ? 'text-emerald-400' : 'text-rose-400');
+
+      var roi = (summary.overallUnrealizedROI || summary.unrealizedROI || 0);
+      // Si viene como decimal (0.0211) convertir a porcentaje
+      if (Math.abs(roi) < 1 && roi !== 0) roi = roi * 100;
+      document.getElementById('pfUnrealizedROI').textContent = (roi >= 0 ? '+' : '') + roi.toFixed(2) + '%';
+      document.getElementById('pfUnrealizedROIContainer').className = 'px-2 py-1 rounded-md text-[10px] sm:text-xs font-bold ' + (roi >= 0 ? 'bg-emerald-500/20 text-emerald-400' : 'bg-rose-500/20 text-rose-400');
+
+      var realizedPL = summary.totalRealizedPL || summary.realizedPL || 0;
+      document.getElementById('pfRealizedPL').textContent = (realizedPL >= 0 ? '+' : '') + formatCurrency(realizedPL);
+      document.getElementById('pfRealizedPL').className = 'mobile-stat-value ' + (realizedPL >= 0 ? 'text-emerald-400' : 'text-rose-400');
+
+      var totalPL = summary.totalPL || (unrealizedPL + realizedPL) || 0;
+      document.getElementById('pfTotalPL').textContent = 'P/L Histórico: ' + (totalPL >= 0 ? '+' : '') + formatCurrency(totalPL);
+
+      // Daily change (si no existe, calcular aproximado o mostrar 0)
+      var dailyChange = summary.totalDailyChange || 0;
+      document.getElementById('pfDailyChange').textContent = (dailyChange >= 0 ? '+' : '') + formatCurrency(dailyChange);
+      document.getElementById('pfDailyChange').className = 'font-bold text-sm sm:text-base leading-none ' + (dailyChange >= 0 ? 'text-emerald-400' : 'text-rose-400');
+
+      var dailyBase = marketValue - dailyChange;
+      var dailyPct = dailyBase > 0 ? (dailyChange / dailyBase) * 100 : 0;
+      document.getElementById('pfDailyChangePct').textContent = (dailyPct >= 0 ? '+' : '') + dailyPct.toFixed(2) + '%';
+      document.getElementById('pfDailyChangePctContainer').className = 'px-2 py-1 rounded-md text-[10px] sm:text-xs font-bold ' + (dailyPct >= 0 ? 'bg-emerald-500/20 text-emerald-400' : 'bg-rose-500/20 text-rose-400');
+
+      document.getElementById('pfHoldings').textContent = summary.currentHoldings || summary.activePositions || 0;
+      document.getElementById('pfSold').textContent = 'Liquidadas: ' + (summary.soldPositions || 0) + ' | Total: ' + ((summary.currentHoldings || 0) + (summary.soldPositions || 0));
+
+      // Top/Bottom - usar portfolioData si summary no tiene topGainers
+      if (summary.topGainers && summary.topGainers.length > 0) {
+        var best = summary.topGainers[0];
+        document.getElementById('pfBestPosition').textContent = best.ticker;
+        document.getElementById('pfBestROI').textContent = '+' + (best.unrealizedROI * 100 || 0).toFixed(2) + '%';
+      } else if (portfolioData && portfolioData.length > 0) {
+        // Calcular del portfolioData
+        var sorted = portfolioData.slice().sort(function(a, b) { return b.unrealizedROI - a.unrealizedROI; });
+        var best = sorted[0];
+        if (best && best.unrealizedROI > 0) {
+          document.getElementById('pfBestPosition').textContent = best.ticker;
+          document.getElementById('pfBestROI').textContent = '+' + (best.unrealizedROI * 100).toFixed(2) + '%';
+        } else {
+          document.getElementById('pfBestPosition').textContent = '-';
+          document.getElementById('pfBestROI').textContent = '0%';
+        }
+      } else {
+        document.getElementById('pfBestPosition').textContent = '-';
+        document.getElementById('pfBestROI').textContent = '0%';
+      }
+      
+      if (summary.topLosers && summary.topLosers.length > 0) {
+        var worst = summary.topLosers[0];
+        document.getElementById('pfWorstPosition').textContent = worst.ticker;
+        document.getElementById('pfWorstROI').textContent = (worst.unrealizedROI * 100 || 0).toFixed(2) + '%';
+      } else if (portfolioData && portfolioData.length > 0) {
+        var sorted = portfolioData.slice().sort(function(a, b) { return a.unrealizedROI - b.unrealizedROI; });
+        var worst = sorted[0];
+        if (worst && worst.unrealizedROI < 0) {
+          document.getElementById('pfWorstPosition').textContent = worst.ticker;
+          document.getElementById('pfWorstROI').textContent = (worst.unrealizedROI * 100).toFixed(2) + '%';
+        } else {
+          document.getElementById('pfWorstPosition').textContent = '-';
+          document.getElementById('pfWorstROI').textContent = '0%';
+        }
+      } else {
+        document.getElementById('pfWorstPosition').textContent = '-';
+        document.getElementById('pfWorstROI').textContent = '0%';
+      }
+    }
+    
+    
+    function renderTopPositions(summary) {
+      var gainersEl = document.getElementById('topGainersList');
+      var losersEl = document.getElementById('topLosersList');
+
+      if (summary.topGainers && summary.topGainers.length > 0) {
+        gainersEl.innerHTML = summary.topGainers.map(function(p) {
+          return '<div class="flex items-center justify-between group">' +
+            '<div class="flex items-center gap-2.5">' +
+              '<div class="w-2 h-2 rounded-full bg-emerald-500"></div>' +
+              '<div><p class="font-bold text-xs text-slate-200">' + p.ticker + '</p></div>' +
+            '</div>' +
+            '<div class="text-right">' +
+              '<p class="font-bold text-xs text-emerald-400">+' + (p.unrealizedROI * 100 || 0).toFixed(2) + '%</p>' +
+            '</div>' +
+          '</div>';
+        }).join('');
+      } else { gainersEl.innerHTML = '<p class="text-slate-600 text-xs italic">N/A</p>'; }
+
+      if (summary.topLosers && summary.topLosers.length > 0) {
+        losersEl.innerHTML = summary.topLosers.map(function(p) {
+          return '<div class="flex items-center justify-between group">' +
+            '<div class="flex items-center gap-2.5">' +
+              '<div class="w-2 h-2 rounded-full bg-rose-500"></div>' +
+              '<div><p class="font-bold text-xs text-slate-200">' + p.ticker + '</p></div>' +
+            '</div>' +
+            '<div class="text-right">' +
+              '<p class="font-bold text-xs text-rose-400">' + (p.unrealizedROI * 100 || 0).toFixed(2) + '%</p>' +
+            '</div>' +
+          '</div>';
+        }).join('');
+      } else { losersEl.innerHTML = '<p class="text-slate-600 text-xs italic">N/A</p>'; }
+    }
+    function renderLargestPositions(summary) {
+      var el = document.getElementById('largestPositionsList');
+      var data = summary.largestPositions;
+      var title = 'Top Posiciones';
+      var totalValue = summary.totalCurrentValue || 0;
+      
+      // Fallback: si no hay largestPositions pero sí byAssetClass, usar eso
+      if ((!data || data.length === 0) && summary.byAssetClass && summary.byAssetClass.length > 0) {
+        data = summary.byAssetClass;
+        title = 'Por Clase de Activo';
+        totalValue = data.reduce(function(s, item) { return s + (item.value || 0); }, 0);
+      }
+      
+            if (data && data.length > 0) {
+        el.innerHTML = data.map(function(p, idx) {
+          var displayName = p.ticker || p.name || 'Sin nombre';
+          var value = p.currentValue !== undefined ? p.currentValue : p.value;
+          var weight = totalValue > 0 ? ((value || 0) / totalValue * 100).toFixed(1) : 0;
+          var palette = ['#3b82f6', '#8b5cf6', '#10b981', '#f59e0b', '#f43f5e', '#0ea5e9', '#6366f1'];
+          var color = p.ticker ? '#3b82f6' : (palette[idx % palette.length]);
+          var lpIcon = p.iconUrl ? 
+            '<img src="' + p.iconUrl + '" alt="" class="asset-icon-sm mr-1.5" loading="lazy" onerror="this.style.display=\'none\'">' : 
+            '';
+          
+          return '<div class="bg-slate-800/40 rounded-xl p-3 border border-slate-700/50 hover:bg-slate-800/60 transition-colors">' +
+            '<div class="flex items-center justify-between mb-1.5">' +
+              '<div class="flex items-center">' + lpIcon + '<span class="font-bold text-sm text-slate-200">' + displayName + '</span></div>' +
+              '<span class="text-[10px] font-medium text-slate-400 bg-slate-900 px-1.5 py-0.5 rounded">' + weight + '%</span>' +
+            '</div>' +
+            '<p class="text-sm font-semibold text-slate-300 mb-2">' + formatCurrency(value) + '</p>' +
+            '<div class="w-full bg-slate-900 rounded-full h-1 overflow-hidden">' +
+              '<div class="h-1 rounded-full" style="width:' + weight + '%; background-color: ' + color + '"></div>' +
+            '</div>' +
+          '</div>';
+        }).join('');
+      } else { 
+        el.innerHTML = '<div class="col-span-full flex flex-col items-center justify-center py-8 text-center">' +
+          '<div class="w-12 h-12 bg-slate-800/60 rounded-full flex items-center justify-center mb-3">' +
+            '<i class="fas fa-pie-chart text-slate-500 text-lg"></i>' +
+          '</div>' +
+          '<p class="text-slate-400 text-sm font-medium mb-1">Sin datos de exposición</p>' +
+          '<p class="text-slate-600 text-xs">Agrega activos a tu portafolio para ver la distribución</p>' +
+        '</div>'; 
+      }
+    }
+
+function renderPortfolioCharts(summary) {
+  var palette = ['#3b82f6', '#8b5cf6', '#10b981', '#f59e0b', '#f43f5e', '#0ea5e9', '#6366f1'];
+
+  var totalAssetValue = 0;
+  var totalSectorValue = 0;
+
+  if (summary.byAssetClass && summary.byAssetClass.length > 0) {
+    totalAssetValue = summary.byAssetClass.reduce(function(sum, item) {
+      return sum + (item.value || 0);
+    }, 0);
+  }
+
+  if (summary.bySector && summary.bySector.length > 0) {
+    totalSectorValue = summary.bySector.reduce(function(sum, item) {
+      return sum + (item.value || 0);
+    }, 0);
+  }
+
+  // Plugin para forzar color de leyenda
+  var legendColorPlugin = {
+    id: 'legendColor',
+    afterDraw: function(chart) {
+      var legend = chart.legend;
+      if (!legend) return;
+      var ctx = chart.ctx;
+      ctx.save();
+      ctx.fillStyle = '#94a3b8';
+      legend.legendItems.forEach(function(item) {
+        // Chart.js ya dibujó el texto, no podemos cambiarlo fácilmente aquí
+        // En su lugar, usaremos otra aproximación
+      });
+      ctx.restore();
+    }
+  };
+
+  if (summary.byAssetClass && summary.byAssetClass.length > 0) {
+    var ctx = document.getElementById('portfolioAssetClassChart').getContext('2d');
+    if (charts.portfolioAssetClass) charts.portfolioAssetClass.destroy();
+    charts.portfolioAssetClass = new Chart(ctx, {
+      type: 'doughnut',
+      data: {
+        labels: summary.byAssetClass.map(function(d) { return d.name; }),
+        datasets: [{
+          data: summary.byAssetClass.map(function(d) { return d.value; }),
+          backgroundColor: palette,
+          borderWidth: 0,
+          hoverOffset: 6
+        }]
+      },
+      options: {
+        responsive: true, 
+        maintainAspectRatio: false, 
+        cutout: '70%',
+        plugins: {
+          legend: { 
+            position: window.innerWidth < 640 ? 'bottom' : 'right', 
+            labels: { 
+              color: '#94a3b8',
+              usePointStyle: true, 
+              pointStyle: 'circle', 
+              font: { size: window.innerWidth < 640 ? 10 : 11 },
+              padding: window.innerWidth < 640 ? 10 : 16,
+              boxWidth: window.innerWidth < 640 ? 8 : 10,
+              generateLabels: function(chart) {
+                var data = chart.data;
+                if (data.labels.length && data.datasets.length) {
+                  return data.labels.map(function(label, i) {
+                    var meta = chart.getDatasetMeta(0);
+                    var style = meta.controller.getStyle(i);
+                    var value = data.datasets[0].data[i] || 0;
+                    var percentage = totalAssetValue > 0 ? ((value / totalAssetValue) * 100).toFixed(1) : '0.0';
+                    return {
+                      text: label + ' (' + percentage + '%)',
+                      fillStyle: style.backgroundColor,
+                      strokeStyle: style.borderColor,
+                      lineWidth: style.borderWidth,
+                      hidden: isNaN(data.datasets[0].data[i]) || meta.data[i].hidden,
+                      index: i,
+                      fontColor: '#94a3b8'
+                    };
+                  });
+                }
+                return [];
+              }
+            } 
+          },
+          tooltip: chartTooltipConfig
+        }
+      },
+      plugins: [{
+        id: 'customLegendColor',
+        afterUpdate: function(chart) {
+          var legend = chart.legend;
+          if (legend && legend.legendItems) {
+            legend.legendItems.forEach(function(item) {
+              item.fontColor = '#94a3b8';
+              item.color = '#94a3b8';
+            });
+          }
+        }
+      }]
+    });
+  }
+
+  if (summary.bySector && summary.bySector.length > 0) {
+    var ctx = document.getElementById('portfolioSectorChart').getContext('2d');
+    if (charts.portfolioSector) charts.portfolioSector.destroy();
+    charts.portfolioSector = new Chart(ctx, {
+      type: 'doughnut',
+      data: {
+        labels: summary.bySector.map(function(d) { return d.name; }),
+        datasets: [{
+          data: summary.bySector.map(function(d) { return d.value; }),
+          backgroundColor: palette.slice().reverse(),
+          borderWidth: 0,
+          hoverOffset: 6
+        }]
+      },
+      options: {
+        responsive: true, 
+        maintainAspectRatio: false, 
+        cutout: '70%',
+        plugins: {
+          legend: { 
+            position: window.innerWidth < 640 ? 'bottom' : 'right', 
+            labels: { 
+              color: '#94a3b8',
+              usePointStyle: true, 
+              pointStyle: 'circle', 
+              font: { size: window.innerWidth < 640 ? 10 : 11 },
+              padding: window.innerWidth < 640 ? 10 : 16,
+              boxWidth: window.innerWidth < 640 ? 8 : 10,
+              generateLabels: function(chart) {
+                var data = chart.data;
+                if (data.labels.length && data.datasets.length) {
+                  return data.labels.map(function(label, i) {
+                    var meta = chart.getDatasetMeta(0);
+                    var style = meta.controller.getStyle(i);
+                    var value = data.datasets[0].data[i] || 0;
+                    var percentage = totalSectorValue > 0 ? ((value / totalSectorValue) * 100).toFixed(1) : '0.0';
+                    return {
+                      text: label + ' (' + percentage + '%)',
+                      fillStyle: style.backgroundColor,
+                      strokeStyle: style.borderColor,
+                      lineWidth: style.borderWidth,
+                      hidden: isNaN(data.datasets[0].data[i]) || meta.data[i].hidden,
+                      index: i,
+                      fontColor: '#94a3b8'
+                    };
+                  });
+                }
+                return [];
+              }
+            } 
+          },
+          tooltip: chartTooltipConfig
+        }
+      },
+      plugins: [{
+        id: 'customLegendColor',
+        afterUpdate: function(chart) {
+          var legend = chart.legend;
+          if (legend && legend.legendItems) {
+            legend.legendItems.forEach(function(item) {
+              item.fontColor = '#94a3b8';
+              item.color = '#94a3b8';
+            });
+          }
+        }
+      }]
+    });
+  }
+}    
+    function renderPortfolioTable(portfolio) {
+      var tbody = document.getElementById('portfolioTable');
+      var mobileContainer = document.getElementById('portfolioMobileCards');
+      var countSpan = document.getElementById('pfCount');
+
+      if (!portfolio || portfolio.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="14" class="py-12 text-center text-slate-500 text-sm">No hay activos registrados en el portafolio.</td></tr>';
+        mobileContainer.innerHTML = '<p class="text-slate-500 text-sm text-center py-8">No hay activos registrados.</p>';
+        countSpan.textContent = '0';
+        return;
+      }
+
+      var filtered = portfolio.filter(function(p) {
+        if (!showSoldPositionsFlag && p.isSold) return false;
+        if (portfolioFilter) {
+          var search = portfolioFilter.toLowerCase();
+          return (p.ticker && p.ticker.toLowerCase().includes(search)) ||
+                 (p.assetName && p.assetName.toLowerCase().includes(search));
+        }
+        return true;
+      });
+
+      filtered.sort(function(a, b) {
+        var va = a[portfolioSort.field];
+        var vb = b[portfolioSort.field];
+        if (typeof va === 'string') va = va.toLowerCase();
+        if (typeof vb === 'string') vb = vb.toLowerCase();
+        if (va === null || va === undefined) va = -Infinity;
+        if (vb === null || vb === undefined) vb = -Infinity;
+        return portfolioSort.dir === 'asc' ? (va > vb ? 1 : va < vb ? -1 : 0) : (va < vb ? 1 : va > vb ? -1 : 0);
+      });
+
+      countSpan.textContent = filtered.length;
+
+      // Desktop table
+      tbody.innerHTML = filtered.map(function(p) {
+        var roiClass = p.unrealizedROI > 0 ? 'text-emerald-400' : p.unrealizedROI < 0 ? 'text-rose-400' : 'text-slate-400';
+        var plClass = p.unrealizedPL > 0 ? 'text-emerald-400' : p.unrealizedPL < 0 ? 'text-rose-400' : 'text-slate-400';
+        var realizedClass = p.realizedPL > 0 ? 'text-emerald-400' : p.realizedPL < 0 ? 'text-rose-400' : 'text-slate-400';
+        var totalPLClass = p.totalPL > 0 ? 'text-emerald-400' : p.totalPL < 0 ? 'text-rose-400' : 'text-slate-400';
+        var dailyClass = p.dailyChange > 0 ? 'text-emerald-400' : p.dailyChange < 0 ? 'text-rose-400' : 'text-slate-400';
+        var soldBadge = p.isSold ? '<span class="ml-2 px-1.5 py-0.5 bg-slate-800 text-slate-500 rounded text-[9px] font-bold tracking-wider">CERRADA</span>' : '';
+
+        var iconHtml = p.iconUrl ? 
+          '<img src="' + p.iconUrl + '" alt="" class="asset-icon mr-2" loading="lazy" onerror="this.style.display=\'none\'">' : 
+          '<div class="w-5 h-5 mr-2 rounded bg-slate-700/50 flex items-center justify-center text-[9px] text-slate-500 font-bold">' + (p.ticker ? p.ticker.charAt(0) : '?') + '</div>';
+
+        return '<tr class="hover:bg-slate-800/40 transition-colors group">' +
+          '<td class="py-3 px-3 sm:px-4 font-bold text-brand-400 flex items-center">' + iconHtml + (p.ticker || '-') + soldBadge + '</td>' +
+          '<td class="py-3 px-3 sm:px-4 text-slate-300 truncate max-w-[120px] sm:max-w-[150px]">' + (p.assetName || '-') + '</td>' +
+          '<td class="py-3 px-3 sm:px-4"><span class="badge bg-slate-800 border-slate-700/50 text-slate-400">' + (p.assetClass || '-') + '</span></td>' +
+          '<td class="py-3 px-3 sm:px-4 text-slate-500 hidden lg:table-cell text-[11px]">' + (p.sector || '-') + '</td>' +
+          '<td class="py-3 px-3 sm:px-4 text-right font-mono text-slate-300">' + (p.isSold ? '<span class="text-slate-600">0.0000</span>' : (p.quantityNum || 0).toFixed(4)) + '</td>' +
+          '<td class="py-3 px-3 sm:px-4 text-right font-mono text-slate-400">' + formatCurrency(p.avgPurchasePrice) + '</td>' +
+          '<td class="py-3 px-3 sm:px-4 text-right font-mono text-slate-200">' + formatCurrency(p.currentPrice) + '</td>' +
+          '<td class="py-3 px-3 sm:px-4 text-right font-mono text-slate-400">' + formatCurrency(p.cost) + '</td>' +
+          '<td class="py-3 px-3 sm:px-4 text-right font-mono font-bold text-white">' + formatCurrency(p.currentValue) + '</td>' +
+          '<td class="py-3 px-3 sm:px-4 text-right font-mono font-medium ' + roiClass + '">' + (p.unrealizedROI !== null ? (p.unrealizedROI > 0 ? '+' : '') + p.unrealizedROI.toFixed(2) + '%' : '-') + '</td>' +
+          '<td class="py-3 px-3 sm:px-4 text-right font-mono font-medium ' + plClass + '">' + (p.unrealizedPL !== null ? (p.unrealizedPL > 0 ? '+' : '') + formatCurrency(p.unrealizedPL) : '-') + '</td>' +
+          '<td class="py-3 px-3 sm:px-4 text-right font-mono font-medium ' + realizedClass + '">' + (p.realizedPL !== null ? (p.realizedPL > 0 ? '+' : '') + formatCurrency(p.realizedPL) : '-') + '</td>' +
+          '<td class="py-3 px-3 sm:px-4 text-right font-mono font-bold ' + totalPLClass + '">' + (p.totalPL !== null ? (p.totalPL > 0 ? '+' : '') + formatCurrency(p.totalPL) : '-') + '</td>' +
+          '<td class="py-3 px-3 sm:px-4 text-right font-mono font-medium ' + dailyClass + '">' + (p.dailyChange !== null ? (p.dailyChange > 0 ? '+' : '') + formatCurrency(p.dailyChange) : '-') + '</td>' +
+        '</tr>';
+      }).join('');
+
+      // Mobile cards
+      mobileContainer.innerHTML = filtered.map(function(p, idx) {
+        var roiClass = p.unrealizedROI > 0 ? 'text-emerald-400' : p.unrealizedROI < 0 ? 'text-rose-400' : 'text-slate-400';
+        var plClass = p.unrealizedPL > 0 ? 'text-emerald-400' : p.unrealizedPL < 0 ? 'text-rose-400' : 'text-slate-400';
+        var realizedClass = p.realizedPL > 0 ? 'text-emerald-400' : p.realizedPL < 0 ? 'text-rose-400' : 'text-slate-400';
+        var totalPLClass = p.totalPL > 0 ? 'text-emerald-400' : p.totalPL < 0 ? 'text-rose-400' : 'text-slate-400';
+        var dailyClass = p.dailyChange > 0 ? 'text-emerald-400' : p.dailyChange < 0 ? 'text-rose-400' : 'text-slate-400';
+        var soldBadge = p.isSold ? '<span class="ml-2 px-1.5 py-0.5 bg-slate-800 text-slate-500 rounded text-[9px] font-bold tracking-wider">CERRADA</span>' : '';
+
+        var mobileIconHtml = p.iconUrl ? 
+          '<img src="' + p.iconUrl + '" alt="" class="asset-icon-lg mr-2" loading="lazy" onerror="this.style.display=\'none\'">' : 
+          '<div class="w-6 h-6 mr-2 rounded bg-slate-700/50 flex items-center justify-center text-[10px] text-slate-500 font-bold">' + (p.ticker ? p.ticker.charAt(0) : '?') + '</div>';
+
+        return '<div class="position-mobile-card" onclick="toggleCardDetails(this)">' +
+          '<div class="flex items-center justify-between">' +
+            '<div class="flex items-center gap-2 flex items-center">' + mobileIconHtml +
+              '<span class="font-bold text-sm text-brand-400">' + (p.ticker || '-') + '</span>' + soldBadge +
+              '<span class="badge bg-slate-800 border-slate-700/50 text-slate-400">' + (p.assetClass || '-') + '</span>' +
+            '</div>' +
+            '<div class="text-right">' +
+              '<p class="font-bold text-sm text-white">' + formatCurrency(p.currentValue) + '</p>' +
+              '<p class="text-[10px] font-mono ' + roiClass + '">' + (p.unrealizedROI !== null ? (p.unrealizedROI > 0 ? '+' : '') + p.unrealizedROI.toFixed(2) + '%' : '-') + '</p>' +
+            '</div>' +
+          '</div>' +
+          '<div class="card-details">' +
+            '<div class="grid grid-cols-2 gap-3 text-xs">' +
+              '<div><p class="text-[10px] text-slate-500 uppercase">Activo</p><p class="text-slate-300 font-medium truncate">' + (p.assetName || '-') + '</p></div>' +
+              '<div><p class="text-[10px] text-slate-500 uppercase">Sector</p><p class="text-slate-300 font-medium">' + (p.sector || '-') + '</p></div>' +
+              '<div><p class="text-[10px] text-slate-500 uppercase">Cantidad</p><p class="text-slate-300 font-mono">' + (p.isSold ? '0.0000' : (p.quantityNum || 0).toFixed(4)) + '</p></div>' +
+              '<div><p class="text-[10px] text-slate-500 uppercase">Precio Prom.</p><p class="text-slate-300 font-mono">' + formatCurrency(p.avgPurchasePrice) + '</p></div>' +
+              '<div><p class="text-[10px] text-slate-500 uppercase">Precio Mercado</p><p class="text-slate-300 font-mono">' + formatCurrency(p.currentPrice) + '</p></div>' +
+              '<div><p class="text-[10px] text-slate-500 uppercase">Costo</p><p class="text-slate-300 font-mono">' + formatCurrency(p.cost) + '</p></div>' +
+              '<div><p class="text-[10px] text-slate-500 uppercase">P/L</p><p class="font-mono font-medium ' + plClass + '">' + (p.unrealizedPL !== null ? (p.unrealizedPL > 0 ? '+' : '') + formatCurrency(p.unrealizedPL) : '-') + '</p></div>' +
+              '<div><p class="text-[10px] text-slate-500 uppercase">P/L Realizado</p><p class="font-mono font-medium ' + realizedClass + '">' + (p.realizedPL !== null ? (p.realizedPL > 0 ? '+' : '') + formatCurrency(p.realizedPL) : '-') + '</p></div>' +
+              '<div><p class="text-[10px] text-slate-500 uppercase">P/L Total</p><p class="font-mono font-bold ' + totalPLClass + '">' + (p.totalPL !== null ? (p.totalPL > 0 ? '+' : '') + formatCurrency(p.totalPL) : '-') + '</p></div>' +
+              '<div><p class="text-[10px] text-slate-500 uppercase">Día</p><p class="font-mono font-medium ' + dailyClass + '">' + (p.dailyChange !== null ? (p.dailyChange > 0 ? '+' : '') + formatCurrency(p.dailyChange) : '-') + '</p></div>' +
+            '</div>' +
+          '</div>' +
+        '</div>';
+      }).join('');
+    }
+
+    function toggleCardDetails(card) {
+      var details = card.querySelector('.card-details');
+      var isExpanded = details.classList.contains('expanded');
+
+      // Close all other cards
+      document.querySelectorAll('.card-details.expanded').forEach(function(el) {
+        if (el !== details) el.classList.remove('expanded');
+      });
+
+      details.classList.toggle('expanded', !isExpanded);
+    }
+
+    function sortPortfolio(field) {
+      if (portfolioSort.field === field) {
+        portfolioSort.dir = portfolioSort.dir === 'asc' ? 'desc' : 'asc';
+      } else {
+        portfolioSort.field = field;
+        portfolioSort.dir = 'desc';
+      }
+      renderPortfolioTable(portfolioData);
+    }
+
+    function toggleSoldPositions() {
+      showSoldPositionsFlag = document.getElementById('showSold').checked;
+      renderPortfolioTable(portfolioData);
+    }
+
+    function filterPortfolio() {
+      portfolioFilter = document.getElementById('pfSearch').value;
+      renderPortfolioTable(portfolioData);
+    }
+
+    function renderBrokersSummary(platforms) {
+      var section = document.getElementById('brokersSummarySection');
+      var grid = document.getElementById('brokersSummaryGrid');
+
+      if (!platforms || platforms.length === 0) {
+        section.classList.add('hidden');
+        return;
+      }
+
+      section.classList.remove('hidden');
+
+      var colors = {
+        'ETORO': { bg: 'rgba(59, 130, 246, 0.15)', icon: 'fa-globe', color: '#60a5fa' },
+        'ETORO': { bg: 'rgba(59, 130, 246, 0.15)', icon: 'fa-globe', color: '#60a5fa' },
+        'HAPI':  { bg: 'rgba(16, 185, 129, 0.15)', icon: 'fa-bolt', color: '#34d399' },
+        'TRADESTATION': { bg: 'rgba(245, 158, 11, 0.15)', icon: 'fa-chart-line', color: '#fbbf24' },
+        'ALPHA': { bg: 'rgba(139, 92, 246, 0.15)', icon: 'fa-building', color: '#a78bfa' },
+        'SIEMBRA': { bg: 'rgba(34, 197, 94, 0.15)', icon: 'fa-seedling', color: '#4ade80' },
+        'CCI': { bg: 'rgba(239, 68, 68, 0.15)', icon: 'fa-credit-card', color: '#f87171' },
+        'BANRESERVAS': { bg: 'rgba(59, 130, 246, 0.15)', icon: 'fa-university', color: '#60a5fa' },
+        'UNITED': { bg: 'rgba(99, 102, 241, 0.15)', icon: 'fa-plane', color: '#818cf8' },
+        'default': { bg: 'rgba(99, 102, 241, 0.15)', icon: 'fa-building', color: '#818cf8' }
+      };
+
+      grid.innerHTML = platforms.map(function(p) {
+        var key = (p.platform || p.name || 'default').toUpperCase();
+        var style = colors[key] || colors['default'];
+
+        // Mapear propiedades del GAS a las que usa el frontend
+        var marketValue = p.marketValue || 0;
+        var costBasis = p.costBasis || p.totalInvested || 0;
+        var cash = p.cash || 0;
+        var unrealizedPL = p.unrealizedPL || 0;
+        var realizedPL = p.realizedPL || 0;
+        var totalValue = marketValue + cash;
+        var unrealizedROI = p.unrealizedROI || 0;
+        var realizedROI = p.realizedROI || 0;
+        var totalPL = p.totalPL || (unrealizedPL + realizedPL);
+        var totalROI = p.totalROI || (costBasis > 0 ? totalPL / costBasis : 0);
+        var activePositions = p.activePositions || p.symbols || 0;
+        var soldPositions = p.soldPositions || 0;
+
+        var unrealizedClass = unrealizedPL >= 0 ? 'text-emerald-400' : 'text-rose-400';
+        var realizedClass = realizedPL >= 0 ? 'text-emerald-400' : 'text-rose-400';
+        var totalClass = totalPL >= 0 ? 'text-emerald-400' : 'text-rose-400';
+        var cashClass = cash >= 0 ? 'text-slate-300' : 'text-rose-400';
+
+        return '<div class="broker-summary-card">' +
+          '<div class="broker-header">' +
+            '<div class="broker-icon" style="background:' + style.bg + '; color:' + style.color + '">' +
+              '<i class="fas ' + style.icon + '"></i>' +
+            '</div>' +
+            '<span class="broker-name">' + (p.platform || p.name || 'Sin nombre') + '</span>' +
+          '</div>' +
+          '<div class="text-center mb-3">' +
+            '<p class="text-[10px] text-slate-500 uppercase font-bold tracking-wider mb-1">Valor Total</p>' +
+            '<p class="text-xl sm:text-2xl font-extrabold text-white tracking-tight">' + formatCurrency(totalValue) + '</p>' +
+          '</div>' +
+          '<div class="broker-grid">' +
+            '<div class="broker-stat">' +
+              '<div class="broker-stat-label">Cost Basis</div>' +
+              '<div class="broker-stat-value text-slate-300">' + formatCurrency(costBasis) + '</div>' +
+            '</div>' +
+            '<div class="broker-stat">' +
+              '<div class="broker-stat-label">Market Value</div>' +
+              '<div class="broker-stat-value text-white">' + formatCurrency(marketValue) + '</div>' +
+            '</div>' +
+            '<div class="broker-stat">' +
+              '<div class="broker-stat-label">Cash</div>' +
+              '<div class="broker-stat-value ' + cashClass + '">' + formatCurrency(cash) + '</div>' +
+            '</div>' +
+          '</div>' +
+          '<div class="broker-divider"></div>' +
+          '<div class="broker-grid">' +
+            '<div class="broker-stat">' +
+              '<div class="broker-stat-label">Unrealized</div>' +
+              '<div class="broker-stat-value ' + unrealizedClass + '">' + (unrealizedPL >= 0 ? '+' : '') + formatCurrency(unrealizedPL) + '</div>' +
+              '<div class="broker-stat-sub ' + unrealizedClass + '">' + (unrealizedROI >= 0 ? '+' : '') + (unrealizedROI * 100).toFixed(2) + '%</div>' +
+            '</div>' +
+            '<div class="broker-stat">' +
+              '<div class="broker-stat-label">Realized</div>' +
+              '<div class="broker-stat-value ' + realizedClass + '">' + (realizedPL >= 0 ? '+' : '') + formatCurrency(realizedPL) + '</div>' +
+              '<div class="broker-stat-sub ' + realizedClass + '">' + (realizedROI >= 0 ? '+' : '') + (realizedROI * 100).toFixed(2) + '%</div>' +
+            '</div>' +
+            '<div class="broker-stat">' +
+              '<div class="broker-stat-label">Total P/L</div>' +
+              '<div class="broker-stat-value ' + totalClass + '">' + (totalPL >= 0 ? '+' : '') + formatCurrency(totalPL) + '</div>' +
+              '<div class="broker-stat-sub ' + totalClass + '">' + (totalROI >= 0 ? '+' : '') + (totalROI * 100).toFixed(2) + '%</div>' +
+            '</div>' +
+          '</div>' +
+          '<div class="mt-2 text-center">' +
+            '<span class="text-[10px] text-slate-500 font-medium">' + activePositions + ' activas / ' + soldPositions + ' vendidas</span>' +
+          '</div>' +
+        '</div>';
+      }).join('');
+    }
+    
+
+    function changeTxPage(delta) {
+      var maxPage = Math.ceil(allTransactions.length / TX_PER_PAGE) - 1;
+      txPage = Math.max(0, Math.min(txPage + delta, maxPage));
+      renderTransactionsTable();
+    }
+
+    function renderTransactionsTable() {
+      var tbody = document.getElementById('transactionsTable');
+      var mobileContainer = document.getElementById('transactionsMobileCards');
+      var countSpan = document.getElementById('txCount');
+      var pageSpan = document.getElementById('txPage');
+      var prevBtn = document.getElementById('txPrev');
+      var nextBtn = document.getElementById('txNext');
+
+      if (!allTransactions || allTransactions.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="7" class="py-12 text-center text-slate-500 text-sm">No hay transacciones registradas</td></tr>';
+        mobileContainer.innerHTML = '<p class="text-slate-500 text-sm text-center py-8">No hay transacciones registradas.</p>';
+        countSpan.textContent = '0';
+        return;
+      }
+
+      countSpan.textContent = allTransactions.length;
+
+      var start = txPage * TX_PER_PAGE;
+      var end = Math.min(start + TX_PER_PAGE, allTransactions.length);
+      var pageTransactions = allTransactions.slice(start, end);
+
+      pageSpan.textContent = 'Pág. ' + (txPage + 1) + ' / ' + Math.ceil(allTransactions.length / TX_PER_PAGE);
+      prevBtn.disabled = txPage === 0;
+      nextBtn.disabled = end >= allTransactions.length;
+
+      // Desktop table
+      tbody.innerHTML = pageTransactions.map(function(t) {
+        return '<tr class="hover:bg-slate-800/40 transition-colors">' +
+          '<td class="py-3 px-3 sm:px-4 text-slate-400 text-[11px] font-mono">' + (t.date || '-') + '</td>' +
+          '<td class="py-3 px-3 sm:px-4 font-bold text-slate-200">' + (t.ticker || t.assetName || '-') + '</td>' +
+          '<td class="py-3 px-3 sm:px-4 text-center">' + getActionBadge(t.action) + '</td>' +
+          '<td class="py-3 px-3 sm:px-4 text-right font-mono text-slate-300">' + (t.quantity || 0) + '</td>' +
+          '<td class="py-3 px-3 sm:px-4 text-right font-mono text-slate-400">' + formatCurrency(t.displayPrice || t.price) + '</td>' +
+          '<td class="py-3 px-3 sm:px-4 text-right font-mono font-semibold text-white">' + formatCurrency(Math.abs(t.displayTotal || t.totalUSD || t.total || 0)) + '</td>' +
+          '<td class="py-3 px-3 sm:px-4 text-center text-slate-500 text-[11px]">' + (t.platform || '-') + '</td>' +
+        '</tr>';
+      }).join('');
+
+      // Mobile cards
+      mobileContainer.innerHTML = pageTransactions.map(function(t) {
+        return '<div class="tx-mobile-card">' +
+          '<div class="flex items-center justify-between mb-2">' +
+            '<div class="flex items-center gap-2">' +
+              '<span class="font-bold text-sm text-slate-200">' + (t.ticker || t.assetName || '-') + '</span>' +
+              getActionBadge(t.action) +
+            '</div>' +
+            '<span class="text-[10px] text-slate-500 font-mono">' + (t.date || '-') + '</span>' +
+          '</div>' +
+          '<div class="grid grid-cols-3 gap-2 text-xs">' +
+            '<div><p class="text-[10px] text-slate-500 uppercase">Cantidad</p><p class="text-slate-300 font-mono">' + (t.quantity || 0) + '</p></div>' +
+            '<div><p class="text-[10px] text-slate-500 uppercase">Precio</p><p class="text-slate-300 font-mono">' + formatCurrency(t.displayPrice || t.price) + '</p></div>' +
+            '<div class="text-right"><p class="text-[10px] text-slate-500 uppercase">Total</p><p class="text-white font-mono font-semibold">' + formatCurrency(Math.abs(t.displayTotal || t.totalUSD || t.total || 0)) + '</p></div>' +
+          '</div>' +
+          '<div class="mt-2 pt-2 border-t border-slate-700/30 flex justify-between items-center">' +
+            '<span class="text-[10px] text-slate-500">' + (t.platform || '-') + '</span>' +
+            '<span class="text-[10px] text-slate-500 font-mono">' + (t.currency || 'USD') + '</span>' +
+          '</div>' +
+        '</div>';
+      }).join('');
+    }
+
+    function renderAssetsTable(assets) {
+      var tbody = document.getElementById('assetsTable');
+      var mobileContainer = document.getElementById('assetsMobileCards');
+
+      if (!assets || assets.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="8" class="py-12 text-center text-slate-500 text-sm">No hay activos en cartera</td></tr>';
+        mobileContainer.innerHTML = '<p class="text-slate-500 text-sm text-center py-8">No hay activos en cartera.</p>';
+        return;
+      }
+
+      // Desktop table
+      tbody.innerHTML = assets.map(function(a) {
+        var assetIcon = a.iconUrl ? 
+          '<img src="' + a.iconUrl + '" alt="" class="asset-icon mr-2" loading="lazy" onerror="this.style.display=\'none\'">' : 
+          '<div class="w-5 h-5 mr-2 rounded bg-slate-700/50 flex items-center justify-center text-[9px] text-slate-500 font-bold">' + (a.ticker ? a.ticker.charAt(0) : '?') + '</div>';
+
+        return '<tr class="hover:bg-slate-800/40 transition-colors">' +
+          '<td class="py-3 px-3 sm:px-4 font-bold text-brand-400 flex items-center">' + assetIcon + (a.ticker || '-') + '</td>' +
+          '<td class="py-3 px-3 sm:px-4 text-slate-300">' + (a.name || '-') + '</td>' +
+          '<td class="py-3 px-3 sm:px-4"><span class="badge bg-slate-800 border-slate-700/50 text-slate-400">' + (a.class || '-') + '</span></td>' +
+          '<td class="py-3 px-3 sm:px-4 text-slate-500 text-[11px]">' + (a.sector || '-') + '</td>' +
+          '<td class="py-3 px-3 sm:px-4 text-right font-mono text-slate-200">' + ((a.quantity || 0).toFixed(4)) + '</td>' +
+          '<td class="py-3 px-3 sm:px-4 text-right font-mono text-slate-400">' + formatCurrency(a.costBasis) + '</td>' +
+          '<td class="py-3 px-3 sm:px-4 text-center font-mono text-[10px] text-slate-500">' + (a.originalCurrency || a.currency || '-') + '</td>' +
+          '<td class="py-3 px-3 sm:px-4 text-center text-slate-400 text-[11px]">' + (a.platform || '-') + '</td>' +
+        '</tr>';
+      }).join('');
+
+      // Mobile cards
+      mobileContainer.innerHTML = assets.map(function(a) {
+        var assetMobileIcon = a.iconUrl ? 
+          '<img src="' + a.iconUrl + '" alt="" class="asset-icon-lg mr-2" loading="lazy" onerror="this.style.display=\'none\'">' : 
+          '<div class="w-6 h-6 mr-2 rounded bg-slate-700/50 flex items-center justify-center text-[10px] text-slate-500 font-bold">' + (a.ticker ? a.ticker.charAt(0) : '?') + '</div>';
+
+        return '<div class="position-mobile-card">' +
+          '<div class="flex items-center justify-between mb-2">' +
+            '<div class="flex items-center gap-2 flex items-center">' + assetMobileIcon +
+              '<span class="font-bold text-sm text-brand-400">' + (a.ticker || '-') + '</span>' +
+              '<span class="badge bg-slate-800 border-slate-700/50 text-slate-400">' + (a.class || '-') + '</span>' +
+            '</div>' +
+            '<span class="text-[10px] text-slate-500 font-mono">' + (a.originalCurrency || a.currency || '-') + '</span>' +
+          '</div>' +
+          '<p class="text-xs text-slate-300 mb-2 truncate">' + (a.name || '-') + '</p>' +
+          '<div class="grid grid-cols-2 gap-2 text-xs">' +
+            '<div><p class="text-[10px] text-slate-500 uppercase">Cantidad</p><p class="text-slate-300 font-mono">' + ((a.quantity || 0).toFixed(4)) + '</p></div>' +
+            '<div><p class="text-[10px] text-slate-500 uppercase">Costo Base</p><p class="text-slate-300 font-mono">' + formatCurrency(a.costBasis) + '</p></div>' +
+            '<div><p class="text-[10px] text-slate-500 uppercase">Sector</p><p class="text-slate-300">' + (a.sector || '-') + '</p></div>' +
+            '<div><p class="text-[10px] text-slate-500 uppercase">Plataforma</p><p class="text-slate-300">' + (a.platform || '-') + '</p></div>' +
+          '</div>' +
+        '</div>';
+      }).join('');
+    }
+
+
+    function renderPerformance(data) {
+      if (!data) {
+        console.warn("renderPerformance: data es null/undefined");
+        return;
+      }
+
+      // Normalizar: si viene como objeto plano o con .performance anidado
+      var perfData = data.performance || data;
+      var summary = perfData.summary || {};
+      var periods = perfData.periods || [];
+      var assetPerformance = perfData.assetPerformance || [];
+      var platformPerformance = perfData.platformPerformance || [];
+      var distribution = perfData.distribution || {};
+      var riskMetrics = perfData.riskMetrics || {};
+
+      // Helper defensivo para formatear números
+      function safeNumber(val, fallback) {
+        if (val === undefined || val === null || isNaN(val) || !isFinite(val)) {
+          return fallback !== undefined ? fallback : 0;
+        }
+        return val;
+      }
+
+      // ===== RESUMEN =====
+      var totalReturn = safeNumber(summary.totalReturn);
+      var totalReturnPct = safeNumber(summary.totalReturnPct);
+
+      var totalReturnEl = document.getElementById('perfTotalReturn');
+      if (totalReturnEl) {
+        totalReturnEl.textContent = (totalReturn >= 0 ? '+' : '') + formatCurrency(totalReturn);
+        totalReturnEl.className = 'mobile-stat-value ' + (totalReturn >= 0 ? 'text-emerald-400' : 'text-rose-400');
+      }
+
+      var totalReturnPctEl = document.getElementById('perfTotalReturnPct');
+      if (totalReturnPctEl) {
+        totalReturnPctEl.textContent = (totalReturnPct >= 0 ? '+' : '') + totalReturnPct.toFixed(2) + '%';
+        totalReturnPctEl.className = 'text-[10px] font-bold mt-1 ' + (totalReturnPct >= 0 ? 'text-emerald-400' : 'text-rose-400');
+      }
+
+      var perfTotalInvested = document.getElementById('perfTotalInvested');
+      if (perfTotalInvested) {
+        perfTotalInvested.textContent = formatCurrency(safeNumber(summary.totalInvested));
+      }
+
+      var perfTotalValue = document.getElementById('perfTotalValue');
+      if (perfTotalValue) {
+        perfTotalValue.textContent = formatCurrency(safeNumber(summary.totalPortfolioValue));
+      }
+
+      var perfMaxDrawdown = document.getElementById('perfMaxDrawdown');
+      if (perfMaxDrawdown) {
+        var maxDrawdown = safeNumber(riskMetrics.maxDrawdown, null);
+        perfMaxDrawdown.textContent = maxDrawdown !== null ? maxDrawdown.toFixed(2) + '%' : 'N/A';
+      }
+
+      // ===== TABLA DE PERÍODOS =====
+      renderPerformancePeriods(periods);
+
+      // ===== GRÁFICO DE PERÍODOS =====
+      renderPerformancePeriodChart(periods);
+
+      // ===== DISTRIBUCIÓN =====
+      renderPerformanceDistribution(distribution);
+
+      // ===== TOP PERFORMERS =====
+      renderTopPerformers(assetPerformance);
+
+      // ===== PLATAFORMAS =====
+      renderPerformancePlatforms(platformPerformance);
+    }
+
+    function renderPerformancePeriodChart(periods) {
+  var ctx = document.getElementById('performancePeriodChart');
+  if (!ctx) return;
+
+  if (charts.performancePeriod) charts.performancePeriod.destroy();
+
+  var labels = periods.map(function(p) { return p.label; });
+  var unrealized = periods.map(function(p) { return p.unrealizedPL; });
+  var realized = periods.map(function(p) { return p.realizedPL; });
+
+  charts.performancePeriod = new Chart(ctx.getContext('2d'), {
+    type: 'bar',
+    data: {
+      labels: labels,
+      datasets: [
+        {
+          label: 'No Realizado',
+          data: unrealized,
+          backgroundColor: unrealized.map(function(v) { return v >= 0 ? 'rgba(59, 130, 246, 0.7)' : 'rgba(244, 63, 94, 0.7)'; }),
+          borderColor: unrealized.map(function(v) { return v >= 0 ? '#3b82f6' : '#f43f5e'; }),
+          borderWidth: 1,
+          borderRadius: 4,
+          stack: 'stack1'
+        },
+        {
+          label: 'Realizado',
+          data: realized,
+          backgroundColor: realized.map(function(v) { return v >= 0 ? 'rgba(16, 185, 129, 0.7)' : 'rgba(245, 158, 11, 0.7)'; }),
+          borderColor: realized.map(function(v) { return v >= 0 ? '#10b981' : '#f59e0b'; }),
+          borderWidth: 1,
+          borderRadius: 4,
+          stack: 'stack1'
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: {
+          position: 'top',
+          labels: { color: '#94a3b8', usePointStyle: true, font: { size: 11 } }
+        },
+        tooltip: {
+          backgroundColor: 'rgba(15, 23, 42, 0.95)',
+          titleColor: '#f8fafc',
+          bodyColor: '#cbd5e1',
+          borderColor: '#334155',
+          borderWidth: 1,
+          padding: 12,
+          cornerRadius: 8,
+          callbacks: {
+            label: function(context) {
+              var val = context.parsed.y;
+              return context.dataset.label + ': ' + (val >= 0 ? '+' : '') + formatCurrency(val);
+            }
+          }
+        }
+      },
+      scales: {
+        x: {
+          stacked: true,
+          grid: { color: 'rgba(51, 65, 85, 0.15)', drawBorder: false },
+          ticks: { color: '#64748b', font: { size: 10 } }
+        },
+        y: {
+          stacked: true,
+          grid: { color: 'rgba(51, 65, 85, 0.15)', drawBorder: false },
+          ticks: { 
+            color: '#64748b', 
+            font: { size: 10 },
+            callback: function(value) { return formatCurrency(value); }
+          }
+        }
+      }
+    }
+  });
+}
+
+    function renderPerformancePeriods(periods) {
+      var tbody = document.getElementById('performancePeriodsTable');
+      var mobileContainer = document.getElementById('performancePeriodsMobile');
+
+      if (!periods || periods.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="7" class="py-12 text-center text-slate-500 text-sm">No hay datos de rendimiento</td></tr>';
+        mobileContainer.innerHTML = '<p class="text-slate-500 text-sm text-center py-8">No hay datos de rendimiento.</p>';
+        return;
+      }
+
+      // Desktop table
+      tbody.innerHTML = periods.map(function(p) {
+        var realizedClass = p.realizedPL >= 0 ? 'text-emerald-400' : 'text-rose-400';
+        var realizedSign = p.realizedPL >= 0 ? '+' : '';
+        var unrealizedClass = p.unrealizedPL >= 0 ? 'text-emerald-400' : 'text-rose-400';
+        var unrealizedSign = p.unrealizedPL >= 0 ? '+' : '';
+        var totalClass = p.totalPL >= 0 ? 'text-emerald-400' : 'text-rose-400';
+        var totalSign = p.totalPL >= 0 ? '+' : '';
+
+        return '<tr class="hover:bg-slate-800/40 transition-colors">' +
+          '<td class="py-3 px-3 sm:px-4 font-bold text-slate-200">' + p.label + '</td>' +
+          '<td class="py-3 px-3 sm:px-4 text-right font-mono text-slate-400">' + formatCurrency(p.startValue) + '</td>' +
+          '<td class="py-3 px-3 sm:px-4 text-right font-mono text-white">' + formatCurrency(p.endValue) + '</td>' +
+          '<td class="py-3 px-3 sm:px-4 text-right font-mono font-bold ' + unrealizedClass + '">' + unrealizedSign + formatCurrency(p.unrealizedPL) + '</td>' +
+          '<td class="py-3 px-3 sm:px-4 text-right font-mono font-bold ' + realizedClass + '">' + realizedSign + formatCurrency(p.realizedPL) + '</td>' +
+          '<td class="py-3 px-3 sm:px-4 text-right font-mono font-bold ' + totalClass + '">' + totalSign + formatCurrency(p.totalPL) + '</td>' +
+          '<td class="py-3 px-3 sm:px-4 text-right font-mono text-slate-500 text-[10px]">' + formatCurrency(p.marketValue) + ' / ' + formatCurrency(p.cash) + '</td>' +
+        '</tr>';
+      }).join('');
+
+      // Mobile cards
+      mobileContainer.innerHTML = periods.map(function(p) {
+        var totalClass = p.totalPL >= 0 ? 'text-emerald-400' : 'text-rose-400';
+        var totalSign = p.totalPL >= 0 ? '+' : '';
+        var unrealizedClass = p.unrealizedPL >= 0 ? 'text-emerald-400' : 'text-rose-400';
+        var realizedClass = p.realizedPL >= 0 ? 'text-emerald-400' : 'text-rose-400';
+
+        return '<div class="tx-mobile-card">' +
+          '<div class="flex items-center justify-between mb-2">' +
+            '<span class="font-bold text-sm text-slate-200">' + p.label + '</span>' +
+            '<span class="font-mono font-bold ' + totalClass + '">' + totalSign + formatCurrency(p.totalPL) + '</span>' +
+          '</div>' +
+          '<div class="grid grid-cols-2 gap-2 text-xs">' +
+            '<div><p class="text-[10px] text-slate-500 uppercase">No Realizado</p><p class="font-mono font-bold ' + unrealizedClass + '">' + (p.unrealizedPL >= 0 ? '+' : '') + formatCurrency(p.unrealizedPL) + '</p></div>' +
+            '<div><p class="text-[10px] text-slate-500 uppercase">Realizado</p><p class="font-mono font-bold ' + realizedClass + '">' + (p.realizedPL >= 0 ? '+' : '') + formatCurrency(p.realizedPL) + '</p></div>' +
+            '<div><p class="text-[10px] text-slate-500 uppercase">Mercado</p><p class="text-slate-300 font-mono">' + formatCurrency(p.marketValue) + '</p></div>' +
+            '<div><p class="text-[10px] text-slate-500 uppercase">Cash</p><p class="text-slate-300 font-mono">' + formatCurrency(p.cash) + '</p></div>' +
+          '</div>' +
+        '</div>';
+      }).join('');
+    }
+
+    function renderPerformanceDistribution(distribution) {
+      var ctx = document.getElementById('performanceDistributionChart');
+      if (!ctx) return;
+
+      if (charts.performanceDistribution) charts.performanceDistribution.destroy();
+
+      var data = [
+        distribution.excellentCount || 0,
+        distribution.goodCount || 0,
+        distribution.neutralCount || 0,
+        distribution.badCount || 0,
+        distribution.terribleCount || 0
+      ];
+
+      var total = data.reduce(function(a, b) { return a + b; }, 0);
+      if (total === 0) {
+        ctx.parentElement.innerHTML = '<div class="flex items-center justify-center h-full text-slate-500 text-sm">Sin datos de distribución</div>';
+        return;
+      }
+
+      charts.performanceDistribution = new Chart(ctx.getContext('2d'), {
+        type: 'doughnut',
+        data: {
+          labels: ['Excelente (+50%)', 'Bueno (+10%)', 'Neutral (±10%)', 'Malo (-10%)', 'Pésimo (-30%)'],
+          datasets: [{
+            data: data,
+            backgroundColor: ['#10b981', '#3b82f6', '#f59e0b', '#f43f5e', '#7c2d12'],
+            borderWidth: 0,
+            hoverOffset: 6
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          cutout: '65%',
+          plugins: {
+            legend: {
+              position: window.innerWidth < 640 ? 'bottom' : 'right',
+              labels: {
+                color: '#94a3b8',
+                usePointStyle: true,
+                pointStyle: 'circle',
+                font: { size: window.innerWidth < 640 ? 10 : 11 },
+                padding: window.innerWidth < 640 ? 10 : 16,
+                boxWidth: window.innerWidth < 640 ? 8 : 10
+              }
+            },
+            tooltip: {
+              backgroundColor: 'rgba(15, 23, 42, 0.95)',
+              titleColor: '#f8fafc',
+              bodyColor: '#cbd5e1',
+              borderColor: '#334155',
+              borderWidth: 1,
+              padding: 12,
+              cornerRadius: 8,
+              callbacks: {
+                label: function(context) {
+                  var value = context.parsed;
+                  var pct = total > 0 ? ((value / total) * 100).toFixed(1) : 0;
+                  return context.label + ': ' + value + ' posiciones (' + pct + '%)';
+                }
+              }
+            }
+          }
+        }
+      });
+    }
+
+    function renderTopPerformers(assets) {
+      var el = document.getElementById('topPerformersList');
+
+      if (!assets || assets.length === 0) {
+        el.innerHTML = '<p class="text-slate-500 text-sm text-center py-4">No hay datos de performers</p>';
+        return;
+      }
+
+      var top5 = assets.slice(0, 5);
+      var bottom5 = assets.slice(-5).reverse();
+
+      el.innerHTML = '<div class="mb-4"><p class="text-[10px] text-emerald-400 uppercase font-bold mb-2">Mejores</p>' +
+        top5.map(function(p) {
+          var roiClass = p.totalPL >= 0 ? 'text-emerald-400' : 'text-rose-400';
+          var sign = p.totalPL >= 0 ? '+' : '';
+          var perfIcon = p.iconUrl ? 
+            '<img src="' + p.iconUrl + '" alt="" class="asset-icon-sm mr-1.5" loading="lazy" onerror="this.style.display=\'none\'">' : 
+            '<div class="w-4 h-4 mr-1.5 rounded bg-slate-700/50 flex items-center justify-center text-[8px] text-slate-500 font-bold">' + (p.ticker ? p.ticker.charAt(0) : '?') + '</div>';
+          return '<div class="flex items-center justify-between py-1.5">' +
+            '<div class="flex items-center gap-2">' + perfIcon +
+              '<span class="font-bold text-xs text-slate-200">' + p.ticker + '</span>' +
+              '<span class="text-[10px] text-slate-500">' + (p.assetClass || '') + '</span>' +
+            '</div>' +
+            '<div class="text-right">' +
+              '<p class="font-bold text-xs ' + roiClass + '">' + sign + formatCurrency(p.totalPL) + '</p>' +
+              '<p class="text-[10px] text-slate-500">' + (p.weight || 0).toFixed(1) + '% del portafolio</p>' +
+            '</div>' +
+          '</div>';
+        }).join('') +
+      '</div>' +
+      '<div class="w-full h-px bg-slate-700/30 my-3"></div>' +
+      '<div><p class="text-[10px] text-rose-400 uppercase font-bold mb-2">Peores</p>' +
+        bottom5.map(function(p) {
+          var roiClass = p.totalPL >= 0 ? 'text-emerald-400' : 'text-rose-400';
+          var sign = p.totalPL >= 0 ? '+' : '';
+          var perfIcon2 = p.iconUrl ? 
+            '<img src="' + p.iconUrl + '" alt="" class="asset-icon-sm mr-1.5" loading="lazy" onerror="this.style.display=\'none\'">' : 
+            '<div class="w-4 h-4 mr-1.5 rounded bg-slate-700/50 flex items-center justify-center text-[8px] text-slate-500 font-bold">' + (p.ticker ? p.ticker.charAt(0) : '?') + '</div>';
+          return '<div class="flex items-center justify-between py-1.5">' +
+            '<div class="flex items-center gap-2">' + perfIcon2 +
+              '<span class="font-bold text-xs text-slate-200">' + p.ticker + '</span>' +
+              '<span class="text-[10px] text-slate-500">' + (p.assetClass || '') + '</span>' +
+            '</div>' +
+            '<div class="text-right">' +
+              '<p class="font-bold text-xs ' + roiClass + '">' + sign + formatCurrency(p.totalPL) + '</p>' +
+              '<p class="text-[10px] text-slate-500">' + (p.weight || 0).toFixed(1) + '% del portafolio</p>' +
+            '</div>' +
+          '</div>';
+        }).join('') +
+      '</div>';
+    }
+
+    function renderPerformancePlatforms(platforms) {
+      var tbody = document.getElementById('performancePlatformsTable');
+      var mobileContainer = document.getElementById('performancePlatformsMobile');
+
+      if (!platforms || platforms.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="8" class="py-12 text-center text-slate-500 text-sm">No hay datos por plataforma</td></tr>';
+        mobileContainer.innerHTML = '<p class="text-slate-500 text-sm text-center py-8">No hay datos por plataforma.</p>';
+        return;
+      }
+
+      tbody.innerHTML = platforms.map(function(p) {
+        var unrealizedClass = p.unrealizedPL >= 0 ? 'text-emerald-400' : 'text-rose-400';
+        var realizedClass = p.realizedPL >= 0 ? 'text-emerald-400' : 'text-rose-400';
+        var totalClass = p.totalPL >= 0 ? 'text-emerald-400' : 'text-rose-400';
+        var totalROIColor = p.totalROI >= 0 ? 'text-emerald-400' : 'text-rose-400';
+
+        return '<tr class="hover:bg-slate-800/40 transition-colors">' +
+          '<td class="py-3 px-3 sm:px-4 font-bold text-slate-200">' + (p.platform || '-') + '</td>' +
+          '<td class="py-3 px-3 sm:px-4 text-right font-mono text-slate-400">' + formatCurrency(p.totalInvested) + '</td>' +
+          '<td class="py-3 px-3 sm:px-4 text-right font-mono text-white">' + formatCurrency(p.totalValue) + '</td>' +
+          '<td class="py-3 px-3 sm:px-4 text-right font-mono font-medium ' + unrealizedClass + '">' + (p.unrealizedPL >= 0 ? '+' : '') + formatCurrency(p.unrealizedPL) + '</td>' +
+          '<td class="py-3 px-3 sm:px-4 text-right font-mono font-medium ' + (p.unrealizedROI >= 0 ? 'text-emerald-400' : 'text-rose-400') + '">' + (p.unrealizedROI >= 0 ? '+' : '') + p.unrealizedROI.toFixed(2) + '%</td>' +
+          '<td class="py-3 px-3 sm:px-4 text-right font-mono font-medium ' + realizedClass + '">' + (p.realizedPL >= 0 ? '+' : '') + formatCurrency(p.realizedPL) + '</td>' +
+          '<td class="py-3 px-3 sm:px-4 text-right font-mono font-bold ' + totalClass + '">' + (p.totalPL >= 0 ? '+' : '') + formatCurrency(p.totalPL) + '</td>' +
+          '<td class="py-3 px-3 sm:px-4 text-right font-mono font-bold ' + totalROIColor + '">' + (p.totalROI >= 0 ? '+' : '') + p.totalROI.toFixed(2) + '%</td>' +
+        '</tr>';
+      }).join('');
+
+      mobileContainer.innerHTML = platforms.map(function(p) {
+        var totalClass = p.totalPL >= 0 ? 'text-emerald-400' : 'text-rose-400';
+        return '<div class="platform-mobile-card">' +
+          '<div class="flex items-center justify-between mb-2">' +
+            '<span class="font-bold text-sm text-slate-200">' + (p.platform || '-') + '</span>' +
+            '<span class="font-mono font-bold ' + totalClass + '">' + (p.totalPL >= 0 ? '+' : '') + formatCurrency(p.totalPL) + '</span>' +
+          '</div>' +
+          '<div class="grid grid-cols-2 gap-2 text-xs">' +
+            '<div><p class="text-[10px] text-slate-500 uppercase">Invertido</p><p class="text-slate-300 font-mono">' + formatCurrency(p.totalInvested) + '</p></div>' +
+            '<div><p class="text-[10px] text-slate-500 uppercase">Valor Actual</p><p class="text-white font-mono">' + formatCurrency(p.totalValue) + '</p></div>' +
+            '<div><p class="text-[10px] text-slate-500 uppercase">ROI</p><p class="text-slate-300 font-mono">' + (p.totalROI >= 0 ? '+' : '') + p.totalROI.toFixed(2) + '%</p></div>' +
+            '<div><p class="text-[10px] text-slate-500 uppercase">Símbolos</p><p class="text-slate-300 font-mono">' + (p.symbols || 0) + '</p></div>' +
+          '</div>' +
+        '</div>';
+      }).join('');
+    }
+
+    function renderPlatformsTable(platforms) {
+      var tbody = document.getElementById('platformsTable');
+      var mobileContainer = document.getElementById('platformsMobileCards');
+
+      if (!platforms || platforms.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="7" class="py-12 text-center text-slate-500 text-sm">No hay plataformas registradas</td></tr>';
+        mobileContainer.innerHTML = '<p class="text-slate-500 text-sm text-center py-8">No hay plataformas registradas.</p>';
+        return;
+      }
+
+      // Desktop table
+      tbody.innerHTML = platforms.map(function(p) {
+        return '<tr class="hover:bg-slate-800/40 transition-colors">' +
+          '<td class="py-3 px-3 sm:px-4 font-bold text-slate-200">' + (p.platform || '-') + '</td>' +
+          '<td class="py-3 px-3 sm:px-4 text-center font-mono text-[10px] text-slate-500">' + (p.originalCurrency || p.currency || '-') + '</td>' +
+          '<td class="py-3 px-3 sm:px-4 text-right font-mono text-slate-300">' + (p.transactions || 0) + '</td>' +
+          '<td class="py-3 px-3 sm:px-4 text-right font-mono text-emerald-400/80">' + formatCurrency(p.totalDeposits) + '</td>' +
+          '<td class="py-3 px-3 sm:px-4 text-right font-mono text-brand-400/80">' + formatCurrency(p.totalInvested) + '</td>' +
+          '<td class="py-3 px-3 sm:px-4 text-right font-mono text-purple-400/80">' + formatCurrency(p.totalSold + p.totalDividends) + '</td>' +
+          '<td class="py-3 px-3 sm:px-4 text-right font-mono font-bold text-white">' + formatCurrency(p.netFlow) + '</td>' +
+        '</tr>';
+      }).join('');
+
+      // Mobile cards
+      mobileContainer.innerHTML = platforms.map(function(p) {
+        var netFlowClass = p.netFlow >= 0 ? 'text-emerald-400' : 'text-rose-400';
+        return '<div class="platform-mobile-card">' +
+          '<div class="flex items-center justify-between mb-3">' +
+            '<span class="font-bold text-sm text-slate-200">' + (p.platform || '-') + '</span>' +
+            '<span class="text-[10px] text-slate-500 font-mono">' + (p.originalCurrency || p.currency || '-') + '</span>' +
+          '</div>' +
+          '<div class="grid grid-cols-2 gap-3 text-xs">' +
+            '<div><p class="text-[10px] text-slate-500 uppercase">Órdenes</p><p class="text-slate-300 font-mono">' + (p.transactions || 0) + '</p></div>' +
+            '<div><p class="text-[10px] text-slate-500 uppercase">Fondeo</p><p class="text-emerald-400/80 font-mono">' + formatCurrency(p.totalDeposits) + '</p></div>' +
+            '<div><p class="text-[10px] text-slate-500 uppercase">Invertido</p><p class="text-brand-400/80 font-mono">' + formatCurrency(p.totalInvested) + '</p></div>' +
+            '<div><p class="text-[10px] text-slate-500 uppercase">Retornos</p><p class="text-purple-400/80 font-mono">' + formatCurrency(p.totalSold + p.totalDividends) + '</p></div>' +
+          '</div>' +
+          '<div class="mt-3 pt-3 border-t border-slate-700/30 flex justify-between items-center">' +
+            '<span class="text-[10px] text-slate-500 uppercase">Flujo Neto</span>' +
+            '<span class="font-mono font-bold ' + netFlowClass + '">' + formatCurrency(p.netFlow) + '</span>' +
+          '</div>' +
+        '</div>';
+      }).join('');
+    }
+
+    // ===== RENDER BUFFETT-STYLE PORTFOLIO CHART =====
+    function renderBuffettPortfolio(portfolio) {
+      var ctx = document.getElementById('buffettPortfolioChart');
+      if (!ctx) return;
+
+      // Filtrar solo posiciones activas con valor, ordenadas por tamaño
+      var activePositions = (portfolio || []).filter(function(p) {
+        return !p.isSold && (p.currentValue || 0) > 0;
+      }).sort(function(a, b) {
+        return (b.currentValue || 0) - (a.currentValue || 0);
+      });
+
+      if (activePositions.length === 0) {
+        ctx.parentElement.innerHTML = '<div class="flex items-center justify-center h-[300px] text-slate-500 text-sm">Sin posiciones activas</div>';
+        return;
+      }
+
+      // Calcular total para porcentajes
+      var totalValue = activePositions.reduce(function(sum, p) {
+        return sum + (p.currentValue || 0);
+      }, 0);
+
+      // Colores corporativos por ticker (ajusta según tus empresas)
+      var brandColors = {
+          'NVDA': '#76b900',
+          'ALCANZA 2': '#8D5578',
+          'HAINA': '#142B37',
+          'ALTIO': '#449E40',
+          'BLK': '#000000',
+          'AMZN': '#ff9900',
+          'MA': '#eb001b',
+          'MSFT': '#00a4ef',
+          'META': '#0866ff',
+          'BKNG': '#003580',
+          'V': '#1434cb',
+          'ANET': '#005eb8',
+          'VRT': '#0072ce',
+          'GOOG': '#4285f4',
+          'AAPL': '#a2aaad',
+          'VOO': '#D04C55',
+          'AOCISA': '#c62828',
+          'UBER': '#000000',
+          'ASML': '#00a651',
+          'APH': '#005b96',
+          'DUOL': '#58cc02',
+          'ALCANZA': '#8D5578',
+          'CRM': '#1798c1',
+          'YMM': '#00a651',
+          'BABA': '#ff6a00',
+          'CBANR': '#007a3d',
+          'BTCUSD': '#f7931a',
+          'NOW': '#81b441',
+          'NFLX': '#e50914',
+          'METU': '#0866ff',
+          'ETHUSD': '#627eea',
+          'default': '#3b82f6'
+      };
+
+      // Preparar datos para Chart.js
+      var labels = [];
+      var data = [];
+      var colors = [];
+      var tickers = [];
+      var iconUrls = [];
+
+      activePositions.forEach(function(p) {
+        var ticker = (p.ticker || 'OTRO').toUpperCase();
+        labels.push(p.assetName || ticker);
+        data.push(p.currentValue || 0);
+        colors.push(brandColors[ticker] || brandColors['default']);
+        tickers.push(ticker);
+        iconUrls.push(p.iconUrl || '');
+      });
+
+      // Destruir chart anterior si existe
+      if (charts.buffettPortfolio) {
+        charts.buffettPortfolio.destroy();
+      }
+
+      // Crear el donut chart
+      charts.buffettPortfolio = new Chart(ctx.getContext('2d'), {
+        type: 'doughnut',
+        data: {
+          labels: labels,
+          datasets: [{
+            data: data,
+            backgroundColor: colors,
+            borderColor: '#0f172a',
+            borderWidth: 3,
+            hoverOffset: 12,
+            hoverBorderWidth: 0
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          cutout: '58%',
+          animation: {
+            animateRotate: true,
+            animateScale: true,
+            duration: 1200,
+            easing: 'easeOutQuart'
+          },
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              backgroundColor: 'rgba(15, 23, 42, 0.95)',
+              titleColor: '#f8fafc',
+              bodyColor: '#cbd5e1',
+              borderColor: '#334155',
+              borderWidth: 1,
+              padding: 12,
+              cornerRadius: 8,
+              callbacks: {
+                label: function(context) {
+                  var idx = context.dataIndex;
+                  var value = context.parsed;
+                  var pct = totalValue > 0 ? ((value / totalValue) * 100).toFixed(1) : 0;
+                  return tickers[idx] + ': ' + formatCurrency(value) + ' (' + pct + '%)';
+                }
+              }
+            }
+          },
+          onHover: function(event, elements) {
+            event.native.target.style.cursor = elements.length > 0 ? 'pointer' : 'default';
+          }
+        },
+        plugins: [{
+          // Plugin para dibujar iconos en el centro de cada slice grande
+          id: 'sliceIcons',
+          afterDraw: function(chart) {
+            var ctx = chart.ctx;
+            var meta = chart.getDatasetMeta(0);
+            
+            meta.data.forEach(function(arc, index) {
+              var center = arc.tooltipPosition();
+              var value = data[index];
+              var pct = totalValue > 0 ? ((value / totalValue) * 100) : 0;
+              
+              // Solo mostrar icono si el slice es > 4%
+              if (pct < 4) return;
+              
+              var size = Math.min(26, Math.max(18, pct * 0.6));
+              
+              // Círculo de fondo oscuro
+              ctx.save();
+              ctx.beginPath();
+              ctx.arc(center.x, center.y, size/2 + 2, 0, 2 * Math.PI);
+              ctx.fillStyle = '#0f172a';
+              ctx.fill();
+              ctx.strokeStyle = '#334155';
+              ctx.lineWidth = 1;
+              ctx.stroke();
+              ctx.restore();
+              
+              // Si hay iconUrl, intentar dibujarlo (simplificado - usa iniciales como fallback)
+              var ticker = tickers[index];
+              ctx.save();
+              ctx.fillStyle = '#f8fafc';
+              ctx.font = 'bold ' + (size * 0.35) + 'px Inter, sans-serif';
+              ctx.textAlign = 'center';
+              ctx.textBaseline = 'middle';
+              ctx.fillText(ticker.substring(0, 3), center.x, center.y);
+              ctx.restore();
+            });
+          }
+        }]
+      });
+
+      // Renderizar leyenda custom con asset-icon
+      renderBuffettLegend(activePositions, totalValue, colors, tickers, iconUrls);
+    }
+
+    function renderBuffettLegend(positions, totalValue, colors, tickers, iconUrls) {
+      var el = document.getElementById('buffettLegend');
+      if (!el) return;
+
+      el.innerHTML = positions.map(function(p, idx) {
+        var ticker = tickers[idx];
+        var weight = totalValue > 0 ? ((p.currentValue || 0) / totalValue * 100).toFixed(1) : 0;
+        var color = colors[idx];
+        var iconUrl = iconUrls[idx];
+        
+        // Usar tu asset-icon existente
+        var iconHtml = iconUrl ? 
+          '<img src="' + iconUrl + '" alt="" class="asset-icon-lg" loading="lazy" onerror="this.style.display=\'none\'; this.nextElementSibling.style.display=\'flex\'">' :
+          '';
+        
+        // Fallback con iniciales (hidden por defecto, se muestra si la imagen falla)
+        var fallbackHtml = '<div class="w-6 h-6 rounded-lg bg-slate-700/50 flex items-center justify-center text-[10px] text-slate-500 font-bold" style="display:' + (iconUrl ? 'none' : 'flex') + '">' + 
+          (ticker ? ticker.charAt(0) : '?') + '</div>';
+
+        return '<div class="buffett-legend-item">' +
+          '<div class="flex-shrink-0">' + iconHtml + fallbackHtml + '</div>' +
+          '<div class="buffett-legend-info">' +
+            '<div class="flex items-center justify-between gap-2">' +
+              '<span class="buffett-ticker truncate">' + ticker + '</span>' +
+              '<span class="buffett-percent flex-shrink-0">' + weight + '%</span>' +
+            '</div>' +
+            '<p class="buffett-value truncate">' + formatCurrency(p.currentValue || 0) + '</p>' +
+          '</div>' +
+          '<div class="w-1 h-8 rounded-full flex-shrink-0" style="background-color: ' + color + '"></div>' +
+        '</div>';
+      }).join('');
+    }
+
+    function getActionBadge(action) {
+      var b = 'px-2 py-0.5 rounded text-[10px] font-bold tracking-wider ';
+      var badges = {
+        'Buy': '<span class="' + b + 'bg-brand-500/20 text-brand-400 border border-brand-500/30">COMPRA</span>',
+        'Sell': '<span class="' + b + 'bg-rose-500/20 text-rose-400 border border-rose-500/30">VENTA</span>',
+        'Cash Deposit': '<span class="' + b + 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">FONDEO</span>',
+        'Cash Withdrawal': '<span class="' + b + 'bg-orange-500/20 text-orange-400 border border-orange-500/30">RETIRO</span>',
+        'Transfer Send': '<span class="' + b + 'bg-slate-500/20 text-slate-400 border border-slate-500/30">TRF OUT</span>',
+        'Transfer Deposit': '<span class="' + b + 'bg-slate-500/20 text-slate-400 border border-slate-500/30">TRF IN</span>',
+        'Dividend': '<span class="' + b + 'bg-purple-500/20 text-purple-400 border border-purple-500/30">DIVIDENDO</span>',
+        'DRIP': '<span class="' + b + 'bg-indigo-500/20 text-indigo-400 border border-indigo-500/30">DRIP</span>',
+        'Crypto Interest': '<span class="' + b + 'bg-yellow-500/20 text-yellow-400 border border-yellow-500/30">YIELD</span>'
+      };
+      return badges[action] || '<span class="' + b + 'bg-slate-800 text-slate-400">' + (action || '-') + '</span>';
+    }
+
+    function formatCurrency(value) {
+      if (value === undefined || value === null || isNaN(value)) {
+        return currentCurrency === 'DOP' ? 'DOP$0.00' : '$0.00';
+      }
+      
+      if (currentCurrency === 'DOP') {
+        return 'DOP$' + new Intl.NumberFormat('en-US', { 
+          minimumFractionDigits: 2,
+          maximumFractionDigits: 2
+        }).format(value);
+      }
+      
+      return '$' + new Intl.NumberFormat('en-US', { 
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2
+      }).format(value);
+    }
+
+    function switchTab(tab) {
+      var tabs = ['portfolio', 'assets', 'transactions', 'performance', 'platforms'];
+      tabs.forEach(function(t) {
+        document.getElementById('panel-' + t).classList.add('hidden');
+        document.getElementById('tab-' + t).classList.remove('tab-active');
+        document.getElementById('tab-' + t).classList.remove('text-brand-400');
+      });
+      document.getElementById('panel-' + tab).classList.remove('hidden');
+      document.getElementById('tab-' + tab).classList.add('tab-active');
+      document.getElementById('tab-' + tab).classList.add('text-brand-400');
+
+      // Renderizar desde datos cacheados sin llamar API
+      if (window.dashboardData) {
+        if (tab === 'assets') {
+          renderAssetsTable(window.dashboardData.currentAssets || []);
+        } else if (tab === 'platforms') {
+          renderPlatformsTable(window.dashboardData.byPlatform || []);
+        } else if (tab === 'transactions') {
+          renderTransactionsTable();
+        }
+      }
+
+      // Re-apply mobile view mode if on portfolio tab
+      if (tab === 'portfolio' && window.innerWidth < 768) {
+        setMobileView(mobileViewMode);
+      }
+    }
+
+    function showLoading() {
+      document.getElementById('loadingState').classList.remove('hidden');
+      document.getElementById('errorState').classList.add('hidden');
+      document.getElementById('content').classList.add('hidden');
+    }
+
+    function showContent() {
+      document.getElementById('loadingState').classList.add('hidden');
+      document.getElementById('errorState').classList.add('hidden');
+      document.getElementById('content').classList.remove('hidden');
+    }
+
+    function showError(msg) {
+      document.getElementById('loadingState').classList.add('hidden');
+      document.getElementById('errorState').classList.remove('hidden');
+      document.getElementById('errorMessage').textContent = msg;
+    }
+
+    // Handle window resize for charts
+    var resizeTimeout;
+    window.addEventListener('resize', function() {
+      clearTimeout(resizeTimeout);
+      resizeTimeout = setTimeout(function() {
+        if (portfolioSummary && portfolioSummary.byAssetClass) {
+          renderPortfolioCharts(portfolioSummary);
+        }
+      }, 250);
+    });
+
+        function buildHistoryFromTransactions(transactions) {
+      if (!transactions || transactions.length === 0) {
+        historyData = [];
+        return;
+      }
+
+      var sorted = transactions.slice().sort(function(a, b) {
+        return new Date(a.dateRaw || a.date) - new Date(b.dateRaw || b.date);
+      });
+
+      var monthlyData = {};
+      var runningInvested = 0;
+      var runningCash = 0;
+
+      sorted.forEach(function(tx) {
+        var date = new Date(tx.dateRaw || tx.date);
+        var monthKey = date.getFullYear() + '-' + String(date.getMonth() + 1).padStart(2, '0');
+        var amount = Math.abs(tx.displayTotal || tx.totalUSD || tx.total || 0);
+        var action = tx.action || '';
+
+        if (action === 'Buy') {
+          runningInvested += amount;
+          runningCash -= amount;
+        } else if (action === 'Sell') {
+          runningInvested -= amount;
+          runningCash += amount;
+        } else if (action === 'Cash Deposit' || action === 'Transfer Deposit') {
+          runningCash += amount;
+        } else if (action === 'Cash Withdrawal') {
+          runningCash -= amount;
+        } else if (action === 'Dividend' || action === 'Crypto Interest') {
+          runningCash += amount;
+        }
+
+        monthlyData[monthKey] = {
+          date: monthKey,
+          marketValue: runningInvested,
+          cash: runningCash,
+          total: runningInvested + runningCash,
+          invested: runningInvested
+        };
+      });
+
+      historyData = Object.keys(monthlyData).sort().map(function(key) {
+        return monthlyData[key];
+      });
+    }
+
+        function buildRealHistoryFromPrices(transactions) {
+      if (!transactions || transactions.length === 0 || historicalDates.length === 0) {
+        historyData = [];
+        window.monthlyPL = {};
+        return;
+      }
+
+      // Obtener precios actuales de la hoja Portfolio
+      var currentPricesFromPortfolio = {};
+      if (typeof portfolioData !== 'undefined' && portfolioData && portfolioData.length > 0) {
+        portfolioData.forEach(function(p) {
+          if (!p.isSold && p.ticker) {
+            currentPricesFromPortfolio[p.ticker.toUpperCase()] = {
+              price: p.currentPrice,
+              quantity: p.quantityNum,
+              currency: p.currency || 'USD'
+            };
+          }
+        });
+      } else if (typeof window.lastPortfolioData !== 'undefined' && window.lastPortfolioData) {
+        window.lastPortfolioData.forEach(function(p) {
+          if (!p.isSold && p.ticker) {
+            currentPricesFromPortfolio[p.ticker.toUpperCase()] = {
+              price: p.currentPrice,
+              quantity: p.quantityNum,
+              currency: p.currency || 'USD'
+            };
+          }
+        });
+      }
+
+      var sorted = transactions.slice().sort(function(a, b) {
+        return new Date(a.dateRaw || a.date) - new Date(b.dateRaw || b.date);
+      });
+
+      var monthlyPortfolio = {};
+      var lastDateKey = historicalDates[historicalDates.length - 1];
+      
+      // === NUEVO: Guardar detalle por ticker para P&L ===
+      var monthlyTickerDetail = {};
+      // === FIN NUEVO ===
+
+      historicalDates.forEach(function(dateKey) {
+        var cashByBroker = {};
+        var runningPositions = {};
+        var monthlyDividends = 0;
+        var monthlyBuys = []; // { ticker, broker, quantity, price, total }
+        var monthlySells = []; // { ticker, broker, quantity, total, costBasis }
+        
+        sorted.forEach(function(tx) {
+          var txDate = new Date(tx.dateRaw || tx.date);
+          var txYear = txDate.getFullYear();
+          var txMonth = txDate.getMonth() + 1;
+          var txKey = txYear + '-' + String(txMonth).padStart(2, '0');
+          
+          if (txKey > dateKey) return;
+
+          var broker = (tx.platform || "Sin Plataforma").toUpperCase();
+          var action = tx.action || '';
+          var amount = Math.abs(tx.displayTotal || tx.totalUSD || tx.total || 0);
+          var ticker = (tx.ticker || "").toUpperCase();
+          var quantity = parseFloat(tx.quantity) || 0;
+
+          if (!cashByBroker[broker]) cashByBroker[broker] = 0;
+
+                    if (action === 'Cash Deposit') {
+            cashByBroker[broker] += amount;
+          } else if (action === 'Transfer Deposit') {
+            // Solo suma al cash si es transferencia de EFECTIVO (sin ticker)
+            if (!ticker) cashByBroker[broker] += amount;
+          } else if (action === 'Cash Withdrawal') {
+            cashByBroker[broker] -= amount;
+          } else if (action === 'Dividend' || action === 'Crypto Interest') {
+            cashByBroker[broker] += amount;
+            monthlyDividends += amount;
+          } else if (action === 'Buy') {
+            cashByBroker[broker] -= amount;
+            if (!runningPositions[ticker]) runningPositions[ticker] = {};
+            if (!runningPositions[ticker][broker]) {
+              runningPositions[ticker][broker] = { quantity: 0, invested: 0, avgCost: 0 };
+            }
+            var pos = runningPositions[ticker][broker];
+            // Actualizar costo promedio
+            var newTotalCost = pos.invested + amount;
+            var newQty = pos.quantity + quantity;
+            pos.avgCost = newQty > 0 ? newTotalCost / newQty : 0;
+            pos.quantity = newQty;
+            pos.invested = newTotalCost;
+            
+            // Guardar compra del mes para P&L
+            if (txKey === dateKey) {
+              monthlyBuys.push({ ticker: ticker, broker: broker, quantity: quantity, price: amount/quantity, total: amount });
+            }
+          } else if (action === 'Sell') {
+            cashByBroker[broker] += amount;
+            if (runningPositions[ticker] && runningPositions[ticker][broker]) {
+              var pos = runningPositions[ticker][broker];
+              var costBasisSold = pos.avgCost * quantity;
+              pos.quantity -= quantity;
+              pos.invested -= costBasisSold;
+              if (pos.quantity <= 0) {
+                delete runningPositions[ticker][broker];
+                if (Object.keys(runningPositions[ticker]).length === 0) {
+                  delete runningPositions[ticker];
+                }
+              }
+              
+              // Guardar venta del mes para P&L
+              if (txKey === dateKey) {
+                monthlySells.push({ ticker: ticker, broker: broker, quantity: quantity, total: amount, costBasis: costBasisSold });
+              }
+            }
+          } else if (action === 'DRIP') {
+            if (!runningPositions[ticker]) runningPositions[ticker] = {};
+            if (!runningPositions[ticker][broker]) {
+              runningPositions[ticker][broker] = { quantity: 0, invested: 0, avgCost: 0 };
+            }
+            runningPositions[ticker][broker].quantity += quantity;
+            // DRIP no aumenta invested (dividendo reinvertido)
+            
+            if (txKey === dateKey) {
+              monthlyBuys.push({ ticker: ticker, broker: broker, quantity: quantity, price: 0, total: 0, isDRIP: true });
+            }
+          } 
+        });
+
+        // Calcular valor de mercado y guardar detalle por ticker
+        var marketValue = 0;
+        var currentInvested = 0;
+        var tickerValues = {};
+        
+        for (var ticker in runningPositions) {
+          for (var broker in runningPositions[ticker]) {
+            var pos = runningPositions[ticker][broker];
+            if (pos.quantity > 0) {
+              currentInvested += pos.invested;
+              
+              var price = null;
+              
+              // PRIORIDAD 1: Si es el mes más reciente, usar precio actual de Portfolio
+              if (dateKey === lastDateKey && currentPricesFromPortfolio[ticker]) {
+                price = currentPricesFromPortfolio[ticker].price;
+              }
+              
+              // PRIORIDAD 2: Precio histórico de FECHAS
+              if (price === null && historicalPrices[ticker] && historicalPrices[ticker][broker] && historicalPrices[ticker][broker][dateKey]) {
+                price = historicalPrices[ticker][broker][dateKey];
+              }
+              
+              // PRIORIDAD 3: Último precio histórico conocido anterior
+              if (price === null) {
+                var tickerPrices = historicalPrices[ticker];
+                if (tickerPrices && tickerPrices[broker]) {
+                  var brokerPrices = tickerPrices[broker];
+                  var availableDates = Object.keys(brokerPrices).sort();
+                  for (var i = availableDates.length - 1; i >= 0; i--) {
+                    if (availableDates[i] <= dateKey) {
+                      price = brokerPrices[availableDates[i]];
+                      break;
+                    }
+                  }
+                }
+              }
+
+              // PRIORIDAD 4: Costo promedio como fallback
+              if (price === null) {
+                price = pos.avgCost;
+              }
+
+              if (price !== null) {
+                var val = pos.quantity * price;
+                marketValue += val;
+                
+                // Guardar detalle para P&L
+                if (!tickerValues[ticker]) tickerValues[ticker] = {};
+                tickerValues[ticker][broker] = {
+                  quantity: pos.quantity,
+                  price: price,
+                  invested: pos.invested,
+                  avgCost: pos.avgCost,
+                  value: val
+                };
+              }
+            }
+          }
+        }
+
+        var cash = 0;
+        for (var broker in cashByBroker) {
+          cash += cashByBroker[broker];
+        }
+
+        monthlyPortfolio[dateKey] = {
+          date: dateKey,
+          marketValue: marketValue,
+          cash: cash,
+          total: marketValue + cash,
+          invested: currentInvested,
+          dividends: monthlyDividends,
+          buys: monthlyBuys,
+          sells: monthlySells
+        };
+        
+        // Guardar detalle por ticker
+        monthlyTickerDetail[dateKey] = tickerValues;
+      });
+
+      // === CALCULAR P&L POR PERÍODO (como fórmula de Sheets) ===
+      window.monthlyPL = {};
+      var monthlyKeys = historicalDates.slice().sort();
+      
+      monthlyKeys.forEach(function(dateKey, idx) {
+        var current = monthlyPortfolio[dateKey];
+        var currentTickers = monthlyTickerDetail[dateKey];
+        if (!current) return;
+        
+        var pl = 0;
+        
+        if (idx === 0) {
+          // Primer mes: valor de mercado - capital invertido + dividendos
+          pl = current.marketValue - current.invested + current.dividends;
+        } else {
+          var prevKey = monthlyKeys[idx - 1];
+          var prev = monthlyPortfolio[prevKey];
+          var prevTickers = monthlyTickerDetail[prevKey];
+          
+          if (!prev || !prevTickers) {
+            pl = current.marketValue - current.invested + current.dividends;
+          } else {
+            // 1. Ganancia de posiciones que llevabas del mes anterior
+            for (var ticker in prevTickers) {
+              for (var broker in prevTickers[ticker]) {
+                var prevPos = prevTickers[ticker][broker];
+                var currentPos = currentTickers && currentTickers[ticker] && currentTickers[ticker][broker];
+                
+                if (currentPos) {
+                  // Sigo teniendo estas acciones: ganancia = (PrecioActual - PrecioAnterior) × CantidadAnterior
+                  // PERO limitado a la cantidad que sigue (si vendí algunas, el resto se calcula en ventas)
+                  var qtyCarried = Math.min(prevPos.quantity, currentPos.quantity);
+                  pl += (currentPos.price - prevPos.price) * qtyCarried;
+                }
+                // Si no está en current, se vendió todo (se calcula en sells)
+              }
+            }
+            
+            // 2. Ganancia de compras nuevas del mes
+            current.buys.forEach(function(buy) {
+              var currentPos = currentTickers && currentTickers[buy.ticker] && currentTickers[buy.ticker][buy.broker];
+              if (currentPos && !buy.isDRIP) {
+                // Ganancia = (PrecioActual - PrecioCompra) × CantidadComprada
+                pl += (currentPos.price - buy.price) * buy.quantity;
+              }
+              // DRIP: no hay ganancia adicional (ya está en la valorización)
+            });
+            
+            // 3. Ganancia/pérdida de ventas del mes
+            current.sells.forEach(function(sell) {
+              pl += sell.total - sell.costBasis;
+            });
+            
+            // 4. Dividendos del mes
+            pl += current.dividends;
+          }
+        }
+        // === CALCULAR P/L REALIZADO Y NO REALIZADO DEL MES ===
+        var monthlyRealizedPL = 0;
+        
+        // 1. P/L de ventas del mes (FIFO exacto)
+        current.sells.forEach(function(sell) {
+          monthlyRealizedPL += (sell.total - sell.costBasis);
+        });
+        
+        // 2. Dividendos y Crypto Interest (son P/L realizado)
+        monthlyRealizedPL += current.dividends;
+        
+        // 3. P/L No Realizado = Total del mes - Realizado
+        var monthlyUnrealizedPL = pl - monthlyRealizedPL;
+        
+        window.monthlyPL[dateKey] = {
+          date: dateKey,
+          pl: pl,
+          realizedPL: monthlyRealizedPL,
+          unrealizedPL: monthlyUnrealizedPL,
+          marketValue: current.marketValue,
+          invested: current.invested,
+          cash: current.cash,
+          total: current.total,
+          buys: current.buys.length,
+          sells: current.sells.length,
+          dividends: current.dividends
+        };
+        // === FIN ===
+      });
+      // === FIN CALCULAR P&L ===
+
+      historyData = historicalDates.map(function(dateKey) {
+        return monthlyPortfolio[dateKey] || { date: dateKey, marketValue: 0, cash: 0, total: 0, invested: 0 };
+      }).filter(function(d) { return d.total !== 0 || d.invested !== 0; });
+    }
+    
+    function setHistoryRange(range) {
+      historyRange = range;
+      
+      ['1M','3M','6M','1Y','ALL'].forEach(function(r) {
+        var btn = document.getElementById('range-' + r);
+        if (btn) {
+          if (r === range) {
+            btn.classList.add('active');
+            btn.classList.remove('text-slate-400');
+          } else {
+            btn.classList.remove('active');
+            btn.classList.add('text-slate-400');
+          }
+        }
+      });
+
+      renderHistoryChart();
+
+      
+    }
+
+        function renderHistoryChart() {
+      var ctx = document.getElementById('portfolioHistoryChart');
+      if (!ctx) return;
+
+      var filteredData = filterHistoryByRange(historyData, historyRange);
+      
+      if (filteredData.length === 0) {
+        if (charts.history) charts.history.destroy();
+        return;
+      }
+
+      var labels = filteredData.map(function(d) {
+        var parts = d.date.split('-');
+        var monthNames = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+        return monthNames[parseInt(parts[1]) - 1] + " '" + parts[0].slice(2);
+      });
+      
+      var totalValues = filteredData.map(function(d) { return d.total; });
+      
+      // Calcular métricas
+      var maxVal = Math.max.apply(null, totalValues);
+      var minVal = Math.min.apply(null, totalValues);
+      var firstVal = totalValues[0] || 0;
+      var lastVal = totalValues[totalValues.length - 1] || 0;
+      var growth = firstVal > 0 ? ((lastVal - firstVal) / firstVal) * 100 : 0;
+
+      document.getElementById('historyMax').textContent = formatCurrency(maxVal);
+      document.getElementById('historyMin').textContent = formatCurrency(minVal);
+      document.getElementById('historyGrowth').textContent = (growth >= 0 ? '+' : '') + growth.toFixed(2) + '%';
+      document.getElementById('historyGrowth').className = 'text-sm font-bold ' + (growth >= 0 ? 'text-emerald-400' : 'text-rose-400');
+
+      if (charts.history) charts.history.destroy();
+
+      // Construir datasets
+      var datasets = [
+        {
+          label: 'Patrimonio Total',
+          data: totalValues,
+          borderColor: '#3b82f6',
+          backgroundColor: 'rgba(59, 130, 246, 0.08)',
+          borderWidth: 2.5,
+          tension: 0.3,
+          fill: true,
+          pointRadius: 3,
+          pointHoverRadius: 6,
+          pointBackgroundColor: '#3b82f6',
+          pointBorderColor: '#0f172a',
+          pointBorderWidth: 2,
+          order: 1
+        }
+      ];
+
+      // Si tenemos datos de brokers individuales, agregar líneas
+      if (window.dashboardData && window.dashboardData.historicoBrokers && 
+          window.dashboardData.historicoBrokers.brokers) {
+        
+        var hb = window.dashboardData.historicoBrokers;
+        var brokerColors = {
+          'Etoro': '#60a5fa',
+          'Hapi': '#34d399', 
+          'TradeStation': '#fbbf24',
+          'Alpha': '#a78bfa',
+          'SIEMBRA': '#4ade80',
+          'Banreservas': '#60a5fa',
+          'UNITED': '#818cf8',
+          'Goarbit': '#f87171',
+          'R-Company': '#f472b6',
+          'BDI y QIK Ahorro': '#94a3b8'
+        };
+        
+        var colorIdx = 0;
+        var palette = ['#f43f5e', '#10b981', '#f59e0b', '#8b5cf6', '#0ea5e9', '#ec4899', '#84cc16', '#06b6d4'];
+        
+        for (var brokerName in hb.brokers) {
+          var brokerValues = hb.brokers[brokerName];
+          
+          // Filtrar por rango si es necesario
+          var filteredBrokerValues = [];
+          var allDates = hb.dates;
+          
+          for (var i = 0; i < filteredData.length; i++) {
+            var targetDate = filteredData[i].date;
+            var dateIdx = allDates.indexOf(targetDate);
+            if (dateIdx >= 0 && dateIdx < brokerValues.length) {
+              filteredBrokerValues.push(brokerValues[dateIdx]);
+            } else {
+              filteredBrokerValues.push(null);
+            }
+          }
+          
+          // Solo agregar si tiene valores no-cero
+          var hasData = filteredBrokerValues.some(function(v) { return v && v > 0; });
+          if (!hasData) continue;
+          
+          var color = brokerColors[brokerName] || palette[colorIdx % palette.length];
+          colorIdx++;
+          
+          datasets.push({
+            label: brokerName,
+            data: filteredBrokerValues,
+            borderColor: color,
+            backgroundColor: 'transparent',
+            borderWidth: 1.5,
+            borderDash: [3, 3],
+            tension: 0.3,
+            fill: false,
+            pointRadius: 0,
+            pointHoverRadius: 4,
+            hidden: true, // Oculto por defecto, el usuario puede activar en la leyenda
+            order: 2 + colorIdx
+          });
+        }
+      }
+
+      charts.history = new Chart(ctx.getContext('2d'), {
+        type: 'line',
+        data: {
+          labels: labels,
+          datasets: datasets
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          interaction: {
+            mode: 'index',
+            intersect: false
+          },
+          plugins: {
+            legend: {
+              position: 'top',
+              align: 'end',
+              labels: {
+                color: '#94a3b8',
+                usePointStyle: true,
+                pointStyle: 'circle',
+                font: { size: 11 },
+                padding: 16,
+                boxWidth: 8
+              }
+            },
+            tooltip: {
+              backgroundColor: 'rgba(15, 23, 42, 0.95)',
+              titleColor: '#f8fafc',
+              bodyColor: '#cbd5e1',
+              borderColor: '#334155',
+              borderWidth: 1,
+              padding: 12,
+              cornerRadius: 8,
+              callbacks: {
+                label: function(context) {
+                  return context.dataset.label + ': ' + formatCurrency(context.parsed.y);
+                }
+              }
+            }
+          },
+          scales: {
+            x: {
+              grid: {
+                color: 'rgba(51, 65, 85, 0.15)',
+                drawBorder: false
+              },
+              ticks: {
+                color: '#64748b',
+                font: { size: 10 },
+                maxRotation: 45,
+                minRotation: 45
+              }
+            },
+            y: {
+              grid: {
+                color: 'rgba(51, 65, 85, 0.15)',
+                drawBorder: false
+              },
+              ticks: {
+                color: '#64748b',
+                font: { size: 10 },
+                callback: function(value) {
+                  if (Math.abs(value) >= 1000000) return '$' + (value / 1000000).toFixed(1) + 'M';
+                  if (Math.abs(value) >= 1000) return '$' + (value / 1000).toFixed(1) + 'k';
+                  return '$' + value.toFixed(0);
+                }
+              }
+            }
+          }
+        }
+      });
+    }
+
+    
+    function filterHistoryByRange(data, range) {
+      if (range === 'ALL' || data.length === 0) return data;
+      
+      var now = new Date();
+      var cutoff = new Date();
+      
+      switch(range) {
+        case '1M': cutoff.setMonth(now.getMonth() - 1); break;
+        case '3M': cutoff.setMonth(now.getMonth() - 3); break;
+        case '6M': cutoff.setMonth(now.getMonth() - 6); break;
+        case '1Y': cutoff.setFullYear(now.getFullYear() - 1); break;
+        default: return data;
+      }
+
+      var cutoffStr = cutoff.getFullYear() + '-' + String(cutoff.getMonth() + 1).padStart(2, '0');
+
+      var filtered = data.filter(function(d) {
+        return d.date >= cutoffStr;
+      });
+
+      if (filtered.length < 2) {
+        return data.slice(-3);
+      }
+
+      return filtered;
+    }
+
+    setHistoryRange('ALL');
+
+    loadData();
+
+    // ===== PERFORMANCE OPTIMIZATIONS =====
+    
+    // 1. Debounce helper para eventos frecuentes
+    function debounce(func, wait) {
+      let timeout;
+      return function executedFunction(...args) {
+        const later = () => {
+          clearTimeout(timeout);
+          func.apply(this, args);
+        };
+        clearTimeout(timeout);
+        timeout = setTimeout(later, wait);
+      };
+    }
+
+    // 2. Throttle helper para scroll
+    function throttle(func, limit) {
+      let inThrottle;
+      return function(...args) {
+        if (!inThrottle) {
+          func.apply(this, args);
+          inThrottle = true;
+          setTimeout(() => (inThrottle = false), limit);
+        }
+      };
+    }
+
+    // 3. Cache para charts con memoización
+    const chartCache = {
+      data: new Map(),
+      lastHash: new Map(),
+      
+      hash: function(data) {
+        return JSON.stringify(data).length;
+      },
+      
+      shouldUpdate: function(key, newData) {
+        const newHash = this.hash(newData);
+        const oldHash = this.lastHash.get(key);
+        const hasChanged = newHash !== oldHash;
+        if (hasChanged) {
+          this.lastHash.set(key, newHash);
+        }
+        return hasChanged;
+      }
+    };
+
+    // 4. Debounce resize para redibujados de charts
+    const debouncedResize = debounce(() => {
+      if (charts.history) {
+        renderHistoryChart();
+      }
+    }, 300);
+
+    window.addEventListener('resize', debouncedResize, { passive: true });
+
+    // 5. Detectar scroll y desactivar blur dinámicamente
+    let scrollTimeout;
+    const scrollListener = throttle(() => {
+      document.body.classList.add('is-scrolling');
+      clearTimeout(scrollTimeout);
+      scrollTimeout = setTimeout(() => {
+        document.body.classList.remove('is-scrolling');
+      }, 150);
+    }, 100);
+
+    document.addEventListener('scroll', scrollListener, { passive: true });
+
+    // 6. Lazy load de gráficos con Intersection Observer
+    const chartContainers = document.querySelectorAll('[data-chart]');
+    if ('IntersectionObserver' in window) {
+      const chartObserver = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+          if (entry.isIntersecting) {
+            const chartId = entry.target.id;
+            // Renderizar solo cuando sea visible
+            if (chartId === 'portfolioHistoryChart') {
+              renderHistoryChart();
+            }
+            chartObserver.unobserve(entry.target);
+          }
+        });
+      }, {
+        rootMargin: '50px',
+        threshold: 0.01
+      });
+
+      chartContainers.forEach(el => {
+        if (el.dataset.chart) {
+          chartObserver.observe(el);
+        }
+      });
+    }
+
+    // 7. Memoizar renderHistoryChart para evitar recálculos
+    const originalRenderHistoryChart = renderHistoryChart;
+    renderHistoryChart = function() {
+      if (chartCache.shouldUpdate('historyChart', historyData)) {
+        originalRenderHistoryChart.apply(this, arguments);
+      }
+    };
+
+    
+
+    // ===== FIN OPTIMIZACIONES =====
+  </script>
+</body>
+</html>
