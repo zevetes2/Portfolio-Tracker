@@ -725,3 +725,34 @@ body.is-scrolling {
 #perfMonthlyChart {
   cursor: pointer;
 }
+
+/* ===== PERFORMANCE DETAIL CLICKABLE ROWS ===== */
+.perf-detail-clickable {
+  cursor: pointer;
+  position: relative;
+}
+.perf-detail-clickable::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%) scaleY(0);
+  width: 3px;
+  height: 60%;
+  background: #3b82f6;
+  border-radius: 0 3px 3px 0;
+  transition: transform 0.2s ease;
+}
+.perf-detail-clickable:hover::before {
+  transform: translateY(-50%) scaleY(1);
+}
+.perf-detail-clickable:hover {
+  background: rgba(51, 65, 85, 0.35);
+}
+.perf-detail-clickable:hover .fa-chevron-right {
+  color: #60a5fa !important;
+  transform: translateX(2px);
+}
+.perf-detail-clickable .fa-chevron-right {
+  transition: all 0.2s ease;
+}

@@ -3074,18 +3074,20 @@ function initAllocation() {
 let perfCurrentYear = 'ALL';
 let perfRendimiento = null;
 let perfSelectedMonth = null;
+let perfSelectedTicker = null;
 
 
 function setPerfYear(year) {
   perfCurrentYear = year;
-  perfSelectedMonth = null;  // ← Reset drill al cambiar de año
+  perfSelectedMonth = null;
+  perfSelectedTicker = null;  // ← NUEVO
   document.querySelectorAll('.perf-year-tab').forEach(function(btn) {
     btn.classList.remove('perf-year-active');
   });
   var activeBtn = document.getElementById('perf-year-' + year);
   if (activeBtn) activeBtn.classList.add('perf-year-active');
   renderPerformanceMonthly();
-  renderPerfMonthDetail();  // ← Refresca el panel (lo oculta si no hay mes seleccionado)
+  renderPerfMonthDetail();
 }
 
 function renderPerformanceOverview() {
@@ -3243,12 +3245,14 @@ function renderPerformanceMonthly() {
           }
         }
       },
-     onClick: function(event, elements) {
+    
+    onClick: function(event, elements) {
         if (elements.length > 0) {
           var idx = elements[0].index;
           var monthKey = filtered[idx].key;
           
-          // Toggle: si clickeas el mismo mes, se cierra
+          perfSelectedTicker = null;  // ← Reset ticker al cambiar de mes
+          
           if (perfSelectedMonth === monthKey) {
             perfSelectedMonth = null;
           } else {
@@ -3258,7 +3262,7 @@ function renderPerformanceMonthly() {
           renderPerfMonthDetail();
         }
       },
-      onHover: function(event, elements) {
+    onHover: function(event, elements) {
         event.native.target.style.cursor = elements.length > 0 ? 'pointer' : 'default';
       },
       scales: {
@@ -3347,13 +3351,19 @@ function renderPerfMonthDetail() {
   var container = document.getElementById('perfMonthDetail');
   if (!container) return;
   
+  // Modo 3: ticker seleccionado → delega a la ficha
+  if (perfSelectedTicker && perfRendimiento) {
+    renderPerfTickerDetail();
+    return;
+  }
+  
   // Si no hay mes seleccionado → ocultar
   if (!perfSelectedMonth || !perfRendimiento) {
     container.classList.add('hidden');
     container.innerHTML = '';
     return;
   }
-  
+
   var monthKey = perfSelectedMonth;
   var monthLabel = (perfRendimiento.monthLabels && perfRendimiento.months) 
     ? perfRendimiento.monthLabels[perfRendimiento.months.indexOf(monthKey)] 
@@ -3382,11 +3392,11 @@ function renderPerfMonthDetail() {
   var totalSign = totalPL >= 0 ? '+' : '';
   
   // Generar filas de ganadores
-  var winnerRowsHtml = winners.length > 0 
+    var winnerRowsHtml = winners.length > 0 
     ? winners.map(function(t) {
         var maxVal = winners[0].value;
         var pct = maxVal > 0 ? (t.value / maxVal) * 100 : 0;
-        return '<div class="perf-detail-row">' +
+        return '<div class="perf-detail-row perf-detail-clickable" onclick="openPerfTickerDetail(\'' + escapeHtml(t.ticker) + '\')">' +
           '<div class="flex items-center gap-2 min-w-0 flex-1">' +
             '<div class="w-1.5 h-1.5 rounded-full bg-emerald-500 flex-shrink-0"></div>' +
             '<span class="font-bold text-xs text-slate-200 truncate">' + escapeHtml(t.ticker) + '</span>' +
@@ -3399,17 +3409,18 @@ function renderPerfMonthDetail() {
             '<span class="font-mono font-bold text-xs text-emerald-400 whitespace-nowrap">' +
               '+ ' + formatCurrency(t.value) +
             '</span>' +
+            '<i class="fas fa-chevron-right text-[10px] text-slate-600 ml-1"></i>' +
           '</div>' +
         '</div>';
       }).join('')
     : '<p class="text-slate-600 text-xs italic px-4 py-2">Sin ganadores este mes</p>';
   
   // Generar filas de perdedores
-  var loserRowsHtml = losers.length > 0
+   var loserRowsHtml = losers.length > 0
     ? losers.map(function(t) {
         var minVal = losers[0].value;
         var pct = minVal < 0 ? (t.value / minVal) * 100 : 0;
-        return '<div class="perf-detail-row">' +
+        return '<div class="perf-detail-row perf-detail-clickable" onclick="openPerfTickerDetail(\'' + escapeHtml(t.ticker) + '\')">' +
           '<div class="flex items-center gap-2 min-w-0 flex-1">' +
             '<div class="w-1.5 h-1.5 rounded-full bg-rose-500 flex-shrink-0"></div>' +
             '<span class="font-bold text-xs text-slate-200 truncate">' + escapeHtml(t.ticker) + '</span>' +
@@ -3422,11 +3433,12 @@ function renderPerfMonthDetail() {
             '<span class="font-mono font-bold text-xs text-rose-400 whitespace-nowrap">' +
               formatCurrency(t.value) +
             '</span>' +
+            '<i class="fas fa-chevron-right text-[10px] text-slate-600 ml-1"></i>' +
           '</div>' +
         '</div>';
       }).join('')
     : '<p class="text-slate-600 text-xs italic px-4 py-2">Sin perdedores este mes</p>';
-  
+
   container.classList.remove('hidden');
   container.innerHTML =
     '<div class="glass-card rounded-2xl overflow-hidden perf-fade-in">' +
@@ -3494,6 +3506,312 @@ function renderPerfMonthDetail() {
         
       '</div>' +
     '</div>';
+}
+
+// ============================================================
+// PERFORMANCE — Ticker Detail (ficha individual)
+// ============================================================
+
+function openPerfTickerDetail(ticker) {
+  if (!ticker) return;
+  perfSelectedTicker = ticker;
+  renderPerfTickerDetail();
+  // Scroll al panel
+  var container = document.getElementById('perfMonthDetail');
+  if (container) {
+    container.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+}
+
+function closePerfTickerDetail() {
+  perfSelectedTicker = null;
+  renderPerfMonthDetail();
+}
+
+function renderPerfTickerDetail() {
+  var container = document.getElementById('perfMonthDetail');
+  if (!container) return;
+  
+  if (!perfSelectedTicker || !perfRendimiento) {
+    container.classList.add('hidden');
+    return;
+  }
+  
+  // Buscar todos los registros del ticker (puede aparecer en múltiples brokers)
+  var tickerData = (perfRendimiento.tickers || []).filter(function(t) {
+    return t.ticker === perfSelectedTicker;
+  });
+  
+  if (tickerData.length === 0) {
+    container.classList.remove('hidden');
+    container.innerHTML =
+      '<div class="glass-card rounded-2xl p-6 text-center">' +
+        '<p class="text-slate-400 text-sm">No se encontraron datos para <strong>' + escapeHtml(perfSelectedTicker) + '</strong></p>' +
+        '<button onclick="closePerfTickerDetail()" class="mt-4 text-xs text-brand-400 hover:text-brand-300 font-semibold">← Volver</button>' +
+      '</div>';
+    return;
+  }
+  
+  // Combinar datos de todos los brokers
+  var combinedMonths = {};
+  var brokersSet = {};
+  var totalPL = 0;
+  
+  tickerData.forEach(function(t) {
+    brokersSet[t.broker || 'Sin Plataforma'] = true;
+    totalPL += t.total || 0;
+    
+    Object.keys(t.months).forEach(function(k) {
+      var v = t.months[k];
+      if (v === undefined || v === null) return;
+      if (!combinedMonths[k]) combinedMonths[k] = 0;
+      combinedMonths[k] += v;
+    });
+  });
+  
+  var brokers = Object.keys(brokersSet);
+  
+  // Filtrar por año activo
+  var monthsFiltered = [];
+  Object.keys(combinedMonths).sort().forEach(function(k) {
+    if (perfCurrentYear === 'ALL' || k.startsWith(perfCurrentYear)) {
+      monthsFiltered.push({ key: k, value: combinedMonths[k] });
+    }
+  });
+  
+  // Métricas
+  var totalAbs = monthsFiltered.reduce(function(s, m) { return s + Math.abs(m.value); }, 0);
+  var positiveMonths = monthsFiltered.filter(function(m) { return m.value > 0; }).length;
+  var negativeMonths = monthsFiltered.filter(function(m) { return m.value < 0; }).length;
+  var winRate = monthsFiltered.length > 0 ? (positiveMonths / monthsFiltered.length) * 100 : 0;
+  
+  var bestMonth = monthsFiltered.length > 0 
+    ? monthsFiltered.reduce(function(a, b) { return b.value > a.value ? b : a; }, monthsFiltered[0])
+    : { key: '-', value: 0 };
+  var worstMonth = monthsFiltered.length > 0
+    ? monthsFiltered.reduce(function(a, b) { return b.value < a.value ? b : a; }, monthsFiltered[0])
+    : { key: '-', value: 0 };
+  
+  // Formatear label bonito
+  function monthLabel(key) {
+    if (!key || key === '-') return '-';
+    var parts = key.split('-');
+    var monthNames = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+    return monthNames[parseInt(parts[1]) - 1] + " '" + parts[0].slice(2);
+  }
+  
+  var totalClass = totalPL >= 0 ? 'text-emerald-400' : 'text-rose-400';
+  var totalSign = totalPL >= 0 ? '+' : '';
+  
+  // Chart de barras mensuales del ticker
+  // Lo dibujamos después de inyectar el HTML
+  
+  // Filas de la tabla mes a mes (reversed → más reciente arriba)
+  var rowsHtml = monthsFiltered.slice().reverse().map(function(m) {
+    var v = m.value;
+    var vClass = v >= 0 ? 'text-emerald-400' : 'text-rose-400';
+    var vSign = v >= 0 ? '+' : '';
+    return '<div class="perf-detail-row">' +
+      '<div class="flex items-center gap-3">' +
+        '<span class="text-xs text-slate-400 font-medium w-20">' + monthLabel(m.key) + '</span>' +
+      '</div>' +
+      '<div class="flex items-center gap-3 flex-shrink-0">' +
+        '<span class="font-mono font-bold text-xs ' + vClass + ' whitespace-nowrap">' +
+          vSign + formatCurrency(v) +
+        '</span>' +
+      '</div>' +
+    '</div>';
+  }).join('');
+  
+  // Inyectar HTML
+  container.classList.remove('hidden');
+  container.innerHTML =
+    '<div class="glass-card rounded-2xl overflow-hidden perf-fade-in">' +
+      
+      // Header
+      '<div class="px-4 sm:px-5 py-3 border-b border-slate-700/50 bg-slate-900/40 flex items-center justify-between flex-wrap gap-2">' +
+        '<div class="flex items-center gap-3 flex-wrap">' +
+          '<button onclick="closePerfTickerDetail()" class="inline-flex items-center gap-2 text-[11px] text-brand-400 hover:text-brand-300 font-semibold transition-colors">' +
+            '<i class="fas fa-arrow-left text-[10px]"></i>' +
+            '<span>Volver al mes</span>' +
+          '</button>' +
+          '<span class="text-slate-600">•</span>' +
+          '<span class="text-sm font-bold text-white">' + escapeHtml(perfSelectedTicker) + '</span>' +
+          '<span class="text-[10px] text-slate-500 font-medium">' + 
+            (brokers.length > 1 ? brokers.length + ' brókers' : escapeHtml(brokers[0])) + 
+          '</span>' +
+        '</div>' +
+        '<div class="flex items-center gap-2">' +
+          '<span class="text-[10px] text-slate-500 uppercase font-bold">P/L Total:</span>' +
+          '<span class="font-mono font-bold text-sm ' + totalClass + '">' + totalSign + formatCurrency(totalPL) + '</span>' +
+        '</div>' +
+      '</div>' +
+      
+      // Métricas rápidas
+      '<div class="grid grid-cols-2 sm:grid-cols-4 gap-0 border-b border-slate-700/50">' +
+        '<div class="text-center py-3 px-2 border-r border-slate-700/30">' +
+          '<p class="text-[9px] text-slate-500 uppercase font-bold tracking-wider">Meses activos</p>' +
+          '<p class="text-sm font-bold text-white mt-0.5">' + monthsFiltered.length + '</p>' +
+        '</div>' +
+        '<div class="text-center py-3 px-2 border-r border-slate-700/30">' +
+          '<p class="text-[9px] text-slate-500 uppercase font-bold tracking-wider">Win rate</p>' +
+          '<p class="text-sm font-bold ' + (winRate >= 50 ? 'text-emerald-400' : 'text-rose-400') + ' mt-0.5">' + winRate.toFixed(0) + '%</p>' +
+        '</div>' +
+        '<div class="text-center py-3 px-2 border-r border-slate-700/30">' +
+          '<p class="text-[9px] text-slate-500 uppercase font-bold tracking-wider">Mejor mes</p>' +
+          '<p class="text-sm font-bold text-emerald-400 mt-0.5">' + monthLabel(bestMonth.key) + '</p>' +
+          '<p class="text-[10px] text-emerald-400/70 font-mono">' + (bestMonth.value >= 0 ? '+' : '') + formatCurrency(bestMonth.value) + '</p>' +
+        '</div>' +
+        '<div class="text-center py-3 px-2">' +
+          '<p class="text-[9px] text-slate-500 uppercase font-bold tracking-wider">Peor mes</p>' +
+          '<p class="text-sm font-bold text-rose-400 mt-0.5">' + monthLabel(worstMonth.key) + '</p>' +
+          '<p class="text-[10px] text-rose-400/70 font-mono">' + formatCurrency(worstMonth.value) + '</p>' +
+        '</div>' +
+      '</div>' +
+      
+      // Chart mensual del ticker
+      '<div class="p-4 sm:p-6 border-b border-slate-700/50">' +
+        '<h4 class="text-[10px] text-slate-400 uppercase font-bold tracking-wider mb-3">Evolución mensual</h4>' +
+        '<div class="relative h-[200px] sm:h-[240px]">' +
+          '<canvas id="perfTickerChart"></canvas>' +
+        '</div>' +
+      '</div>' +
+      
+      // Tabla mes a mes
+      '<div class="grid grid-cols-1 lg:grid-cols-2 divide-y lg:divide-y-0 lg:divide-x divide-slate-700/30">' +
+        
+        // Columna izquierda: tabla
+        '<div>' +
+          '<div class="px-4 sm:px-5 py-2.5 bg-slate-900/40 border-b border-slate-700/30 flex items-center justify-between">' +
+            '<span class="text-[10px] text-slate-300 uppercase font-bold tracking-wider">' +
+              '<i class="fas fa-list mr-1"></i>Detalle mensual' +
+            '</span>' +
+            '<span class="text-[10px] text-slate-500 font-medium">' + monthsFiltered.length + ' meses</span>' +
+          '</div>' +
+          '<div class="max-h-[280px] overflow-y-auto allocation-legend-scroll">' +
+            (rowsHtml || '<p class="text-slate-600 text-xs italic px-4 py-3">Sin datos</p>') +
+          '</div>' +
+        '</div>' +
+        
+        // Columna derecha: resumen
+        '<div>' +
+          '<div class="px-4 sm:px-5 py-2.5 bg-slate-900/40 border-b border-slate-700/30">' +
+            '<span class="text-[10px] text-slate-300 uppercase font-bold tracking-wider">' +
+              '<i class="fas fa-chart-pie mr-1"></i>Resumen' +
+            '</span>' +
+          '</div>' +
+          '<div class="p-4 sm:p-5 space-y-3">' +
+            '<div class="flex justify-between items-center text-xs">' +
+              '<span class="text-slate-500">Meses positivos</span>' +
+              '<span class="font-bold text-emerald-400">' + positiveMonths + '</span>' +
+            '</div>' +
+            '<div class="flex justify-between items-center text-xs">' +
+              '<span class="text-slate-500">Meses negativos</span>' +
+              '<span class="font-bold text-rose-400">' + negativeMonths + '</span>' +
+            '</div>' +
+            '<div class="flex justify-between items-center text-xs">' +
+              '<span class="text-slate-500">Meses neutros</span>' +
+              '<span class="font-bold text-slate-400">' + (monthsFiltered.length - positiveMonths - negativeMonths) + '</span>' +
+            '</div>' +
+            '<div class="w-full h-px bg-slate-700/30 my-2"></div>' +
+            '<div class="flex justify-between items-center text-xs">' +
+              '<span class="text-slate-500">Brókers</span>' +
+              '<span class="font-bold text-white text-right">' + escapeHtml(brokers.join(', ')) + '</span>' +
+            '</div>' +
+            '<div class="flex justify-between items-center text-xs">' +
+              '<span class="text-slate-500">Año activo</span>' +
+              '<span class="font-bold text-brand-400">' + (perfCurrentYear === 'ALL' ? 'Todos' : perfCurrentYear) + '</span>' +
+            '</div>' +
+          '</div>' +
+        '</div>' +
+        
+      '</div>' +
+      
+    '</div>';
+  
+  // Render del chart del ticker
+  setTimeout(function() {
+    var ctx = document.getElementById('perfTickerChart');
+    if (!ctx) return;
+    
+    if (charts.perfTicker) charts.perfTicker.destroy();
+    
+    var labels = monthsFiltered.map(function(m) { return monthLabel(m.key); });
+    var values = monthsFiltered.map(function(m) { return m.value; });
+    var bgColors = values.map(function(v) {
+      return v >= 0 ? 'rgba(16, 185, 129, 0.75)' : 'rgba(244, 63, 94, 0.75)';
+    });
+    var borderColors = values.map(function(v) {
+      return v >= 0 ? '#10b981' : '#f43f5e';
+    });
+    
+    charts.perfTicker = new Chart(ctx.getContext('2d'), {
+      type: 'bar',
+      data: {
+        labels: labels,
+        datasets: [{
+          label: perfSelectedTicker,
+          data: values,
+          backgroundColor: bgColors,
+          borderColor: borderColors,
+          borderWidth: 1,
+          borderRadius: 4,
+          barPercentage: 0.7,
+          categoryPercentage: 0.85
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            backgroundColor: 'rgba(15, 23, 42, 0.95)',
+            titleColor: '#f8fafc',
+            bodyColor: '#cbd5e1',
+            borderColor: '#334155',
+            borderWidth: 1,
+            padding: 12,
+            cornerRadius: 8,
+            callbacks: {
+              title: function(context) { return context[0].label; },
+              label: function(context) {
+                var val = context.parsed.y;
+                return (val >= 0 ? '+' : '') + formatCurrency(val);
+              }
+            }
+          }
+        },
+        scales: {
+          x: {
+            grid: { display: false },
+            ticks: {
+              color: '#64748b',
+              font: { size: 10 },
+              maxRotation: 0,
+              minRotation: 0,
+              autoSkip: true,
+              maxTicksLimit: 12
+            }
+          },
+          y: {
+            grid: {
+              color: 'rgba(51, 65, 85, 0.15)',
+              drawBorder: false
+            },
+            ticks: {
+              color: '#64748b',
+              font: { size: 10 },
+              callback: function(v) {
+                if (Math.abs(v) >= 1000) return '$' + (v / 1000).toFixed(1) + 'k';
+                return '$' + v.toFixed(0);
+              }
+            }
+          }
+        }
+      }
+    });
+  }, 50);
 }
 
 // Hook a renderDashboard
