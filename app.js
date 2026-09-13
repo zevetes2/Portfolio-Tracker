@@ -529,13 +529,13 @@ function renderPortfolioSummary(summary, metrics) {
   if (summary.topGainers && summary.topGainers.length > 0) {
     var best = summary.topGainers[0];
     document.getElementById('pfBestPosition').textContent = best.ticker;
-    document.getElementById('pfBestROI').textContent = '+' + (best.unrealizedROI * 100 || 0).toFixed(2) + '%';
+    document.getElementById('pfBestROI').textContent = '+' + (best.unrealizedROI || 0).toFixed(2) + '%';
   } else if (portfolioData && portfolioData.length > 0) {
     var sorted = portfolioData.slice().sort(function(a, b) { return b.unrealizedROI - a.unrealizedROI; });
     var best = sorted[0];
     if (best && best.unrealizedROI > 0) {
       document.getElementById('pfBestPosition').textContent = best.ticker;
-      document.getElementById('pfBestROI').textContent = '+' + (best.unrealizedROI * 100).toFixed(2) + '%';
+      document.getElementById('pfBestROI').textContent = '+' + (best.unrealizedROI || 0).toFixed(2) + '%';
     } else {
       document.getElementById('pfBestPosition').textContent = '-';
       document.getElementById('pfBestROI').textContent = '0%';
@@ -548,13 +548,13 @@ function renderPortfolioSummary(summary, metrics) {
   if (summary.topLosers && summary.topLosers.length > 0) {
     var worst = summary.topLosers[0];
     document.getElementById('pfWorstPosition').textContent = worst.ticker;
-    document.getElementById('pfWorstROI').textContent = (worst.unrealizedROI * 100 || 0).toFixed(2) + '%';
+    document.getElementById('pfWorstROI').textContent = (worst.unrealizedROI || 0).toFixed(2) + '%';
   } else if (portfolioData && portfolioData.length > 0) {
     var sorted = portfolioData.slice().sort(function(a, b) { return a.unrealizedROI - b.unrealizedROI; });
     var worst = sorted[0];
     if (worst && worst.unrealizedROI < 0) {
       document.getElementById('pfWorstPosition').textContent = worst.ticker;
-      document.getElementById('pfWorstROI').textContent = (worst.unrealizedROI * 100).toFixed(2) + '%';
+      document.getElementById('pfWorstROI').textContent = (worst.unrealizedROI || 0).toFixed(2) + '%';
     } else {
       document.getElementById('pfWorstPosition').textContent = '-';
       document.getElementById('pfWorstROI').textContent = '0%';
@@ -577,7 +577,7 @@ function renderTopPositions(summary) {
           '<div><p class="font-bold text-xs text-slate-200">' + p.ticker + '</p></div>' +
         '</div>' +
         '<div class="text-right">' +
-          '<p class="font-bold text-xs text-emerald-400">+' + (p.unrealizedROI * 100 || 0).toFixed(2) + '%</p>' +
+          '<p class="font-bold text-xs text-emerald-400">+' + (p.unrealizedROI || 0).toFixed(2) + '%</p>' +
         '</div>' +
       '</div>';
     }).join('');
@@ -591,7 +591,7 @@ function renderTopPositions(summary) {
           '<div><p class="font-bold text-xs text-slate-200">' + p.ticker + '</p></div>' +
         '</div>' +
         '<div class="text-right">' +
-          '<p class="font-bold text-xs text-rose-400">' + (p.unrealizedROI * 100 || 0).toFixed(2) + '%</p>' +
+          '<p class="font-bold text-xs text-rose-400">' + (p.unrealizedROI || 0).toFixed(2) + '%</p>' +
         '</div>' +
       '</div>';
     }).join('');
@@ -1027,7 +1027,7 @@ function renderBrokersSummary(platforms) {
         '<div class="broker-stat">' +
           '<div class="broker-stat-label">Realized</div>' +
           '<div class="broker-stat-value ' + realizedClass + '">' + (realizedPL >= 0 ? '+' : '') + formatCurrency(realizedPL) + '</div>' +
-          '<div class="broker-stat-sub ' + realizedClass + '">' + (realizedROI >= 0 ? '+' : '') + (realizedROI * 100).toFixed(2) + '%</div>' +
+          '<div class="broker-stat-sub ' + realizedClass + '">' + (realizedROI >= 0 ? '+' : '') + (realizedROI).toFixed(2) + '%</div>' +
         '</div>' +
         '<div class="broker-stat">' +
           '<div class="broker-stat-label">Total P/L</div>' +
