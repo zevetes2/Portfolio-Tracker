@@ -29,7 +29,7 @@
 <body class="bg-slate-950 text-slate-200 min-h-screen selection:bg-brand-500/30">
 
   <header class="glass-header sticky top-0 z-50">
-    <div class="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between flex-wrap gap-3">
+    <div class="flex items-center gap-2 sm:gap-4 flex-wrap justify-end">
       <div class="flex items-center gap-3">
         <div class="w-9 h-9 sm:w-10 sm:h-10 bg-gradient-to-tr from-brand-600 to-purple-600 rounded-xl flex items-center justify-center shadow-lg shadow-brand-500/20">
           <i class="fas fa-layer-group text-white text-sm sm:text-lg"></i>
@@ -88,92 +88,383 @@
         <span id="rateText" class="font-medium"></span>
       </div>
 
-      <!-- ===== RESUMEN DEL PORTAFOLIO ===== -->
-      <div id="portfolioSummary">
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
+            <!-- ===== HERO: PATRIMONIO NETO UNIFICADO ===== -->
+      <div id="networthHero" class="networth-hero rounded-2xl sm:rounded-3xl relative overflow-hidden">
+        <div class="absolute top-0 right-0 -mr-20 -mt-20 w-72 h-72 bg-brand-500/15 rounded-full blur-3xl pointer-events-none"></div>
+        <div class="absolute bottom-0 left-0 -ml-20 -mb-20 w-56 h-56 bg-purple-500/10 rounded-full blur-3xl pointer-events-none"></div>
 
-          <!-- Tarjeta principal: Patrimonio Total -->
-          <div class="glass-card lg:col-span-2 p-5 sm:p-8 rounded-2xl sm:rounded-3xl relative overflow-hidden flex flex-col justify-between">
-            <div class="absolute top-0 right-0 -mr-16 -mt-16 w-48 h-48 sm:w-64 sm:h-64 bg-brand-500/10 rounded-full blur-3xl pointer-events-none"></div>
-            <div class="absolute bottom-0 left-0 -ml-16 -mb-16 w-32 h-32 sm:w-48 sm:h-48 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none"></div>
-
+        <div class="relative p-5 sm:p-8">
+          <div class="flex items-start justify-between flex-wrap gap-3 mb-5 sm:mb-7">
             <div>
               <p class="text-slate-400 text-[10px] sm:text-xs font-semibold uppercase tracking-widest mb-2 flex items-center gap-2">
-                <i class="fas fa-wallet text-brand-400"></i> Patrimonio Total
+                <i class="fas fa-crown text-amber-400"></i> Patrimonio Neto Total
               </p>
-              <h2 id="pfTotalBalance" class="text-3xl sm:text-4xl lg:text-6xl font-extrabold text-white tracking-tight mb-3">$0.00</h2>
-
-              <div class="stats-scroll sm:inline-flex sm:bg-slate-900/60 sm:px-4 sm:py-2 sm:rounded-xl sm:border sm:border-slate-700/50 sm:backdrop-blur-md mb-4 sm:mb-6">
-                <div class="flex items-center gap-2 bg-slate-900/60 sm:bg-transparent px-3 py-2 rounded-xl border border-slate-700/50 sm:border-0 sm:px-0 sm:py-0">
-                  <i class="fas fa-chart-pie text-brand-400 text-xs"></i>
-                  <span class="text-[10px] sm:text-[11px] text-slate-400 whitespace-nowrap">Mercado: <span id="pfMarketValue" class="text-white font-bold">$0.00</span></span>
-                </div>
-                <div class="w-px h-4 bg-slate-600/60 hidden sm:block"></div>
-                <div class="flex items-center gap-2 bg-slate-900/60 sm:bg-transparent px-3 py-2 rounded-xl border border-slate-700/50 sm:border-0 sm:px-0 sm:py-0">
-                  <i class="fas fa-money-bill-wave text-emerald-400 text-xs"></i>
-                  <span class="text-[10px] sm:text-[11px] text-slate-400 whitespace-nowrap">Efectivo: <span id="pfTotalCash" class="text-white font-bold">$0.00</span></span>
-                </div>
-              </div>
+              <h2 id="nwTotal" class="text-3xl sm:text-5xl lg:text-6xl font-extrabold text-white tracking-tight leading-none">RD$0.00</h2>
+              <p id="nwTotalUsd" class="text-xs sm:text-sm text-slate-400 mt-2 font-medium">≈ $0.00 USD</p>
             </div>
-
-            <div class="stats-scroll sm:flex-wrap sm:overflow-visible">
-              <div class="flex items-center gap-3 bg-slate-900/60 backdrop-blur-md px-3 sm:px-4 py-2.5 rounded-2xl border border-slate-700/50">
-                <div>
-                  <p class="text-[9px] sm:text-[10px] text-slate-400 uppercase tracking-wider font-semibold mb-0.5">Día</p>
-                  <p id="pfDailyChange" class="font-bold text-sm sm:text-base leading-none">$0.00</p>
-                </div>
-                <div id="pfDailyChangePctContainer" class="px-2 py-1 rounded-md bg-slate-800 text-[10px] sm:text-xs font-bold">
-                  <span id="pfDailyChangePct">0.00%</span>
-                </div>
-              </div>
-
-              <div class="flex items-center gap-3 bg-slate-900/60 backdrop-blur-md px-3 sm:px-4 py-2.5 rounded-2xl border border-slate-700/50">
-                <div>
-                  <p class="text-[9px] sm:text-[10px] text-slate-400 uppercase tracking-wider font-semibold mb-0.5">Retorno</p>
-                  <p id="pfUnrealizedPL" class="font-bold text-sm sm:text-base leading-none">$0.00</p>
-                </div>
-                <div id="pfUnrealizedROIContainer" class="px-2 py-1 rounded-md bg-slate-800 text-[10px] sm:text-xs font-bold">
-                  <span id="pfUnrealizedROI">0.00%</span>
-                </div>
-              </div>
+            <div class="flex items-center gap-2 flex-wrap">
+              <span class="nw-chip nw-chip-assets">
+                <i class="fas fa-arrow-up text-emerald-400 text-[10px]"></i>
+                <span id="nwAssetsPct">0%</span>
+                <span class="text-slate-500">activos</span>
+              </span>
+              <span class="nw-chip nw-chip-liabilities">
+                <i class="fas fa-arrow-down text-rose-400 text-[10px]"></i>
+                <span id="nwLiabilitiesPct">0%</span>
+                <span class="text-slate-500">pasivos</span>
+              </span>
             </div>
           </div>
 
-          <!-- Grid de 4 métricas -->
-          <div class="grid grid-cols-2 gap-3 sm:gap-4">
-            <div class="glass-card p-4 sm:p-5 rounded-2xl flex flex-col justify-center">
-              <p class="text-slate-400 text-[9px] sm:text-[10px] font-bold uppercase tracking-widest mb-1">Capital Invertido</p>
-              <p id="pfTotalCost" class="mobile-stat-value text-white">$0.00</p>
+          <!-- Grid de 4 KPIs -->
+          <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+            <!-- Inversiones -->
+            <div class="nw-kpi nw-kpi-investments">
+              <div class="flex items-center justify-between mb-2">
+                <div class="nw-kpi-icon bg-brand-500/15 text-brand-400">
+                  <i class="fas fa-chart-line"></i>
+                </div>
+                <span id="nwInvestmentsPct" class="nw-kpi-pct">0%</span>
+              </div>
+              <p class="text-[10px] text-slate-500 uppercase font-bold tracking-wider mb-1">Inversiones</p>
+              <p id="nwInvestments" class="text-base sm:text-lg font-extrabold text-white tracking-tight">RD$0.00</p>
+              <div class="nw-kpi-bar"><div id="nwInvestmentsBar" class="nw-kpi-bar-fill bg-brand-500"></div></div>
             </div>
-            <div class="glass-card p-4 sm:p-5 rounded-2xl flex flex-col justify-center">
-              <p class="text-slate-400 text-[9px] sm:text-[10px] font-bold uppercase tracking-widest mb-1">Beneficio Cerrado</p>
-              <p id="pfRealizedPL" class="mobile-stat-value text-white">$0.00</p>
-              <p id="pfTotalPL" class="text-[9px] sm:text-[10px] text-slate-500 mt-1 truncate">Total: $0.00</p>
+
+            <!-- Efectivo -->
+            <div class="nw-kpi nw-kpi-cash">
+              <div class="flex items-center justify-between mb-2">
+                <div class="nw-kpi-icon bg-emerald-500/15 text-emerald-400">
+                  <i class="fas fa-money-bill-wave"></i>
+                </div>
+                <span id="nwCashPct" class="nw-kpi-pct">0%</span>
+              </div>
+              <p class="text-[10px] text-slate-500 uppercase font-bold tracking-wider mb-1">Efectivo</p>
+              <p id="nwCash" class="text-base sm:text-lg font-extrabold text-white tracking-tight">RD$0.00</p>
+              <div class="nw-kpi-bar"><div id="nwCashBar" class="nw-kpi-bar-fill bg-emerald-500"></div></div>
             </div>
-            <div class="glass-card p-4 sm:p-5 rounded-2xl flex flex-col justify-center">
-              <p class="text-slate-400 text-[9px] sm:text-[10px] font-bold uppercase tracking-widest mb-1">Posiciones</p>
-              <p id="pfHoldings" class="mobile-stat-value text-white">0</p>
-              <p id="pfSold" class="text-[9px] sm:text-[10px] text-slate-500 mt-1">Activas vs Históricas</p>
+
+            <!-- Pasivos -->
+            <div class="nw-kpi nw-kpi-debts">
+              <div class="flex items-center justify-between mb-2">
+                <div class="nw-kpi-icon bg-rose-500/15 text-rose-400">
+                  <i class="fas fa-credit-card"></i>
+                </div>
+                <span id="nwDebtsPct" class="nw-kpi-pct text-rose-400">-0%</span>
+              </div>
+              <p class="text-[10px] text-slate-500 uppercase font-bold tracking-wider mb-1">Pasivos</p>
+              <p id="nwDebts" class="text-base sm:text-lg font-extrabold text-rose-400 tracking-tight">-RD$0.00</p>
+              <div class="nw-kpi-bar"><div id="nwDebtsBar" class="nw-kpi-bar-fill bg-rose-500"></div></div>
             </div>
-            <div class="glass-card p-3 sm:p-4 rounded-2xl flex flex-col justify-between">
-              <div class="flex justify-between items-center mb-1.5 sm:mb-2">
+
+            <!-- Otros -->
+            <div class="nw-kpi nw-kpi-others">
+              <div class="flex items-center justify-between mb-2">
+                <div class="nw-kpi-icon bg-purple-500/15 text-purple-400">
+                  <i class="fas fa-gem"></i>
+                </div>
+                <span id="nwOthersPct" class="nw-kpi-pct">0%</span>
+              </div>
+              <p class="text-[10px] text-slate-500 uppercase font-bold tracking-wider mb-1">Otros</p>
+              <p id="nwOthers" class="text-base sm:text-lg font-extrabold text-white tracking-tight">RD$0.00</p>
+              <div class="nw-kpi-bar"><div id="nwOthersBar" class="nw-kpi-bar-fill bg-purple-500"></div></div>
+            </div>
+          </div>
+
+          <!-- Footer info -->
+          <div class="flex items-center justify-between flex-wrap gap-2 mt-4 sm:mt-5 pt-4 border-t border-slate-700/30">
+            <p class="text-[10px] text-slate-500 font-medium">
+              <i class="fas fa-circle-info mr-1"></i>
+              Portfolio internacional + Inversiones locales + Cuentas + Otros − Pasivos
+            </p>
+            <p id="nwLastUpdate" class="text-[10px] text-slate-500 font-mono"></p>
+          </div>
+        </div>
+      </div>
+      <!-- ===== FIN HERO ===== -->
+             <!-- ===== COMPOSICIÓN PATRIMONIAL (Donut + Drill-down) ===== -->
+      <div id="compositionSection" class="glass-card rounded-2xl overflow-hidden">
+        
+        <!-- Header -->
+        <div class="p-4 sm:p-5 border-b border-slate-700/50 bg-slate-800/20 flex items-center justify-between flex-wrap gap-3">
+          <div class="flex items-center gap-3">
+            <h3 class="text-xs sm:text-sm font-semibold text-slate-200 uppercase tracking-wider flex items-center gap-2">
+              <i class="fas fa-chart-pie text-brand-400"></i> Composición Patrimonial
+            </h3>
+          </div>
+          <span id="compositionTotal" class="text-[10px] sm:text-xs text-slate-400 font-medium"></span>
+        </div>
+
+        <!-- Layout: donut + leyenda -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-0">
+          
+          <!-- Donut (col-span-2) -->
+          <div class="lg:col-span-2 p-4 sm:p-6 border-b lg:border-b-0 lg:border-r border-slate-700/50">
+            <div class="relative flex items-center justify-center" style="min-height: 320px; max-height: 420px;">
+              <canvas id="compositionChart"></canvas>
+              
+              <!-- Centro del donut -->
+              <div class="absolute inset-0 flex items-center justify-center pointer-events-none">
+                <div class="text-center">
+                  <p class="text-[10px] sm:text-xs text-slate-500 uppercase font-bold tracking-wider mb-1">Patrimonio Neto</p>
+                  <p id="compositionCenterTotal" class="text-lg sm:text-2xl font-extrabold text-white tracking-tight">$0.00</p>
+                  <p class="text-[9px] text-slate-600 mt-1 font-medium">TOTAL</p>
+                </div>
+              </div>
+            </div>
+
+            <!-- Breadcrumb (aparece al hacer drill-down) -->
+            <div id="compositionBreadcrumb" class="hidden mt-4 pt-4 border-t border-slate-700/30">
+              <button onclick="clearCompositionDrill()" class="inline-flex items-center gap-2 text-[11px] text-brand-400 hover:text-brand-300 font-semibold transition-colors">
+                <i class="fas fa-arrow-left text-[10px]"></i>
+                <span>Volver a <span class="text-slate-300">Composición</span></span>
+              </button>
+              <span id="compositionDrillLabel" class="text-[11px] text-slate-400 ml-3"></span>
+            </div>
+          </div>
+
+          <!-- Leyenda lateral -->
+          <div class="lg:col-span-1 flex flex-col">
+            <div class="px-4 sm:px-5 py-3 border-b border-slate-700/50 bg-slate-900/30 flex items-center justify-between">
+              <h4 id="compositionLegendTitle" class="text-[11px] sm:text-xs font-bold text-slate-300 uppercase tracking-wider">Categorías</h4>
+              <span id="compositionLegendCount" class="text-[10px] text-slate-500 font-medium">4 items</span>
+            </div>
+            <div id="compositionLegend" class="flex-1 overflow-y-auto p-2 max-h-[420px] allocation-legend-scroll"></div>
+          </div>
+        </div>
+
+        <!-- Panel de drill-down (oculto por defecto) -->
+        <div id="compositionDetail" class="hidden"></div>
+
+      </div>
+      <!-- ===== FIN COMPOSICIÓN ===== -->
+
+            <!-- ===== GRÁFICO EVOLUCIÓN HISTÓRICA ===== -->
+      <div class="glass-card rounded-2xl p-4 sm:p-6">
+        <div class="flex items-center justify-between mb-4 sm:mb-6 flex-wrap gap-3">
+          <div class="flex items-center gap-3">
+            <h3 class="text-xs sm:text-sm font-semibold text-slate-300 uppercase tracking-wider flex items-center gap-2">
+              <i class="fas fa-chart-line text-emerald-400"></i> Evolución del Patrimonio
+            </h3>
+            <button onclick="toggleUnifiedNetWorthLine()" 
+                    class="text-[10px] font-bold px-2.5 py-1 rounded-md transition-all bg-amber-500/15 text-amber-400 border border-amber-500/30 hover:bg-amber-500/25">
+              <i class="fas fa-crown mr-1"></i>Unificado
+            </button>
+          </div>
+          <div class="flex gap-1">
+            <button onclick="setHistoryRange('1M')" id="range-1M" class="range-btn px-2.5 py-1 rounded-md text-[10px] font-semibold transition-all text-slate-400 hover:text-slate-200">1M</button>
+            <button onclick="setHistoryRange('3M')" id="range-3M" class="range-btn px-2.5 py-1 rounded-md text-[10px] font-semibold transition-all text-slate-400 hover:text-slate-200">3M</button>
+            <button onclick="setHistoryRange('6M')" id="range-6M" class="range-btn px-2.5 py-1 rounded-md text-[10px] font-semibold transition-all text-slate-400 hover:text-slate-200">6M</button>
+            <button onclick="setHistoryRange('1Y')" id="range-1Y" class="range-btn px-2.5 py-1 rounded-md text-[10px] font-semibold transition-all text-slate-400 hover:text-slate-200">1A</button>
+            <button onclick="setHistoryRange('ALL')" id="range-ALL" class="range-btn active px-2.5 py-1 rounded-md text-[10px] font-semibold transition-all bg-brand-500/20 text-brand-400 border border-brand-500/30">TODO</button>
+          </div>
+        </div>
+        <div class="relative h-[300px] sm:h-[380px]">
+          <canvas id="portfolioHistoryChart" data-chart="history"></canvas>
+        </div>
+        <div class="grid grid-cols-3 gap-3 mt-4 pt-4 border-t border-slate-700/30">
+          <div class="text-center">
+            <p class="text-[9px] text-slate-500 uppercase font-bold mb-1">Máximo Histórico</p>
+            <p id="historyMax" class="text-sm font-bold text-emerald-400">$0.00</p>
+          </div>
+          <div class="text-center">
+            <p class="text-[9px] text-slate-500 uppercase font-bold mb-1">Mínimo</p>
+            <p id="historyMin" class="text-sm font-bold text-rose-400">$0.00</p>
+          </div>
+          <div class="text-center">
+            <p class="text-[9px] text-slate-500 uppercase font-bold mb-1">Crecimiento Total</p>
+            <p id="historyGrowth" class="text-sm font-bold text-white">0.00%</p>
+          </div>
+        </div>
+      </div>
+      
+      <!-- ===== DETALLE DE INVERSIONES INTERNACIONALES ===== -->
+      <div id="portfolioSummary" class="glass-card rounded-2xl overflow-hidden">
+        
+        <!-- Header del bloque -->
+        <div class="p-4 sm:p-5 border-b border-slate-700/50 bg-slate-800/20 flex items-center justify-between flex-wrap gap-3">
+          <div class="flex items-center gap-3">
+            <h3 class="text-xs sm:text-sm font-semibold text-slate-200 uppercase tracking-wider flex items-center gap-2">
+              <i class="fas fa-briefcase text-brand-400"></i> Detalle de Inversiones Internacionales
+            </h3>
+            <span class="px-2 py-0.5 bg-slate-800 text-slate-400 border border-slate-700 rounded text-[9px] font-bold tracking-wider">BROKERS</span>
+          </div>
+          <span id="pfTotalBalance" class="text-[10px] sm:text-xs text-slate-400 font-medium">$0.00</span>
+        </div>
+
+        <!-- Layout: métricas a la izquierda + KPIs a la derecha -->
+        <div class="p-4 sm:p-6">
+          
+          <!-- Fila 1: Mercado / Cash / Día / Retorno -->
+          <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-4">
+            <div class="bg-slate-900/40 rounded-xl p-3 sm:p-4 border border-slate-700/40">
+              <div class="flex items-center gap-2 mb-1.5">
+                <i class="fas fa-chart-pie text-brand-400 text-[11px]"></i>
+                <p class="text-[9px] sm:text-[10px] text-slate-500 uppercase font-bold tracking-wider">Mercado</p>
+              </div>
+              <p id="pfMarketValue" class="text-sm sm:text-base font-bold text-white">$0.00</p>
+            </div>
+
+            <div class="bg-slate-900/40 rounded-xl p-3 sm:p-4 border border-slate-700/40">
+              <div class="flex items-center gap-2 mb-1.5">
+                <i class="fas fa-money-bill-wave text-emerald-400 text-[11px]"></i>
+                <p class="text-[9px] sm:text-[10px] text-slate-500 uppercase font-bold tracking-wider">Efectivo Brokers</p>
+              </div>
+              <p id="pfTotalCash" class="text-sm sm:text-base font-bold text-white">$0.00</p>
+            </div>
+
+            <div class="bg-slate-900/40 rounded-xl p-3 sm:p-4 border border-slate-700/40">
+              <div class="flex items-center justify-between mb-1.5">
+                <div class="flex items-center gap-2">
+                  <i class="fas fa-bolt text-amber-400 text-[11px]"></i>
+                  <p class="text-[9px] sm:text-[10px] text-slate-500 uppercase font-bold tracking-wider">Día</p>
+                </div>
+                <span id="pfDailyChangePctContainer" class="px-1.5 py-0.5 rounded text-[9px] font-bold bg-slate-800">
+                  <span id="pfDailyChangePct">0.00%</span>
+                </span>
+              </div>
+              <p id="pfDailyChange" class="text-sm sm:text-base font-bold text-slate-300">$0.00</p>
+            </div>
+
+            <div class="bg-slate-900/40 rounded-xl p-3 sm:p-4 border border-slate-700/40">
+              <div class="flex items-center justify-between mb-1.5">
+                <div class="flex items-center gap-2">
+                  <i class="fas fa-arrow-trend-up text-emerald-400 text-[11px]"></i>
+                  <p class="text-[9px] sm:text-[10px] text-slate-500 uppercase font-bold tracking-wider">Retorno</p>
+                </div>
+                <span id="pfUnrealizedROIContainer" class="px-1.5 py-0.5 rounded text-[9px] font-bold bg-slate-800">
+                  <span id="pfUnrealizedROI">0.00%</span>
+                </span>
+              </div>
+              <p id="pfUnrealizedPL" class="text-sm sm:text-base font-bold text-slate-300">$0.00</p>
+            </div>
+          </div>
+
+          <!-- Fila 2: KPIs secundarios -->
+          <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+            <div class="glass-card p-3 sm:p-4 rounded-xl flex flex-col justify-center">
+              <p class="text-[9px] sm:text-[10px] text-slate-500 font-bold uppercase tracking-widest mb-1">Capital Invertido</p>
+              <p id="pfTotalCost" class="text-base sm:text-lg font-extrabold text-white">$0.00</p>
+            </div>
+            <div class="glass-card p-3 sm:p-4 rounded-xl flex flex-col justify-center">
+              <p class="text-[9px] sm:text-[10px] text-slate-500 font-bold uppercase tracking-widest mb-1">Beneficio Cerrado</p>
+              <p id="pfRealizedPL" class="text-base sm:text-lg font-extrabold text-white">$0.00</p>
+              <p id="pfTotalPL" class="text-[9px] text-slate-500 mt-0.5 truncate">Total: $0.00</p>
+            </div>
+            <div class="glass-card p-3 sm:p-4 rounded-xl flex flex-col justify-center">
+              <p class="text-[9px] sm:text-[10px] text-slate-500 font-bold uppercase tracking-widest mb-1">Posiciones</p>
+              <p id="pfHoldings" class="text-base sm:text-lg font-extrabold text-white">0</p>
+              <p id="pfSold" class="text-[9px] text-slate-500 mt-0.5 truncate">Activas vs Hist.</p>
+            </div>
+            <div class="glass-card p-3 sm:p-4 rounded-xl flex flex-col justify-center">
+              <div class="flex items-center justify-between mb-1">
                 <span class="text-[9px] sm:text-[10px] font-bold text-emerald-400 uppercase"><i class="fas fa-caret-up"></i> Top</span>
-                <span id="pfBestPosition" class="text-xs sm:text-sm font-bold text-white">-</span>
-                <span id="pfBestROI" class="text-[10px] text-emerald-400 font-medium">0%</span>
+                <span id="pfBestROI" class="text-[10px] text-emerald-400 font-bold">0%</span>
               </div>
-              <div class="w-full h-px bg-slate-700/50 my-1"></div>
-              <div class="flex justify-between items-center mt-1.5 sm:mt-2">
+              <p id="pfBestPosition" class="text-sm sm:text-base font-extrabold text-white truncate">-</p>
+            </div>
+            <div class="glass-card p-3 sm:p-4 rounded-xl flex flex-col justify-center">
+              <div class="flex items-center justify-between mb-1">
                 <span class="text-[9px] sm:text-[10px] font-bold text-rose-400 uppercase"><i class="fas fa-caret-down"></i> Low</span>
-                <span id="pfWorstPosition" class="text-xs sm:text-sm font-bold text-white">-</span>
-                <span id="pfWorstROI" class="text-[10px] text-rose-400 font-medium">0%</span>
+                <span id="pfWorstROI" class="text-[10px] text-rose-400 font-bold">0%</span>
               </div>
+              <p id="pfWorstPosition" class="text-sm sm:text-base font-extrabold text-white truncate">-</p>
             </div>
           </div>
 
         </div>
       </div>
+      <!-- ===== FIN DETALLE INVERSIONES ===== -->
 
-      <!-- ===== ALLOCATION (NUEVO - estilo getquin) ===== -->
+
+      <!-- ===== BALANCE PATRIMONIAL (cuentas bancarias + créditos + puntos) ===== -->
+      <div id="balanceSection" class="glass-card rounded-2xl overflow-hidden">
+        
+        <!-- Header -->
+        <div class="p-4 sm:p-5 border-b border-slate-700/50 bg-slate-800/20 flex items-center justify-between flex-wrap gap-3">
+          <div class="flex items-center gap-3">
+            <h3 class="text-xs sm:text-sm font-semibold text-slate-200 uppercase tracking-wider flex items-center gap-2">
+              <i class="fas fa-building-columns text-brand-400"></i> Balance Patrimonial
+            </h3>
+            <span class="px-2 py-0.5 bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 rounded text-[9px] font-bold tracking-wider">RD$</span>
+          </div>
+          <div class="flex items-center gap-3">
+            <div class="text-right">
+              <p class="text-[9px] text-slate-500 uppercase font-bold tracking-wider">Patrimonio Neto</p>
+              <p id="bsNetworth" class="text-sm sm:text-base font-extrabold text-white">RD$0.00</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tabs -->
+        <div class="tabs-scroll flex border-b border-slate-700/50 bg-slate-900/40 px-1">
+          <button onclick="switchBalanceTab('liquido')" id="bs-tab-liquido" class="alloc-tab alloc-tab-active">
+            <i class="fas fa-wallet mr-1"></i>Líquido
+          </button>
+          <button onclick="switchBalanceTab('creditos')" id="bs-tab-creditos" class="alloc-tab">
+            <i class="fas fa-credit-card mr-1"></i>Créditos
+          </button>
+          <button onclick="switchBalanceTab('puntos')" id="bs-tab-puntos" class="alloc-tab">
+            <i class="fas fa-star mr-1"></i>Puntos
+          </button>
+        </div>
+
+        <!-- Panel: Líquido -->
+        <div id="bs-panel-liquido" class="p-4 sm:p-6">
+          <div class="flex items-center justify-between mb-4 flex-wrap gap-2">
+            <div class="flex items-center gap-3">
+              <span class="text-xs font-bold text-slate-300 uppercase tracking-wider">Cuentas Líquidas</span>
+              <span class="px-2 py-0.5 bg-slate-800 text-slate-400 text-[10px] font-bold rounded" id="bsCountLiquido">0 cuentas</span>
+            </div>
+            <span class="text-sm font-bold text-emerald-400" id="bsTotalLiquido">RD$0.00</span>
+          </div>
+          <div id="bsGridLiquido" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3"></div>
+        </div>
+
+        <!-- Panel: Créditos -->
+        <div id="bs-panel-creditos" class="hidden p-4 sm:p-6">
+          <div class="flex items-center justify-between mb-4 flex-wrap gap-2">
+            <div class="flex items-center gap-3">
+              <span class="text-xs font-bold text-slate-300 uppercase tracking-wider">Créditos (Pasivos)</span>
+              <span class="px-2 py-0.5 bg-slate-800 text-slate-400 text-[10px] font-bold rounded" id="bsCountCreditos">0 cuentas</span>
+            </div>
+            <span class="text-sm font-bold text-rose-400" id="bsTotalCreditos">RD$0.00</span>
+          </div>
+          <div id="bsGridCreditos" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3"></div>
+        </div>
+
+        <!-- Panel: Puntos -->
+        <div id="bs-panel-puntos" class="hidden p-4 sm:p-6">
+          <div class="flex items-center justify-between mb-4 flex-wrap gap-2">
+            <div class="flex items-center gap-3">
+              <span class="text-xs font-bold text-slate-300 uppercase tracking-wider">Programas de Puntos</span>
+              <span class="px-2 py-0.5 bg-slate-800 text-slate-400 text-[10px] font-bold rounded" id="bsCountPuntos">0 programas</span>
+            </div>
+          </div>
+          <div id="bsGridPuntos" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3"></div>
+        </div>
+
+        <!-- Footer con desglose -->
+        <div class="px-4 sm:px-5 py-3 border-t border-slate-700/50 bg-slate-900/30 grid grid-cols-3 gap-4">
+          <div>
+            <p class="text-[9px] text-slate-500 uppercase font-bold tracking-wider">Activos Totales</p>
+            <p id="bsTotalActivos" class="text-xs sm:text-sm font-bold text-emerald-400 mt-0.5">RD$0.00</p>
+          </div>
+          <div class="text-center">
+            <p class="text-[9px] text-slate-500 uppercase font-bold tracking-wider">Pasivos Totales</p>
+            <p id="bsTotalPasivos" class="text-xs sm:text-sm font-bold text-rose-400 mt-0.5">RD$0.00</p>
+          </div>
+          <div class="text-right">
+            <p class="text-[9px] text-slate-500 uppercase font-bold tracking-wider">Neto</p>
+            <p id="bsTotalNeto" class="text-xs sm:text-sm font-bold text-white mt-0.5">RD$0.00</p>
+          </div>
+        </div>
+
+      </div>
+      <!-- ===== FIN BALANCE PATRIMONIAL ===== -->
+
+
+      <!-- ===== ALLOCATION (NUEVO - estilo getquin) ===== --> 
       <div id="allocationSection" class="glass-card rounded-2xl overflow-hidden">
         
         <!-- Header con título -->
@@ -323,39 +614,6 @@
         </div>
       </div>
 
-      <!-- ===== GRÁFICO EVOLUCIÓN HISTÓRICA ===== -->
-      <div class="glass-card rounded-2xl p-4 sm:p-6">
-        <div class="flex items-center justify-between mb-4 sm:mb-6">
-          <h3 class="text-xs sm:text-sm font-semibold text-slate-300 uppercase tracking-wider flex items-center gap-2">
-            <i class="fas fa-chart-line text-emerald-400"></i> Evolución del Patrimonio
-          </h3>
-          <div class="flex gap-1">
-            <button onclick="setHistoryRange('1M')" id="range-1M" class="range-btn px-2.5 py-1 rounded-md text-[10px] font-semibold transition-all text-slate-400 hover:text-slate-200">1M</button>
-            <button onclick="setHistoryRange('3M')" id="range-3M" class="range-btn px-2.5 py-1 rounded-md text-[10px] font-semibold transition-all text-slate-400 hover:text-slate-200">3M</button>
-            <button onclick="setHistoryRange('6M')" id="range-6M" class="range-btn px-2.5 py-1 rounded-md text-[10px] font-semibold transition-all text-slate-400 hover:text-slate-200">6M</button>
-            <button onclick="setHistoryRange('1Y')" id="range-1Y" class="range-btn px-2.5 py-1 rounded-md text-[10px] font-semibold transition-all text-slate-400 hover:text-slate-200">1A</button>
-            <button onclick="setHistoryRange('ALL')" id="range-ALL" class="range-btn active px-2.5 py-1 rounded-md text-[10px] font-semibold transition-all bg-brand-500/20 text-brand-400 border border-brand-500/30">TODO</button>
-          </div>
-        </div>
-        <div class="relative h-[300px] sm:h-[380px]">
-          <canvas id="portfolioHistoryChart" data-chart="history"></canvas>
-        </div>
-        <div class="grid grid-cols-3 gap-3 mt-4 pt-4 border-t border-slate-700/30">
-          <div class="text-center">
-            <p class="text-[9px] text-slate-500 uppercase font-bold mb-1">Máximo Histórico</p>
-            <p id="historyMax" class="text-sm font-bold text-emerald-400">$0.00</p>
-          </div>
-          <div class="text-center">
-            <p class="text-[9px] text-slate-500 uppercase font-bold mb-1">Mínimo</p>
-            <p id="historyMin" class="text-sm font-bold text-rose-400">$0.00</p>
-          </div>
-          <div class="text-center">
-            <p class="text-[9px] text-slate-500 uppercase font-bold mb-1">Crecimiento Total</p>
-            <p id="historyGrowth" class="text-sm font-bold text-white">0.00%</p>
-          </div>
-        </div>
-      </div>
-
       <!-- ===== TABS Y TABLAS ===== -->
       <div class="glass-card rounded-2xl overflow-hidden mt-6 sm:mt-8">
         <div class="tabs-scroll flex border-b border-slate-700/50 bg-slate-900/50">
@@ -379,15 +637,20 @@
         <!-- ===== PANEL PORTAFOLIO ===== -->
         <div id="panel-portfolio" class="p-0">
           <div class="p-3 sm:p-4 border-b border-slate-700/50 bg-slate-800/20 flex items-center justify-between flex-wrap gap-3">
-            <div class="flex items-center gap-3">
-              <span class="px-2.5 py-1 bg-slate-800 text-slate-300 text-[11px] font-bold rounded-md border border-slate-700"><span id="pfCount">0</span> POS.</span>
+            
+            <div class="flex items-center gap-3 flex-wrap">
+              <span class="px-2.5 py-1 bg-slate-800 text-slate-300 text-[11px] font-bold rounded-md border border-slate-700">
+                <span id="pfCount">0</span> POS.
+              </span>
               <label class="flex items-center gap-2 text-[11px] font-medium text-slate-400 cursor-pointer hover:text-slate-200 transition-colors">
-                <input type="checkbox" id="showSold" onchange="toggleSoldPositions()" class="rounded bg-slate-800 border-slate-600 text-brand-500 focus:ring-brand-500/50 cursor-pointer w-4 h-4">
+                <input type="checkbox" id="showSold" onchange="toggleSoldPositions()" 
+                      class="rounded bg-slate-800 border-slate-600 text-brand-500 focus:ring-brand-500/50 cursor-pointer w-4 h-4">
                 <span class="hidden sm:inline">Incluir Históricas</span>
                 <span class="sm:hidden">Históricas</span>
               </label>
             </div>
-            <div class="flex items-center gap-2">
+
+            <div class="flex items-center gap-2 flex-wrap w-full sm:w-auto justify-between sm:justify-end">
               <div class="view-toggle-container hidden items-center gap-1 mr-2">
                 <button onclick="setMobileView('cards')" id="view-cards" class="view-toggle-btn active touch-btn">
                   <i class="fas fa-th-large mr-1"></i>Cards
@@ -396,12 +659,13 @@
                   <i class="fas fa-list mr-1"></i>Tabla
                 </button>
               </div>
-              <div class="relative">
+              <div class="relative w-full sm:w-auto">
                 <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 text-xs"></i>
                 <input type="text" id="pfSearch" placeholder="Filtrar ticker..." oninput="filterPortfolio()" 
-                  class="pl-9 pr-4 py-2 bg-slate-900/80 border border-slate-700 rounded-lg text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 transition-all w-40 sm:w-48 md:w-64">
+                      class="pl-9 pr-4 py-2 bg-slate-900/80 border border-slate-700 rounded-lg text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 transition-all w-full sm:w-48 md:w-64">
               </div>
             </div>
+
           </div>
 
           <div class="desktop-table table-scroll-container">

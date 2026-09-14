@@ -45,6 +45,7 @@ const chartTooltipConfig = {
 // ============================================================
 // CARGA DE DATOS
 // ============================================================
+
 async function loadData(forceRefresh = false) {
   showLoading();
   console.log("loadData called, currentCurrency=" + currentCurrency + ", forceRefresh=" + forceRefresh);
@@ -54,6 +55,15 @@ async function loadData(forceRefresh = false) {
   if (!forceRefresh && cache[currentCurrency] && (now - lastFetchTime) < CACHE_TTL) {
     console.log("Usando caché para " + currentCurrency);
     var cachedData = cache[currentCurrency];
+
+    // Restaurar tasa desde el cache
+    if (cachedData.meta) {
+      if (cachedData.meta.exchangeRate) {
+        currentRate = cachedData.meta.exchangeRate;
+      } else if (cachedData.meta.usdToDopRate && !currentRate) {
+        currentRate = cachedData.meta.usdToDopRate;
+      }
+    }
 
     allTransactions = cachedData.allTransactions || [];
     txPage = 0;
@@ -71,19 +81,45 @@ async function loadData(forceRefresh = false) {
   }
 
   try {
+    // Recuperar tasa USD→DOP previa si existe
+    if (!currentRate) {
+      var savedRate = localStorage.getItem('usd_dop_rate');
+      if (savedRate && parseFloat(savedRate) > 0) {
+        currentRate = parseFloat(savedRate);
+        console.log("currentRate desde localStorage:", currentRate);
+      }
+    }
+
     var url = API_URL + "?action=dashboard&currency=" + currentCurrency;
     if (currentCurrency !== "USD" && currentRate) {
       url += "&rate=" + currentRate;
     }
 
-    var data = await fetchAPI(url, 30000, 2);
+    var data = await fetchAPI(url, 60000, 2);
 
     if (data.error) throw new Error(data.error);
 
     console.log("API response meta:", data.meta);
+    
+    // Guardar la tasa específica de la vista (DOP → rate real)
     if (data.meta && data.meta.exchangeRate) {
       currentRate = data.meta.exchangeRate;
       console.log("Saved currentRate:", currentRate);
+    }
+    
+    // Guardar la tasa USD→DOP siempre (aunque estemos en USD)
+    if (data.meta && data.meta.usdToDopRate) {
+      if (!currentRate) {
+        currentRate = data.meta.usdToDopRate;
+        console.log("Saved currentRate from usdToDopRate:", currentRate);
+      }
+      // Persistir para próxima sesión
+      try {
+        localStorage.setItem('usd_dop_rate', String(data.meta.usdToDopRate));
+        console.log("Tasa USD→DOP guardada en localStorage:", data.meta.usdToDopRate);
+      } catch(e) {
+        console.warn("No se pudo guardar rate en localStorage:", e);
+      }
     }
 
     cache[currentCurrency] = data;
@@ -107,6 +143,8 @@ async function loadData(forceRefresh = false) {
     showError(error.message);
   }
 }
+
+
 
 async function loadPerformanceData() {
   try {
@@ -185,8 +223,8 @@ function switchTab(tab) {
 // FETCH API (con fallback a JSONP)
 // ============================================================
 async function fetchAPI(url, timeoutMs, retries) {
-  timeoutMs = timeoutMs || 30000;
-  retries = retries || 2;
+  timeoutMs = timeoutMs || 60000;
+  retries = retries || 0;   // ← Desactivar JSONP por defecto (respuestas grandes)
 
   console.log("fetchAPI called, URL:", url);
 
@@ -509,10 +547,10 @@ function renderPortfolioSummary(summary, metrics) {
 
   var realizedPL = summary.totalRealizedPL || summary.realizedPL || 0;
   document.getElementById('pfRealizedPL').textContent = (realizedPL >= 0 ? '+' : '') + formatCurrency(realizedPL);
-  document.getElementById('pfRealizedPL').className = 'mobile-stat-value ' + (realizedPL >= 0 ? 'text-emerald-400' : 'text-rose-400');
+  document.getElementById('pfRealizedPL').className = 'text-base sm:text-lg font-extrabold ' + (realizedPL >= 0 ? 'text-emerald-400' : 'text-rose-400');
 
   var totalPL = summary.totalPL || (unrealizedPL + realizedPL) || 0;
-  document.getElementById('pfTotalPL').textContent = 'P/L Histórico: ' + (totalPL >= 0 ? '+' : '') + formatCurrency(totalPL);
+  document.getElementById('pfTotalPL').textContent = 'Total: ' + (totalPL >= 0 ? '+' : '') + formatCurrency(totalPL);
 
   var dailyChange = summary.totalDailyChange || 0;
   document.getElementById('pfDailyChange').textContent = (dailyChange >= 0 ? '+' : '') + formatCurrency(dailyChange);
@@ -2196,13 +2234,38 @@ function renderHistoryChart() {
 
   if (charts.history) charts.history.destroy();
 
+    // ===== NUEVO: Línea unificada de Patrimonio Neto =====
+  var unifiedSeries = buildUnifiedNetWorthHistory();
+  var unifiedByDate = {};
+  unifiedSeries.forEach(function(s) { unifiedByDate[s.date] = s.total; });
+
+  var unifiedValues = filteredData.map(function(d) {
+    return unifiedByDate[d.date] !== undefined ? unifiedByDate[d.date] : null;
+  });
+
   var datasets = [
     {
-      label: 'Patrimonio Total',
+      label: '🏛️ Patrimonio Neto (Unificado)',
+      data: unifiedValues,
+      borderColor: '#fbbf24',
+      backgroundColor: 'rgba(251, 191, 36, 0.08)',
+      borderWidth: 3,
+      tension: 0.3,
+      fill: true,
+      pointRadius: 3,
+      pointHoverRadius: 7,
+      pointBackgroundColor: '#fbbf24',
+      pointBorderColor: '#0f172a',
+      pointBorderWidth: 2,
+      hidden: !showUnifiedNetWorthLine,
+      order: 0
+    },
+    {
+      label: 'Portfolio Internacional',
       data: totalValues,
       borderColor: '#3b82f6',
-      backgroundColor: 'rgba(59, 130, 246, 0.08)',
-      borderWidth: 2.5,
+      backgroundColor: 'rgba(59, 130, 246, 0.06)',
+      borderWidth: 2,
       tension: 0.3,
       fill: true,
       pointRadius: 3,
@@ -3841,3 +3904,1021 @@ function renderPerfTickerDetail() {
     }
   };
 })();
+
+
+// ============================================================
+// BALANCE PATRIMONIAL (cuentas + créditos + puntos)
+// ============================================================
+
+let balanceCurrentTab = 'liquido';
+let balanceSheetData = null;
+
+// Detectar tipo de cuenta por nombre
+function classifyAccountType(name) {
+  var n = (name || '').toLowerCase();
+  
+  if (n.indexOf('cash') !== -1) return { icon: 'fa-money-bill-wave', cls: 'bs-icon-cash' };
+  if (n.indexOf('débito') !== -1 || n.indexOf('debito') !== -1) return { icon: 'fa-credit-card', cls: 'bs-icon-bank' };
+  if (n.indexOf('digital') !== -1) return { icon: 'fa-mobile-screen', cls: 'bs-icon-digital' };
+  if (n.indexOf('ahorro') !== -1) return { icon: 'fa-piggy-bank', cls: 'bs-icon-bank' };
+  if (n.indexOf('airtm') !== -1 || n.indexOf('paypal') !== -1 || n.indexOf('honeygain') !== -1) return { icon: 'fa-globe', cls: 'bs-icon-digital' };
+  if (n.indexOf('crédito') !== -1 || n.indexOf('credito') !== -1 || n.indexOf('prestamo') !== -1) return { icon: 'fa-credit-card', cls: 'bs-icon-credit' };
+  if (n.indexOf('puntos') !== -1 || n.indexOf('millas') !== -1 || n.indexOf('estrellas') !== -1) return { icon: 'fa-star', cls: 'bs-icon-points' };
+  
+  return { icon: 'fa-wallet', cls: 'bs-icon-bank' };
+}
+
+// Formatear monto del Balance Sheet respetando la moneda del Portfolio
+function formatBsAmount(amountDOP) {
+  // amountDOP viene siempre en RD$ desde el Balance Sheet
+  if (currentCurrency === 'USD' && currentRate && currentRate > 0) {
+    var usdValue = amountDOP / currentRate;
+    return '$' + new Intl.NumberFormat('en-US', {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    }).format(usdValue);
+  }
+  // DOP
+  return 'RD$' + new Intl.NumberFormat('en-US', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
+  }).format(amountDOP);
+}
+
+function switchBalanceTab(tab) {
+  balanceCurrentTab = tab;
+  
+  var tabs = ['liquido', 'creditos', 'puntos'];
+  tabs.forEach(function(t) {
+    var btn = document.getElementById('bs-tab-' + t);
+    var panel = document.getElementById('bs-panel-' + t);
+    if (!btn || !panel) return;
+    
+    if (t === tab) {
+      btn.classList.add('alloc-tab-active');
+      panel.classList.remove('hidden');
+    } else {
+      btn.classList.remove('alloc-tab-active');
+      panel.classList.add('hidden');
+    }
+  });
+}
+
+function renderBalanceSheet() {
+  var data = window.dashboardData;
+  if (!data || !data.balanceSheet || data.balanceSheet.error) {
+    console.warn('[Balance Sheet] Sin datos:', data && data.balanceSheet);
+    var section = document.getElementById('balanceSection');
+    if (section) section.classList.add('hidden');
+    return;
+  }
+  
+  balanceSheetData = data.balanceSheet;
+  var section = document.getElementById('balanceSection');
+  if (section) section.classList.remove('hidden');
+  
+  // === Header: Networth ===
+  var networth = 0;
+  if (balanceSheetData.summary && balanceSheetData.summary.patrimonioNeto) {
+    networth = balanceSheetData.summary.patrimonioNeto.current || 0;
+  }
+  var networthEl = document.getElementById('bsNetworth');
+  if (networthEl) networthEl.textContent = formatBsAmount(networth);
+  
+  // === Cuentas Líquidas ===
+  var cuentas = balanceSheetData.cuentas || {};
+  var liquidoItems = [];
+  var liquidoTotal = 0;
+  
+  Object.keys(cuentas).forEach(function(name) {
+    var info = cuentas[name];
+    var val = (info && info.current) ? info.current : 0;
+    // Filtrar cuentas con 0 (excepto si todas están en 0)
+    if (Math.abs(val) < 0.01) return;
+    liquidoItems.push({
+      name: name,
+      current: val,
+      previous: info.previous || 0,
+      change: info.change || 0,
+      changePct: info.changePct || 0
+    });
+    liquidoTotal += val;
+  });
+  
+  // Ordenar por monto descendente
+  liquidoItems.sort(function(a, b) { return b.current - a.current; });
+  
+  // === Créditos ===
+  var creditos = balanceSheetData.creditos || {};
+  var creditoItems = [];
+  var creditoTotal = 0;
+  
+  Object.keys(creditos).forEach(function(name) {
+    var info = creditos[name];
+    var val = (info && info.current) ? info.current : 0;
+    if (Math.abs(val) < 0.01) return;
+    creditoItems.push({
+      name: name,
+      current: val,
+      previous: info.previous || 0,
+      change: info.change || 0,
+      changePct: info.changePct || 0
+    });
+    creditoTotal += val;
+  });
+  
+  creditoItems.sort(function(a, b) { return Math.abs(b.current) - Math.abs(a.current); });
+  
+  // === Puntos ===
+  var puntos = balanceSheetData.puntos || {};
+  var puntoItems = [];
+  
+  Object.keys(puntos).forEach(function(name) {
+    var info = puntos[name];
+    var val = (info && info.current) ? info.current : 0;
+    if (Math.abs(val) < 0.01) return;
+    puntoItems.push({
+      name: name,
+      current: val,
+      previous: info.previous || 0,
+      change: info.change || 0,
+      changePct: info.changePct || 0
+    });
+  });
+  
+  puntoItems.sort(function(a, b) { return b.current - a.current; });
+  
+  // === Render grid de liquido ===
+  renderBsGrid('bsGridLiquido', liquidoItems, 'liquido');
+  renderBsGrid('bsGridCreditos', creditoItems, 'credito');
+  renderBsGrid('bsGridPuntos', puntoItems, 'puntos');
+  
+  // === Totales por tab ===
+  var totalLiqEl = document.getElementById('bsTotalLiquido');
+  if (totalLiqEl) totalLiqEl.textContent = formatBsAmount(liquidoTotal);
+  
+  var countLiqEl = document.getElementById('bsCountLiquido');
+  if (countLiqEl) countLiqEl.textContent = liquidoItems.length + ' cuentas';
+  
+  var totalCredEl = document.getElementById('bsTotalCreditos');
+  if (totalCredEl) totalCredEl.textContent = formatBsAmount(creditoTotal);
+  
+  var countCredEl = document.getElementById('bsCountCreditos');
+  if (countCredEl) countCredEl.textContent = creditoItems.length + ' créditos';
+  
+  var countPtsEl = document.getElementById('bsCountPuntos');
+  if (countPtsEl) countPtsEl.textContent = puntoItems.length + ' programas';
+  
+  // === Footer totales ===
+  var activosTotales = 0;
+  if (balanceSheetData.summary && balanceSheetData.summary.activosTotales) {
+    activosTotales = balanceSheetData.summary.activosTotales.current || 0;
+  }
+  
+  var pasivosTotales = 0;
+  if (balanceSheetData.summary && balanceSheetData.summary.pasivosTotal) {
+    pasivosTotales = Math.abs(balanceSheetData.summary.pasivosTotal.current || 0);
+  }
+  
+  var activosEl = document.getElementById('bsTotalActivos');
+  if (activosEl) activosEl.textContent = formatBsAmount(activosTotales);
+  
+  var pasivosEl = document.getElementById('bsTotalPasivos');
+  if (pasivosEl) pasivosEl.textContent = formatBsAmount(pasivosTotales);
+  
+  var netoEl = document.getElementById('bsTotalNeto');
+  if (netoEl) {
+    netoEl.textContent = formatBsAmount(networth);
+    netoEl.className = 'text-xs sm:text-sm font-bold mt-0.5 ' + (networth >= 0 ? 'text-white' : 'text-rose-400');
+  }
+}
+
+function renderBsGrid(containerId, items, type) {
+  var el = document.getElementById(containerId);
+  if (!el) return;
+  
+  if (items.length === 0) {
+    el.innerHTML =
+      '<div class="bs-empty">' +
+        '<div class="bs-empty-icon">' +
+          '<i class="fas fa-inbox text-slate-500"></i>' +
+        '</div>' +
+        '<p class="text-slate-400 text-xs font-medium">Sin cuentas</p>' +
+        '<p class="text-slate-600 text-[10px] mt-1">Agrega datos en BALANCE SHEET</p>' +
+      '</div>';
+    return;
+  }
+  
+  el.innerHTML = items.map(function(item) {
+    var style = classifyAccountType(item.name);
+    
+    // Calcular cambio
+    var changeHtml = '';
+    if (item.previous !== 0) {
+      var changeCls = item.change > 0 ? 'up' : (item.change < 0 ? 'down' : 'neutral');
+      var arrow = item.change > 0 ? '▲' : (item.change < 0 ? '▼' : '•');
+      var changeSign = item.change > 0 ? '+' : '';
+      var changeAbs = formatBsAmount(Math.abs(item.change));
+      var changePct = item.changePct !== 0 ? ' (' + (item.changePct > 0 ? '+' : '') + item.changePct.toFixed(1) + '%)' : '';
+      changeHtml = '<div class="bs-account-change ' + changeCls + '">' +
+        arrow + ' ' + changeSign + changeAbs + changePct +
+        '</div>';
+    } else {
+      changeHtml = '<div class="bs-account-change neutral">— sin histórico</div>';
+    }
+    
+    // Balance (créditos se muestran en negativo)
+    var balanceDisplay = item.current;
+    var balanceClass = 'bs-account-balance';
+    if (type === 'credito') {
+      // Créditos: mostrar como pasivo
+      balanceDisplay = Math.abs(item.current);
+      balanceClass += ' text-rose-400';
+    }
+    
+    return '<div class="bs-account-card">' +
+      '<div class="bs-account-header">' +
+        '<div class="bs-account-icon ' + style.cls + '">' +
+          '<i class="fas ' + style.icon + '"></i>' +
+        '</div>' +
+        '<div class="bs-account-name" title="' + escapeHtml(item.name) + '">' + escapeHtml(item.name) + '</div>' +
+      '</div>' +
+      '<div class="' + balanceClass + '">' + formatBsAmount(balanceDisplay) + '</div>' +
+      changeHtml +
+    '</div>';
+  }).join('');
+}
+
+// ============================================================
+// HERO — PATRIMONIO NETO UNIFICADO (Fase 1)
+// ============================================================
+
+/**
+ * Convierte un valor del Balance Sheet (siempre en RD$) a la moneda
+ * de visualización actual.
+ */
+function bsToDisplay(valueDOP) {
+  if (!valueDOP) return 0;
+  if (currentCurrency === 'USD' && currentRate && currentRate > 0) {
+    return valueDOP / currentRate;
+  }
+  return valueDOP;
+}
+
+/**
+ * Suma todos los valores `current` de una sección del Balance Sheet.
+ */
+function sumBsSection(section) {
+  if (!section || typeof section !== 'object') return 0;
+  var total = 0;
+  Object.keys(section).forEach(function(k) {
+    var v = section[k];
+    if (v && typeof v.current === 'number') {
+      total += v.current;
+    }
+  });
+  return total;
+}
+
+/**
+ * Calcula el Patrimonio Neto Unificado.
+ * Todo se devuelve en la MONEDA DE VISUALIZACIÓN actual.
+ */
+function computeUnifiedNetWorth() {
+  var data = window.dashboardData;
+  if (!data) return null;
+
+  var bs = data.balanceSheet || {};
+  var pSummary = (data.portfolio && data.portfolio.summary) || {};
+
+  // ===== 1. Portfolio internacional (Etoro + Hapi + TradeStation + cash brokers) =====
+  // Ya viene en moneda de visualización
+  var portfolioValue = pSummary.totalBalance
+                    || (pSummary.totalCurrentValue + pSummary.totalCash)
+                    || 0;
+
+  // ===== 2. BS Inversiones Locales (en RD$ → convertir) =====
+  var bsInvLocalesDOP = sumBsSection(bs.inversionesLocales);
+  var bsInvLocales = bsToDisplay(bsInvLocalesDOP);
+
+  // ===== 3. BS Negocio / Modeco =====
+  var bsNegocioDOP = sumBsSection(bs.negocio);
+  var bsNegocio = bsToDisplay(bsNegocioDOP);
+
+  // ===== 4. BS Efectivo (cuentas bancarias) =====
+  var bsEfectivoDOP = sumBsSection(bs.cuentas);
+  var bsEfectivo = bsToDisplay(bsEfectivoDOP);
+
+  // ===== 5. BS Pasivos (créditos + líneas + préstamos) =====
+  var bsCreditosDOP = Math.abs(sumBsSection(bs.creditos));
+  var bsPasivos = bsToDisplay(bsCreditosDOP);
+
+  // ===== 6. BS Otros (puntos + honeygain + depósito + bono) =====
+  var bsPuntosDOP = sumBsSection(bs.puntos);
+  var bsOtrosDOP = sumBsSection(bs.otros);
+  var bsOtros = bsToDisplay(bsPuntosDOP + bsOtrosDOP);
+
+  // ===== Totales por categoría =====
+  var inversiones = portfolioValue + bsInvLocales + bsNegocio;
+  var efectivo = bsEfectivo;
+  var pasivos = bsPasivos;
+  var otros = bsOtros;
+
+  var total = inversiones + efectivo + otros - pasivos;
+  var totalAssets = inversiones + efectivo + otros;
+
+  return {
+    total: total,
+    inversiones: inversiones,
+    efectivo: efectivo,
+    pasivos: pasivos,
+    otros: otros,
+    totalAssets: totalAssets,
+    // Desglose interno para debug
+    breakdown: {
+      portfolio: portfolioValue,
+      bsInvLocales: bsInvLocales,
+      bsNegocio: bsNegocio,
+      bsEfectivo: bsEfectivo,
+      bsPasivos: bsPasivos,
+      bsOtros: bsOtros
+    }
+  };
+}
+
+/**
+ * Render del Hero de Patrimonio Neto.
+ */
+function renderNetWorthHero() {
+  var hero = document.getElementById('networthHero');
+  if (!hero) return;
+
+  var nw = computeUnifiedNetWorth();
+  if (!nw) {
+    hero.classList.add('hidden');
+    return;
+  }
+
+  hero.classList.remove('hidden');
+
+  // Formatear en moneda de visualización
+  var fmt = function(v) { return formatCurrency(v); };
+  var fmtPct = function(v) {
+    if (!isFinite(v)) return '0%';
+    return Math.abs(v) >= 10 ? v.toFixed(0) + '%' : v.toFixed(1) + '%';
+  };
+
+  // Total
+  var totalEl = document.getElementById('nwTotal');
+  if (totalEl) totalEl.textContent = fmt(nw.total);
+
+  // Equivalente USD (siempre mostrarlo, sin importar la vista)
+  var totalUsdEl = document.getElementById('nwTotalUsd');
+  if (totalUsdEl) {
+    var usdEquivalent = 0;
+    if (currentCurrency === 'USD') {
+      usdEquivalent = nw.total;
+    } else if (currentRate && currentRate > 0) {
+      usdEquivalent = nw.total / currentRate;
+    }
+    totalUsdEl.textContent = '≈ $' + new Intl.NumberFormat('en-US', {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    }).format(usdEquivalent) + ' USD';
+  }
+
+  // KPIs
+  var setKpi = function(idValue, idPct, idBar, value, pct, negative) {
+    var elVal = document.getElementById(idValue);
+    var elPct = document.getElementById(idPct);
+    var elBar = document.getElementById(idBar);
+    if (elVal) elVal.textContent = (negative ? '-' : '') + fmt(Math.abs(value));
+    if (elPct) elPct.textContent = (negative ? '-' : '') + fmtPct(pct);
+    if (elBar) elBar.style.width = Math.min(Math.abs(pct), 100) + '%';
+  };
+
+  var totalRef = Math.abs(nw.total) || 1;
+  setKpi('nwInvestments', 'nwInvestmentsPct', 'nwInvestmentsBar',
+         nw.inversiones, (nw.inversiones / totalRef) * 100, false);
+  setKpi('nwCash', 'nwCashPct', 'nwCashBar',
+         nw.efectivo, (nw.efectivo / totalRef) * 100, false);
+  setKpi('nwDebts', 'nwDebtsPct', 'nwDebtsBar',
+         nw.pasivos, (nw.pasivos / totalRef) * 100, true);
+  setKpi('nwOthers', 'nwOthersPct', 'nwOthersBar',
+         nw.otros, (nw.otros / totalRef) * 100, false);
+
+  // Chips de % activos y pasivos
+  var assetsPctEl = document.getElementById('nwAssetsPct');
+  var liabPctEl = document.getElementById('nwLiabilitiesPct');
+  if (assetsPctEl) {
+    assetsPctEl.textContent = fmtPct((nw.totalAssets / totalRef) * 100);
+  }
+  if (liabPctEl) {
+    liabPctEl.textContent = fmtPct((nw.pasivos / totalRef) * 100);
+  }
+
+  // Timestamp
+  var tsEl = document.getElementById('nwLastUpdate');
+  if (tsEl && data && data.balanceSheet && data.balanceSheet.metadata) {
+    var lastBS = data.balanceSheet.metadata.lastUpdate || '';
+    tsEl.textContent = lastBS ? 'Balance Sheet: ' + lastBS : '';
+  }
+}
+// ============================================================
+// FASE 2 — COMPOSICIÓN PATRIMONIAL (Donut + Drill-down)
+// ============================================================
+
+let compositionChartInstance = null;
+let compositionDrillCategory = null; // null = vista raíz
+
+// Configuración de las 4 categorías
+const COMP_CATEGORIES = {
+  'inversiones': {
+    label: 'Inversiones',
+    icon: 'fa-chart-line',
+    color: '#3b82f6',
+    colorSoft: 'rgba(59, 130, 246, 0.15)',
+    colorText: 'text-brand-400'
+  },
+  'efectivo': {
+    label: 'Efectivo',
+    icon: 'fa-money-bill-wave',
+    color: '#10b981',
+    colorSoft: 'rgba(16, 185, 129, 0.15)',
+    colorText: 'text-emerald-400'
+  },
+  'pasivos': {
+    label: 'Pasivos',
+    icon: 'fa-credit-card',
+    color: '#f43f5e',
+    colorSoft: 'rgba(244, 63, 94, 0.15)',
+    colorText: 'text-rose-400'
+  },
+  'otros': {
+    label: 'Otros',
+    icon: 'fa-gem',
+    color: '#a78bfa',
+    colorSoft: 'rgba(167, 139, 250, 0.15)',
+    colorText: 'text-purple-400'
+  }
+};
+
+/**
+ * Obtiene el detalle (array de items) de una categoría para el drill-down.
+ * Cada item: { name, value, icon, iconClass, sub }
+ */
+function getCompositionCategoryDetail(category) {
+  var data = window.dashboardData;
+  if (!data) return [];
+  var bs = data.balanceSheet || {};
+  var pSummary = (data.portfolio && data.portfolio.summary) || {};
+  
+  var items = [];
+  var r = currentRate || 1;
+  var isUSD = currentCurrency === 'USD';
+  var convert = function(v) { return isUSD ? (v / r) : v; };
+  
+  if (category === 'inversiones') {
+    // 1. Portfolio internacional (ya en moneda de vista)
+    var portfolioValue = pSummary.totalBalance
+                      || (pSummary.totalCurrentValue + pSummary.totalCash)
+                      || 0;
+    items.push({
+      name: 'Portfolio Internacional',
+      sub: 'Etoro + Hapi + TradeStation + Brokers',
+      value: portfolioValue,
+      icon: 'fa-globe',
+      iconClass: 'bs-icon-digital'
+    });
+    
+    // 2. BS Inversiones Locales
+    Object.keys(bs.inversionesLocales || {}).forEach(function(name) {
+      var info = bs.inversionesLocales[name];
+      if (info && Math.abs(info.current) > 0.001) {
+        items.push({
+          name: name,
+          sub: 'Inversión local',
+          value: convert(info.current),
+          icon: 'fa-building',
+          iconClass: 'bs-icon-bank'
+        });
+      }
+    });
+    
+    // 3. BS Negocio (Modeco)
+    Object.keys(bs.negocio || {}).forEach(function(name) {
+      var info = bs.negocio[name];
+      if (info && Math.abs(info.current) > 0.001) {
+        items.push({
+          name: name,
+          sub: 'Negocio',
+          value: convert(info.current),
+          icon: 'fa-briefcase',
+          iconClass: 'bs-icon-digital'
+        });
+      }
+    });
+    
+  } else if (category === 'efectivo') {
+    Object.keys(bs.cuentas || {}).forEach(function(name) {
+      var info = bs.cuentas[name];
+      if (info && Math.abs(info.current) > 0.001) {
+        var style = classifyAccountType(name);
+        items.push({
+          name: name,
+          sub: 'Cuenta',
+          value: convert(info.current),
+          icon: style.icon,
+          iconClass: style.cls
+        });
+      }
+    });
+    
+  } else if (category === 'pasivos') {
+    Object.keys(bs.creditos || {}).forEach(function(name) {
+      var info = bs.creditos[name];
+      if (info && Math.abs(info.current) > 0.001) {
+        var lower = name.toLowerCase();
+        var sub = 'Crédito';
+        if (lower.indexOf('prestamo') !== -1 || lower.indexOf('préstamo') !== -1) sub = 'Préstamo';
+        else if (lower.indexOf('extra limite') !== -1 || lower.indexOf('credimás') !== -1) sub = 'Línea de crédito';
+        
+        items.push({
+          name: name,
+          sub: sub,
+          value: -Math.abs(convert(info.current)), // negativo para pasivos
+          icon: 'fa-credit-card',
+          iconClass: 'bs-icon-credit'
+        });
+      }
+    });
+    
+  } else if (category === 'otros') {
+    // Puntos
+    Object.keys(bs.puntos || {}).forEach(function(name) {
+      var info = bs.puntos[name];
+      if (info && Math.abs(info.current) > 0.001) {
+        items.push({
+          name: name,
+          sub: 'Puntos / Millas',
+          value: convert(info.current),
+          icon: 'fa-star',
+          iconClass: 'bs-icon-points'
+        });
+      }
+    });
+    
+    // Otros (Honeygain, Depósito, Bono Navideño, etc.)
+    Object.keys(bs.otros || {}).forEach(function(name) {
+      var info = bs.otros[name];
+      if (info && Math.abs(info.current) > 0.001) {
+        items.push({
+          name: name,
+          sub: 'Otros activos',
+          value: convert(info.current),
+          icon: 'fa-gem',
+          iconClass: 'bs-icon-crypto'
+        });
+      }
+    });
+  }
+  
+  // Ordenar por valor absoluto descendente
+  items.sort(function(a, b) { return Math.abs(b.value) - Math.abs(a.value); });
+  
+  return items;
+}
+
+/**
+ * Renderiza el donut principal de composición.
+ */
+function renderComposition() {
+  var canvas = document.getElementById('compositionChart');
+  if (!canvas) return;
+  
+  var nw = computeUnifiedNetWorth();
+  if (!nw) {
+    var sec = document.getElementById('compositionSection');
+    if (sec) sec.classList.add('hidden');
+    return;
+  }
+  
+  var sec = document.getElementById('compositionSection');
+  if (sec) sec.classList.remove('hidden');
+  
+  // Preparar datos para el donut: usamos valores absolutos
+  // (los pasivos se muestran como slice positivo pero de color rojo)
+  var rawData = [
+    { key: 'inversiones', value: Math.abs(nw.inversiones), real: nw.inversiones },
+    { key: 'efectivo',    value: Math.abs(nw.efectivo),    real: nw.efectivo },
+    { key: 'pasivos',     value: Math.abs(nw.pasivos),     real: -Math.abs(nw.pasivos) },
+    { key: 'otros',       value: Math.abs(nw.otros),       real: nw.otros }
+  ].filter(function(d) { return d.value > 0.01; });
+  
+  if (rawData.length === 0) return;
+  
+  var totalAbs = rawData.reduce(function(s, d) { return s + d.value; }, 0);
+  var labels = rawData.map(function(d) { return COMP_CATEGORIES[d.key].label; });
+  var values = rawData.map(function(d) { return d.value; });
+  var colors = rawData.map(function(d) { return COMP_CATEGORIES[d.key].color; });
+  
+  // Actualizar centro + badge
+  var centerEl = document.getElementById('compositionCenterTotal');
+  if (centerEl) centerEl.textContent = formatCurrency(nw.total);
+  
+  var badgeEl = document.getElementById('compositionTotal');
+  if (badgeEl) badgeEl.textContent = 'Total: ' + formatCurrency(nw.total);
+  
+  // Destruir anterior
+  if (compositionChartInstance) {
+    compositionChartInstance.destroy();
+  }
+  
+  // Crear donut
+  compositionChartInstance = new Chart(canvas.getContext('2d'), {
+    type: 'doughnut',
+    data: {
+      labels: labels,
+      datasets: [{
+        data: values,
+        backgroundColor: colors,
+        borderColor: '#0f172a',
+        borderWidth: 3,
+        hoverOffset: 12,
+        hoverBorderWidth: 0
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      cutout: '65%',
+      animation: {
+        animateRotate: true,
+        animateScale: false,
+        duration: 800,
+        easing: 'easeOutQuart'
+      },
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          backgroundColor: 'rgba(15, 23, 42, 0.95)',
+          titleColor: '#f8fafc',
+          bodyColor: '#cbd5e1',
+          borderColor: '#334155',
+          borderWidth: 1,
+          padding: 12,
+          cornerRadius: 8,
+          callbacks: {
+            label: function(context) {
+              var idx = context.dataIndex;
+              var d = rawData[idx];
+              var pct = totalAbs > 0 ? (d.value / totalAbs * 100).toFixed(1) : 0;
+              var realVal = d.real;
+              var prefix = realVal < 0 ? '-' : '';
+              return [
+                COMP_CATEGORIES[d.key].label + ': ' + prefix + formatCurrency(Math.abs(realVal)) + ' (' + pct + '%)',
+                '  Click para ver detalle'
+              ];
+            }
+          }
+        }
+      },
+      onHover: function(event, elements) {
+        event.native.target.style.cursor = elements.length > 0 ? 'pointer' : 'default';
+        if (elements.length > 0) {
+          highlightCompLegend(rawData[elements[0].index].key, true);
+        } else {
+          clearCompLegendHighlights();
+        }
+      },
+      onClick: function(event, elements) {
+        if (elements.length > 0) {
+          var key = rawData[elements[0].index].key;
+          openCompositionDrill(key);
+        }
+      }
+    }
+  });
+  
+  // Render leyenda
+  renderCompositionLegend(rawData, totalAbs);
+  
+  // Aplicar drill si había uno activo
+  if (compositionDrillCategory) {
+    renderCompositionDetail(compositionDrillCategory);
+  }
+}
+
+/**
+ * Leyenda lateral clickeable.
+ */
+function renderCompositionLegend(rawData, totalAbs) {
+  var el = document.getElementById('compositionLegend');
+  if (!el) return;
+  
+  var countEl = document.getElementById('compositionLegendCount');
+  if (countEl) countEl.textContent = rawData.length + ' categorías';
+  
+  el.innerHTML = rawData.map(function(d) {
+    var cat = COMP_CATEGORIES[d.key];
+    var pct = totalAbs > 0 ? (d.value / totalAbs * 100) : 0;
+    var pctDisplay = pct.toFixed(1) + '%';
+    var prefix = d.real < 0 ? '-' : '';
+    
+    var activeClass = compositionDrillCategory === d.key ? ' comp-active' : '';
+    
+    return '<div class="comp-legend-item' + activeClass + '" ' +
+           'data-comp-key="' + d.key + '" ' +
+           'onclick="openCompositionDrill(\'' + d.key + '\')" ' +
+           'onmouseenter="highlightCompLegend(\'' + d.key + '\', true)" ' +
+           'onmouseleave="highlightCompLegend(\'' + d.key + '\', false)">' +
+      '<div class="comp-legend-icon" style="background:' + cat.colorSoft + '; color:' + cat.color + '">' +
+        '<i class="fas ' + cat.icon + '"></i>' +
+      '</div>' +
+      '<div class="comp-legend-body">' +
+        '<div class="comp-legend-name">' + cat.label + '</div>' +
+        '<div class="comp-legend-sub">' + pctDisplay + ' del total bruto</div>' +
+      '</div>' +
+      '<div class="comp-legend-value">' +
+        '<div class="comp-legend-value-amount">' + prefix + formatCurrency(Math.abs(d.real)) + '</div>' +
+      '</div>' +
+      '<i class="fas fa-chevron-right comp-drill-chevron"></i>' +
+    '</div>';
+  }).join('');
+}
+
+function highlightCompLegend(key, on) {
+  document.querySelectorAll('.comp-legend-item').forEach(function(el) {
+    el.classList.remove('comp-active');
+  });
+  if (on) {
+    var item = document.querySelector('.comp-legend-item[data-comp-key="' + key + '"]');
+    if (item) item.classList.add('comp-active');
+  }
+}
+
+function clearCompLegendHighlights() {
+  document.querySelectorAll('.comp-legend-item').forEach(function(el) {
+    el.classList.remove('comp-active');
+  });
+}
+
+/**
+ * Abre el drill-down de una categoría.
+ */
+function openCompositionDrill(category) {
+  if (!COMP_CATEGORIES[category]) return;
+  
+  // Toggle: si clickeas la misma, cierra
+  if (compositionDrillCategory === category) {
+    compositionDrillCategory = null;
+  } else {
+    compositionDrillCategory = category;
+  }
+  
+  // Actualizar leyenda (marca activa)
+  if (compositionDrillCategory) {
+    var nw = computeUnifiedNetWorth();
+    if (nw) {
+      var rawData = [
+        { key: 'inversiones', value: Math.abs(nw.inversiones), real: nw.inversiones },
+        { key: 'efectivo',    value: Math.abs(nw.efectivo),    real: nw.efectivo },
+        { key: 'pasivos',     value: Math.abs(nw.pasivos),     real: -Math.abs(nw.pasivos) },
+        { key: 'otros',       value: Math.abs(nw.otros),       real: nw.otros }
+      ].filter(function(d) { return d.value > 0.01; });
+      var totalAbs = rawData.reduce(function(s, d) { return s + d.value; }, 0);
+      renderCompositionLegend(rawData, totalAbs);
+    }
+  } else {
+    clearCompLegendHighlights();
+  }
+  
+  renderCompositionDetail(compositionDrillCategory);
+}
+
+function clearCompositionDrill() {
+  compositionDrillCategory = null;
+  clearCompLegendHighlights();
+  renderCompositionDetail(null);
+}
+
+/**
+ * Panel de detalle debajo del donut.
+ */
+function renderCompositionDetail(category) {
+  var container = document.getElementById('compositionDetail');
+  var breadcrumb = document.getElementById('compositionBreadcrumb');
+  var drillLabel = document.getElementById('compositionDrillLabel');
+  
+  if (!container) return;
+  
+  // Si no hay categoría seleccionada → ocultar todo
+  if (!category) {
+    container.classList.add('hidden');
+    container.innerHTML = '';
+    if (breadcrumb) breadcrumb.classList.add('hidden');
+    return;
+  }
+  
+  var cat = COMP_CATEGORIES[category];
+  var items = getCompositionCategoryDetail(category);
+  
+  if (items.length === 0) {
+    container.classList.remove('hidden');
+    container.innerHTML = '<div class="p-6 text-center text-slate-500 text-xs">Sin datos para esta categoría</div>';
+    if (breadcrumb) breadcrumb.classList.remove('hidden');
+    if (drillLabel) drillLabel.textContent = '• ' + cat.label;
+    return;
+  }
+  
+  // Calcular total de la categoría
+  var catTotal = items.reduce(function(s, item) { return s + item.value; }, 0);
+  var isNeg = catTotal < 0;
+  
+  // Filas
+  var rowsHtml = items.map(function(item) {
+    var v = item.value;
+    var isItemNeg = v < 0;
+    var vClass = isItemNeg ? 'text-rose-400' : 'text-emerald-400';
+    var vSign = isItemNeg ? '-' : '+';
+    
+    return '<div class="comp-detail-row">' +
+      '<div class="flex items-center gap-3 min-w-0 flex-1">' +
+        '<div class="bs-account-icon ' + item.iconClass + '">' +
+          '<i class="fas ' + item.icon + '"></i>' +
+        '</div>' +
+        '<div class="min-w-0 flex-1">' +
+          '<p class="font-bold text-xs text-slate-200 truncate">' + escapeHtml(item.name) + '</p>' +
+          '<p class="text-[10px] text-slate-500 truncate">' + escapeHtml(item.sub) + '</p>' +
+        '</div>' +
+      '</div>' +
+      '<span class="font-mono font-bold text-sm whitespace-nowrap ' + vClass + '">' +
+        vSign + formatCurrency(Math.abs(v)) +
+      '</span>' +
+    '</div>';
+  }).join('');
+  
+  container.classList.remove('hidden');
+  container.innerHTML = '<div class="comp-fade-in">' +
+    // Header
+    '<div class="comp-detail-heading" style="background: ' + cat.colorSoft + '; color: ' + cat.color + ';">' +
+      '<span><i class="fas ' + cat.icon + ' mr-2"></i>' + cat.label + ' — Detalle</span>' +
+      '<span class="font-mono">' + (isNeg ? '-' : '') + formatCurrency(Math.abs(catTotal)) + '</span>' +
+    '</div>' +
+    // Filas
+    '<div class="max-h-[400px] overflow-y-auto allocation-legend-scroll">' +
+      rowsHtml +
+    '</div>' +
+  '</div>';
+  
+  // Mostrar breadcrumb
+  if (breadcrumb) breadcrumb.classList.remove('hidden');
+  if (drillLabel) drillLabel.textContent = '• ' + cat.label;
+}
+
+// Hook a renderDashboard
+(function hookRenderComposition() {
+  if (typeof renderDashboard !== 'function') return;
+  var _original = renderDashboard;
+  window.renderDashboard = function(data) {
+    _original.apply(this, arguments);
+    try {
+      renderComposition();
+    } catch (e) {
+      console.warn('[Composition] Error:', e);
+    }
+  };
+})();
+
+// Hook a renderDashboard
+(function hookRenderNetWorth() {
+  if (typeof renderDashboard !== 'function') return;
+  var _original = renderDashboard;
+  window.renderDashboard = function(data) {
+    _original.apply(this, arguments);
+    try {
+      renderNetWorthHero();
+    } catch (e) {
+      console.warn('[NetWorth Hero] Error:', e);
+    }
+  };
+})();
+
+// Hook a renderDashboard
+(function hookRenderBalance() {
+  if (typeof renderDashboard !== 'function') return;
+  var _original = renderDashboard;
+  window.renderDashboard = function(data) {
+    _original.apply(this, arguments);
+    try {
+      renderBalanceSheet();
+    } catch (e) {
+      console.warn('[Balance Sheet] Error:', e);
+    }
+  };
+})();
+
+// ============================================================
+// FASE 3 — EVOLUCIÓN DEL PATRIMONIO UNIFICADA
+// ============================================================
+
+/**
+ * Construye la serie histórica del patrimonio neto unificado.
+ * Combina:
+ *   - Portfolio (HISTORICO BROKERS, ya en viewCurrency)
+ *   - BS cuentas + inv locales + negocio + puntos + otros (RD$ → viewCurrency)
+ *   - − BS créditos
+ */
+function buildUnifiedNetWorthHistory() {
+  var data = window.dashboardData;
+  if (!data) return [];
+
+  var hb = data.historicoBrokers || {};
+  var bsHist = (data.balanceSheet && data.balanceSheet.history) || null;
+
+  // ¿Tenemos datos?
+  var hasHB = hb.dates && hb.dates.length > 0 && hb.totals;
+  var hasBS = bsHist && bsHist.dates && bsHist.dates.length > 0;
+
+  if (!hasHB && !hasBS) return [];
+
+  var rate = currentRate || 1;
+  var isUSD = currentCurrency === 'USD';
+  var conv = function(v) { return isUSD ? (v / rate) : v; };
+
+  // Mapa de portfolio por fecha: { '2025-09': 1234.56, ... }
+  var portfolioByMonth = {};
+  if (hasHB) {
+    for (var i = 0; i < hb.dates.length; i++) {
+      portfolioByMonth[hb.dates[i]] = hb.totals[i] || 0;
+    }
+  }
+
+  // Mapa de Balance Sheet por fecha
+  var bsByMonth = {};
+  if (hasBS) {
+    for (var j = 0; j < bsHist.dates.length; j++) {
+      bsByMonth[bsHist.dates[j]] = {
+        cuentas:   (bsHist.cuentas && bsHist.cuentas[j]) || 0,
+        inversionesLocales: (bsHist.inversionesLocales && bsHist.inversionesLocales[j]) || 0,
+        negocio:   (bsHist.negocio && bsHist.negocio[j]) || 0,
+        creditos:  (bsHist.creditos && bsHist.creditos[j]) || 0,
+        puntos:    (bsHist.puntos && bsHist.puntos[j]) || 0,
+        otros:     (bsHist.otros && bsHist.otros[j]) || 0
+      };
+    }
+  }
+
+  // Unión de todas las fechas (orden cronológico)
+  // Normalizar: solo aceptar keys tipo YYYY-MM
+  var DATE_RE = /^\d{4}-\d{2}$/;
+  var allDates = {};
+  Object.keys(portfolioByMonth).forEach(function(k) {
+    if (DATE_RE.test(k)) allDates[k] = true;
+  });
+  Object.keys(bsByMonth).forEach(function(k) {
+    if (DATE_RE.test(k)) allDates[k] = true;
+  });
+  var sortedDates = Object.keys(allDates).sort();
+
+
+  // Construir serie
+  var series = [];
+  sortedDates.forEach(function(dateKey) {
+    var p = portfolioByMonth[dateKey] || 0;
+    var b = bsByMonth[dateKey];
+    var cuentas = 0, invLocales = 0, negocio = 0, creditos = 0, puntos = 0, otros = 0;
+    if (b) {
+      cuentas = conv(b.cuentas);
+      invLocales = conv(b.inversionesLocales);
+      negocio = conv(b.negocio);
+      creditos = Math.abs(conv(b.creditos));
+      puntos = conv(b.puntos);
+      otros = conv(b.otros);
+    }
+    var total = p + cuentas + invLocales + negocio + puntos + otros - creditos;
+
+    series.push({
+      date: dateKey,
+      portfolio: p,
+      cuentas: cuentas,
+      inversionesLocales: invLocales,
+      negocio: negocio,
+      creditos: creditos,
+      otros: puntos + otros,
+      total: total
+    });
+  });
+
+  return series;
+}
+
+/**
+ * Toggle para mostrar/ocultar la línea unificada en el gráfico.
+ */
+let showUnifiedNetWorthLine = true;
+
+function toggleUnifiedNetWorthLine() {
+  showUnifiedNetWorthLine = !showUnifiedNetWorthLine;
+  renderHistoryChart();
+}

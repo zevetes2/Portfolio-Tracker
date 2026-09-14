@@ -756,3 +756,886 @@ body.is-scrolling {
 .perf-detail-clickable .fa-chevron-right {
   transition: all 0.2s ease;
 }
+/* ===== BALANCE PATRIMONIAL ===== */
+
+/* Card individual de cuenta */
+.bs-account-card {
+  background: rgba(30, 41, 59, 0.5);
+  border: 1px solid rgba(51, 65, 85, 0.5);
+  border-radius: 12px;
+  padding: 12px 14px;
+  transition: all 0.2s ease;
+  cursor: default;
+}
+.bs-account-card:hover {
+  background: rgba(51, 65, 85, 0.4);
+  border-color: rgba(71, 85, 105, 0.7);
+  transform: translateY(-1px);
+}
+
+.bs-account-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.bs-account-icon {
+  width: 26px;
+  height: 26px;
+  border-radius: 7px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  flex-shrink: 0;
+}
+
+.bs-account-name {
+  flex: 1;
+  min-width: 0;
+  font-size: 12px;
+  font-weight: 600;
+  color: #e2e8f0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.bs-account-balance {
+  font-size: 15px;
+  font-weight: 700;
+  color: #f8fafc;
+  font-family: 'Inter', monospace;
+  letter-spacing: -0.01em;
+}
+
+.bs-account-change {
+  font-size: 10px;
+  font-weight: 600;
+  margin-top: 3px;
+  display: flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.bs-account-change.up { color: #34d399; }
+.bs-account-change.down { color: #f87171; }
+.bs-account-change.neutral { color: #64748b; }
+
+/* Colores por tipo de cuenta */
+.bs-icon-bank { background: rgba(59, 130, 246, 0.15); color: #60a5fa; }
+.bs-icon-cash { background: rgba(16, 185, 129, 0.15); color: #34d399; }
+.bs-icon-digital { background: rgba(139, 92, 246, 0.15); color: #a78bfa; }
+.bs-icon-crypto { background: rgba(245, 158, 11, 0.15); color: #fbbf24; }
+.bs-icon-credit { background: rgba(239, 68, 68, 0.15); color: #f87171; }
+.bs-icon-points { background: rgba(251, 191, 36, 0.15); color: #fbbf24; }
+
+/* Empty state */
+.bs-empty {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 32px 16px;
+  text-align: center;
+}
+.bs-empty-icon {
+  width: 48px;
+  height: 48px;
+  background: rgba(30, 41, 59, 0.6);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 12px;
+}
+
+/* ===== NET WORTH HERO ===== */
+.networth-hero {
+  background: linear-gradient(135deg, rgba(30, 41, 59, 0.7) 0%, rgba(15, 23, 42, 0.85) 100%);
+  border: 1px solid rgba(71, 85, 105, 0.4);
+  box-shadow: 0 8px 32px -8px rgba(0, 0, 0, 0.4),
+              inset 0 1px 0 0 rgba(148, 163, 184, 0.05);
+}
+
+.nw-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 10px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  backdrop-filter: blur(6px);
+  border: 1px solid transparent;
+}
+.nw-chip-assets {
+  background: rgba(16, 185, 129, 0.1);
+  border-color: rgba(16, 185, 129, 0.25);
+  color: #e2e8f0;
+}
+.nw-chip-liabilities {
+  background: rgba(244, 63, 94, 0.1);
+  border-color: rgba(244, 63, 94, 0.25);
+  color: #e2e8f0;
+}
+
+.nw-kpi {
+  background: rgba(15, 23, 42, 0.5);
+  border: 1px solid rgba(51, 65, 85, 0.4);
+  border-radius: 14px;
+  padding: 12px 14px;
+  transition: all 0.2s ease;
+  position: relative;
+  overflow: hidden;
+}
+.nw-kpi:hover {
+  background: rgba(30, 41, 59, 0.7);
+  border-color: rgba(71, 85, 105, 0.6);
+  transform: translateY(-2px);
+}
+
+.nw-kpi-icon {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  flex-shrink: 0;
+}
+
+.nw-kpi-pct {
+  font-size: 10px;
+  font-weight: 800;
+  color: #94a3b8;
+  letter-spacing: 0.02em;
+}
+
+.nw-kpi-bar {
+  height: 3px;
+  background: rgba(15, 23, 42, 0.8);
+  border-radius: 999px;
+  overflow: hidden;
+  margin-top: 8px;
+}
+.nw-kpi-bar-fill {
+  height: 100%;
+  border-radius: 999px;
+  transition: width 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@media (max-width: 640px) {
+  .nw-kpi { padding: 10px 12px; }
+  .nw-kpi-icon { width: 24px; height: 24px; font-size: 11px; }
+}
+
+/* Animación fade-in del hero */
+#networthHero {
+  animation: nwHeroFade 0.6s ease-out;
+}
+@keyframes nwHeroFade {
+  from { opacity: 0; transform: translateY(-8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+/* ===== COMPOSICIÓN PATRIMONIAL ===== */
+.comp-detail-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 16px;
+  border-bottom: 1px solid rgba(51, 65, 85, 0.2);
+  transition: background 0.15s ease;
+}
+.comp-detail-row:last-child {
+  border-bottom: none;
+}
+.comp-detail-row:hover {
+  background: rgba(51, 65, 85, 0.25);
+}
+
+.comp-detail-heading {
+  padding: 8px 16px;
+  background: rgba(15, 23, 42, 0.4);
+  border-bottom: 1px solid rgba(51, 65, 85, 0.3);
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #94a3b8;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.comp-fade-in {
+  animation: compFadeIn 0.3s ease-out;
+}
+@keyframes compFadeIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+#compositionChart {
+  cursor: pointer;
+}
+
+/* Leyenda: item clickeable */
+.comp-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  border: 1px solid transparent;
+  user-select: none;
+  position: relative;
+}
+.comp-legend-item:hover {
+  background: rgba(51, 65, 85, 0.35);
+  border-color: rgba(71, 85, 105, 0.5);
+  transform: translateX(2px);
+}
+.comp-legend-item.comp-active {
+  background: rgba(59, 130, 246, 0.12);
+  border-color: rgba(59, 130, 246, 0.4);
+}
+.comp-legend-item::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%) scaleY(0);
+  width: 3px;
+  height: 60%;
+  background: #3b82f6;
+  border-radius: 0 3px 3px 0;
+  transition: transform 0.2s ease;
+}
+.comp-legend-item:hover::before {
+  transform: translateY(-50%) scaleY(1);
+}
+
+.comp-legend-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  flex-shrink: 0;
+}
+
+.comp-legend-body {
+  flex: 1;
+  min-width: 0;
+}
+.comp-legend-name {
+  font-weight: 700;
+  font-size: 13px;
+  color: #f8fafc;
+  line-height: 1.2;
+}
+.comp-legend-sub {
+  font-size: 10px;
+  color: #64748b;
+  margin-top: 2px;
+  font-weight: 500;
+}
+
+.comp-legend-value {
+  text-align: right;
+  flex-shrink: 0;
+}
+.comp-legend-value-amount {
+  font-weight: 800;
+  font-size: 13px;
+  color: #f8fafc;
+  line-height: 1.2;
+}
+.comp-legend-value-pct {
+  font-size: 10px;
+  color: #64748b;
+  font-weight: 600;
+  margin-top: 2px;
+}
+
+.comp-drill-chevron {
+  font-size: 10px;
+  color: #475569;
+  margin-left: 6px;
+  flex-shrink: 0;
+  transition: all 0.2s ease;
+  opacity: 0.5;
+}
+.comp-legend-item:hover .comp-drill-chevron {
+  color: #60a5fa;
+  transform: translateX(2px);
+  opacity: 1;
+}
+
+/* ============================================================
+   RESPONSIVE FIXES — Bloque 1: Base global
+   ============================================================ */
+
+/* Evita scroll horizontal fantasma en móviles */
+html, body {
+  overflow-x: hidden;
+  max-width: 100vw;
+}
+
+/* iPhone con notch / Dynamic Island */
+@supports (padding: env(safe-area-inset-left)) {
+  .glass-header {
+    padding-left: env(safe-area-inset-left);
+    padding-right: env(safe-area-inset-right);
+  }
+  main {
+    padding-left: max(1rem, env(safe-area-inset-left));
+    padding-right: max(1rem, env(safe-area-inset-right));
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+}
+
+/* Prevenir que los textos largos rompan layouts */
+.alloc-legend-name,
+.comp-legend-name,
+.bs-account-name,
+.buffett-ticker,
+.buffett-value {
+  word-break: break-word;
+  overflow-wrap: anywhere;
+}
+
+/* ============================================================
+   RESPONSIVE FIXES — Bloque 2: Header
+   ============================================================ */
+
+@media (max-width: 480px) {
+  .glass-header > div {
+    padding-left: 0.75rem;
+    padding-right: 0.75rem;
+    gap: 0.5rem;
+  }
+
+  /* El bloque USD/DOP se hace más compacto */
+  .glass-header .flex.bg-slate-900 {
+    padding: 3px;
+  }
+  .glass-header .flex.bg-slate-900 button {
+    padding: 6px 8px;
+    font-size: 10px;
+    min-width: 38px;
+    min-height: 38px;
+  }
+
+  /* Botón de sync más pequeño */
+  .glass-header button[onclick*="loadData"] {
+    width: 38px;
+    height: 38px;
+    min-width: 38px;
+    min-height: 38px;
+  }
+}
+
+@media (max-width: 380px) {
+  /* Título más pequeño en mini-móviles */
+  .glass-header h1 {
+    font-size: 13px !important;
+    line-height: 1.1;
+  }
+  .glass-header h1 span {
+    display: inline; /* mantener "Tracker" en línea */
+  }
+  #subtitle {
+    display: none !important;
+  }
+  .glass-header .w-9.h-9 {
+    width: 32px !important;
+    height: 32px !important;
+  }
+}
+
+/* ============================================================
+   RESPONSIVE FIXES — Bloque 3: Allocation legend
+   ============================================================ */
+
+/* Tablets y móviles medianos */
+@media (max-width: 640px) {
+  .alloc-legend-item {
+    gap: 8px;
+    padding: 9px 10px;
+  }
+  .alloc-legend-icon,
+  .alloc-legend-icon-fallback {
+    width: 24px;
+    height: 24px;
+    font-size: 9px;
+  }
+  .alloc-legend-name { font-size: 11.5px; }
+  .alloc-legend-value-pct { font-size: 11.5px; }
+  .alloc-legend-value-amount { font-size: 9.5px; }
+  .alloc-legend-sub { font-size: 9px; }
+}
+
+/* Móviles pequeños */
+@media (max-width: 480px) {
+  .alloc-legend-item {
+    gap: 7px;
+    padding: 8px 10px;
+  }
+  .alloc-legend-color {
+    width: 8px;
+    height: 8px;
+  }
+  .alloc-legend-icon,
+  .alloc-legend-icon-fallback {
+    width: 22px;
+    height: 22px;
+    font-size: 9px;
+    border-radius: 6px;
+  }
+  .alloc-legend-name { font-size: 11px; }
+  .alloc-legend-value-pct { font-size: 11px; }
+  .alloc-legend-value-amount { font-size: 9px; }
+  .alloc-legend-bar { height: 3px; }
+}
+
+/* Mini-móviles: value stackeado debajo del nombre */
+@media (max-width: 380px) {
+  .alloc-legend-item {
+    flex-wrap: wrap;
+    gap: 6px;
+    padding: 8px 8px;
+  }
+  .alloc-legend-body {
+    min-width: 0;
+    flex: 1 1 auto;
+  }
+  .alloc-legend-value {
+    text-align: right;
+    margin-left: auto;
+    flex-shrink: 0;
+  }
+  .alloc-legend-value-amount {
+    display: none; /* ocultamos el monto grande en mini */
+  }
+  .alloc-legend-value-pct {
+    font-size: 11px;
+  }
+  .alloc-drill-chevron {
+    display: none; /* el chevron come espacio */
+  }
+  #allocationLegend {
+    max-height: 280px;
+  }
+}
+
+/* ============================================================
+   RESPONSIVE FIXES — Bloque 4: Composition legend
+   ============================================================ */
+
+@media (max-width: 640px) {
+  .comp-legend-item {
+    gap: 10px;
+    padding: 10px;
+  }
+  .comp-legend-icon {
+    width: 28px;
+    height: 28px;
+    font-size: 12px;
+  }
+  .comp-legend-name { font-size: 12px; }
+  .comp-legend-value-amount { font-size: 12px; }
+}
+
+@media (max-width: 480px) {
+  .comp-legend-item { padding: 9px 10px; }
+  .comp-legend-icon {
+    width: 26px;
+    height: 26px;
+    font-size: 11px;
+  }
+  .comp-legend-name { font-size: 11.5px; }
+  .comp-legend-value-amount { font-size: 11.5px; }
+  .comp-legend-sub { font-size: 9.5px; }
+}
+
+@media (max-width: 380px) {
+  .comp-legend-item {
+    flex-wrap: wrap;
+    gap: 6px;
+    padding: 8px;
+  }
+  .comp-legend-body { flex: 1 1 auto; min-width: 0; }
+  .comp-legend-value {
+    margin-left: auto;
+    flex-shrink: 0;
+  }
+  .comp-drill-chevron { display: none; }
+  .comp-legend-icon {
+    width: 24px;
+    height: 24px;
+    font-size: 10px;
+  }
+  #compositionLegend { max-height: 280px; }
+}
+
+/* Heading del detalle de composición */
+@media (max-width: 480px) {
+  .comp-detail-heading {
+    font-size: 9px;
+    padding: 8px 12px;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+  }
+}
+
+/* ============================================================
+   RESPONSIVE FIXES — Bloque 5: Tabs
+   ============================================================ */
+
+@media (max-width: 640px) {
+  .alloc-tab {
+    padding: 9px 12px;
+    font-size: 10.5px;
+  }
+  .perf-year-tab {
+    padding: 5px 11px;
+    font-size: 10.5px;
+  }
+}
+
+@media (max-width: 480px) {
+  .alloc-tab {
+    padding: 8px 10px;
+    font-size: 10px;
+  }
+  .perf-year-tab {
+    padding: 5px 9px;
+    font-size: 10px;
+  }
+  .tab-btn {
+    padding: 10px 14px !important;
+    font-size: 10.5px !important;
+  }
+}
+
+@media (max-width: 380px) {
+  .alloc-tab {
+    padding: 7px 9px;
+    font-size: 9.5px;
+  }
+  .perf-year-tab {
+    padding: 4px 8px;
+    font-size: 9.5px;
+  }
+}
+
+/* ============================================================
+   RESPONSIVE FIXES — Bloque 6: Broker cards
+   ============================================================ */
+
+@media (max-width: 480px) {
+  .broker-summary-card { padding: 12px; }
+  .broker-header { gap: 8px; margin-bottom: 10px; }
+  .broker-icon {
+    width: 28px;
+    height: 28px;
+    font-size: 12px;
+  }
+  .broker-name { font-size: 13px; }
+  .broker-grid { gap: 8px; }
+  .broker-stat-value { font-size: 11.5px; }
+  .broker-stat-label { font-size: 8px; }
+  .broker-stat-sub { font-size: 9px; }
+  .broker-divider { margin: 10px 0; }
+}
+
+/* Mini-móviles: 1 columna para que los valores quepan */
+@media (max-width: 380px) {
+  .broker-grid {
+    grid-template-columns: 1fr;
+    gap: 6px;
+  }
+  .broker-stat {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    text-align: left;
+    gap: 8px;
+  }
+  .broker-stat-label {
+    margin-bottom: 0;
+    flex-shrink: 0;
+  }
+  .broker-stat-value {
+    font-size: 11px;
+    text-align: right;
+  }
+  .broker-stat-sub {
+    margin-top: 0;
+    text-align: right;
+  }
+}
+
+/* ============================================================
+   RESPONSIVE FIXES — Bloque 7: Performance detail rows
+   ============================================================ */
+
+@media (max-width: 640px) {
+  .perf-detail-row {
+    padding: 9px 14px;
+    gap: 10px;
+  }
+}
+
+@media (max-width: 480px) {
+  .perf-detail-row {
+    padding: 8px 12px;
+    gap: 8px;
+  }
+  /* Ocultamos la barra de progreso de 20px (w-20) */
+  .perf-detail-row .hidden.sm\:block {
+    display: none !important;
+  }
+  /* Ocultamos el broker truncado */
+  .perf-detail-row .text-\[9px\].text-slate-600 {
+    display: none !important;
+  }
+  .perf-detail-row .fa-chevron-right {
+    font-size: 9px !important;
+  }
+  .perf-detail-row .font-mono {
+    font-size: 11px;
+  }
+  .perf-detail-row .font-bold.text-xs {
+    font-size: 11.5px;
+  }
+}
+
+@media (max-width: 380px) {
+  .perf-detail-row {
+    padding: 7px 10px;
+    gap: 6px;
+  }
+  .perf-detail-row .font-mono {
+    font-size: 10.5px;
+  }
+  .perf-detail-row .fa-chevron-right {
+    display: none; /* el chevron come espacio horizontal */
+  }
+}
+
+/* ============================================================
+   RESPONSIVE FIXES — Bloque 8: Balance Sheet
+   ============================================================ */
+
+@media (max-width: 480px) {
+  .bs-account-card { padding: 10px 12px; }
+  .bs-account-icon {
+    width: 24px;
+    height: 24px;
+    font-size: 10px;
+  }
+  .bs-account-name { font-size: 11px; }
+  .bs-account-balance { font-size: 13.5px; }
+  .bs-account-change { font-size: 9px; }
+}
+
+@media (max-width: 380px) {
+  .bs-account-balance { font-size: 12.5px; }
+  .bs-account-name { font-size: 10.5px; }
+  .bs-account-change { font-size: 8.5px; }
+}
+
+/* Net Worth Hero */
+@media (max-width: 480px) {
+  #nwTotal {
+    font-size: 1.75rem !important; /* text-3xl → ~28px */
+    line-height: 1.1;
+  }
+  #nwTotalUsd { font-size: 11px; }
+  .nw-chip {
+    padding: 4px 8px;
+    font-size: 9px;
+  }
+  .nw-kpi { padding: 10px; }
+  .nw-kpi-icon {
+    width: 24px;
+    height: 24px;
+    font-size: 11px;
+  }
+  .nw-kpi-pct { font-size: 9px; }
+}
+
+@media (max-width: 380px) {
+  #nwTotal {
+    font-size: 1.5rem !important; /* 24px */
+  }
+  .nw-kpi p.text-\[10px\] { font-size: 8.5px; }
+  .nw-kpi p.text-base { font-size: 12px; }
+  .nw-kpi-bar { height: 4px; }
+}
+
+/* ============================================================
+   RESPONSIVE FIXES — Bloque 9: Chart containers
+   ============================================================ */
+
+@media (max-width: 480px) {
+  /* Buffett portfolio */
+  #buffettPortfolioChart {
+    max-height: 300px !important;
+    min-height: 260px !important;
+  }
+  /* Allocation */
+  #allocationChart {
+    max-height: 320px !important;
+    min-height: 260px !important;
+  }
+  /* Composition */
+  #compositionChart {
+    max-height: 320px !important;
+    min-height: 260px !important;
+  }
+}
+
+/* Los divs contenedores con inline styles */
+@media (max-width: 480px) {
+  #compositionSection .relative.flex,
+  #allocationSection .relative.flex {
+    min-height: 260px !important;
+    max-height: 340px !important;
+  }
+}
+
+@media (max-width: 380px) {
+  #buffettPortfolioChart,
+  #allocationChart,
+  #compositionChart {
+    max-height: 260px !important;
+    min-height: 220px !important;
+  }
+  #compositionSection .relative.flex,
+  #allocationSection .relative.flex {
+    min-height: 240px !important;
+    max-height: 300px !important;
+  }
+}
+
+/* ============================================================
+   RESPONSIVE FIXES — Bloque 10: Range buttons
+   ============================================================ */
+
+@media (max-width: 640px) {
+  .range-btn {
+    min-height: 34px;
+    min-width: 40px;
+    padding: 6px 10px;
+    font-size: 10.5px;
+  }
+}
+
+@media (max-width: 480px) {
+  .range-btn {
+    min-height: 32px;
+    min-width: 36px;
+    padding: 5px 9px;
+    font-size: 10px;
+  }
+}
+
+/* View toggle (cards/tabla) más compacto */
+@media (max-width: 480px) {
+  .view-toggle-btn {
+    padding: 6px 10px;
+    font-size: 10px;
+  }
+}
+
+/* ============================================================
+   RESPONSIVE FIXES — Bloque 11: Buffett legend
+   ============================================================ */
+
+@media (max-width: 480px) {
+  .buffett-legend-item {
+    padding: 8px 10px;
+    gap: 8px;
+  }
+  .buffett-ticker { font-size: 11.5px; }
+  .buffett-percent { font-size: 12px; }
+  .buffett-value { font-size: 10px; }
+  .buffett-legend-item .asset-icon-lg {
+    width: 24px;
+    height: 24px;
+  }
+}
+
+@media (max-width: 380px) {
+  .buffett-legend-item {
+    padding: 7px 8px;
+    gap: 6px;
+  }
+  .buffett-ticker { font-size: 11px; }
+  .buffett-percent { font-size: 11px; }
+  .buffett-value { font-size: 9.5px; }
+  .buffett-legend-item .w-1.h-8 {
+    height: 24px;
+  }
+  #buffettLegend {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+/* ============================================================
+   RESPONSIVE FIXES — Bloque 12: Mobile cards
+   ============================================================ */
+
+@media (max-width: 480px) {
+  .position-mobile-card {
+    padding: 12px;
+    border-radius: 14px;
+  }
+  .tx-mobile-card {
+    padding: 12px;
+    border-radius: 10px;
+  }
+  .platform-mobile-card {
+    padding: 12px;
+    border-radius: 12px;
+  }
+  .card-details .grid-cols-2 {
+    gap: 8px;
+  }
+  .card-details p.text-xs { font-size: 11px; }
+}
+
+@media (max-width: 380px) {
+  .position-mobile-card,
+  .tx-mobile-card,
+  .platform-mobile-card {
+    padding: 10px;
+  }
+}
+
+
+/* ============================================================
+   RESPONSIVE FIXES — Bloque 13: Scrollbars
+   ============================================================ */
+
+@media (max-width: 1023px) {
+  .allocation-legend-scroll::-webkit-scrollbar,
+  .table-scroll-container::-webkit-scrollbar {
+    width: 3px;
+    height: 3px;
+  }
+}
