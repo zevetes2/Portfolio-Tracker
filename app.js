@@ -20,6 +20,7 @@ const TX_PER_PAGE = 25;
 let currentCurrency = "USD";
 let currentRate = null;
 let showSoldPositionsFlag = false;
+let isPrivacyMode = false;
 let portfolioSort = { field: 'currentValue', dir: 'desc' };
 let portfolioFilter = '';
 let mobileViewMode = 'cards';
@@ -93,6 +94,9 @@ async function loadData(forceRefresh = false) {
     var url = API_URL + "?action=dashboard&currency=" + currentCurrency;
     if (currentCurrency !== "USD" && currentRate) {
       url += "&rate=" + currentRate;
+    }
+    if (forceRefresh) {
+      url += "&force=1";
     }
 
     var data = await fetchAPI(url, 60000, 2);
@@ -3130,6 +3134,32 @@ function initAllocation() {
 }
 
 
+// Alterna el estado y actualiza íconos + la vista global
+function togglePrivacyMode() {
+  isPrivacyMode = !isPrivacyMode;
+  
+  // Alternar visibilidad de los íconos
+  const openIcon = document.getElementById('eyeIconOpen');
+  const closedIcon = document.getElementById('eyeIconClosed');
+  if (openIcon && closedIcon) {
+    openIcon.classList.toggle('hidden', isPrivacyMode);
+    closedIcon.classList.toggle('hidden', !isPrivacyMode);
+  }
+
+  // Refrescar el Dashboard/Tabla para aplicar o quitar el enmascaramiento
+  renderDashboard(); // O llama a la función principal que renderiza tus tablas/resumen
+}
+
+// Función helper para formatear valores respetando la privacidad
+function formatPrivacyValue(value, isCurrency = true) {
+  if (isPrivacyMode) {
+    return '••••••'; // Máscara oculta
+  }
+  // Retorna el formato normal (usa tu formateador actual, ej. formatCurrency o similar)
+  return isCurrency ? formatCurrency(value, currentCurrency) : value;
+}
+
+
 // ============================================================
 // PERFORMANCE OVERVIEW (getquin style)
 // ============================================================
@@ -4319,8 +4349,9 @@ function renderNetWorthHero() {
 
   // Timestamp
   var tsEl = document.getElementById('nwLastUpdate');
-  if (tsEl && data && data.balanceSheet && data.balanceSheet.metadata) {
-    var lastBS = data.balanceSheet.metadata.lastUpdate || '';
+  var currentData = window.dashboardData;
+  if (tsEl && currentData && currentData.balanceSheet && currentData.balanceSheet.metadata) {
+    var lastBS = currentData.balanceSheet.metadata.lastUpdate || '';
     tsEl.textContent = lastBS ? 'Balance Sheet: ' + lastBS : '';
   }
 }
