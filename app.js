@@ -43,6 +43,24 @@ const chartTooltipConfig = {
   boxPadding: 4
 };
 
+
+// Restaurar preferencia de privacidad
+(function restorePrivacyMode() {
+  try {
+    var saved = localStorage.getItem('privacy_mode');
+    if (saved === '1') {
+      isPrivacyMode = true;
+      document.body.classList.add('privacy-mode');
+      var openIcon = document.getElementById('eyeIconOpen');
+      var closedIcon = document.getElementById('eyeIconClosed');
+      if (openIcon && closedIcon) {
+        openIcon.classList.add('hidden');
+        closedIcon.classList.remove('hidden');
+      }
+    }
+  } catch(e) {}
+})();
+
 // ============================================================
 // CARGA DE DATOS
 // ============================================================
@@ -188,12 +206,14 @@ function setMobileView(mode) {
   const tableEl = document.querySelector('#panel-portfolio .desktop-table');
   const cardsEl = document.getElementById('portfolioMobileCards');
 
+  if (!tableEl || !cardsEl) return;
+
   if (mode === 'cards') {
-    if (tableEl) tableEl.style.display = 'none';
-    cardsEl.style.display = 'block';
+    tableEl.classList.remove('force-show');
+    cardsEl.classList.remove('force-hide');
   } else {
-    if (tableEl) tableEl.style.display = 'block';
-    cardsEl.style.display = 'none';
+    tableEl.classList.add('force-show');
+    cardsEl.classList.add('force-hide');
   }
 }
 
@@ -459,7 +479,6 @@ function renderDashboard(data) {
   }
 
   if (data.portfolio && data.portfolio.summary) {
-    renderPortfolioCharts(data.portfolio.summary);
     renderTopPositions(data.portfolio.summary);
     renderLargestPositions(data.portfolio.summary);
   }
@@ -686,166 +705,6 @@ function renderLargestPositions(summary) {
 }
 
 // ============================================================
-// GRÁFICOS DEL PORTAFOLIO
-// ============================================================
-function renderPortfolioCharts(summary) {
-  var palette = ['#3b82f6', '#8b5cf6', '#10b981', '#f59e0b', '#f43f5e', '#0ea5e9', '#6366f1'];
-
-  var totalAssetValue = 0;
-  var totalSectorValue = 0;
-
-  if (summary.byAssetClass && summary.byAssetClass.length > 0) {
-    totalAssetValue = summary.byAssetClass.reduce(function(sum, item) {
-      return sum + (item.value || 0);
-    }, 0);
-  }
-
-  if (summary.bySector && summary.bySector.length > 0) {
-    totalSectorValue = summary.bySector.reduce(function(sum, item) {
-      return sum + (item.value || 0);
-    }, 0);
-  }
-
-  if (summary.byAssetClass && summary.byAssetClass.length > 0) {
-    var ctx = document.getElementById('portfolioAssetClassChart').getContext('2d');
-    if (charts.portfolioAssetClass) charts.portfolioAssetClass.destroy();
-    charts.portfolioAssetClass = new Chart(ctx, {
-      type: 'doughnut',
-      data: {
-        labels: summary.byAssetClass.map(function(d) { return d.name; }),
-        datasets: [{
-          data: summary.byAssetClass.map(function(d) { return d.value; }),
-          backgroundColor: palette,
-          borderWidth: 0,
-          hoverOffset: 6
-        }]
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        cutout: '70%',
-        plugins: {
-          legend: {
-            position: window.innerWidth < 640 ? 'bottom' : 'right',
-            labels: {
-              color: '#94a3b8',
-              usePointStyle: true,
-              pointStyle: 'circle',
-              font: { size: window.innerWidth < 640 ? 10 : 11 },
-              padding: window.innerWidth < 640 ? 10 : 16,
-              boxWidth: window.innerWidth < 640 ? 8 : 10,
-              generateLabels: function(chart) {
-                var data = chart.data;
-                if (data.labels.length && data.datasets.length) {
-                  return data.labels.map(function(label, i) {
-                    var meta = chart.getDatasetMeta(0);
-                    var style = meta.controller.getStyle(i);
-                    var value = data.datasets[0].data[i] || 0;
-                    var percentage = totalAssetValue > 0 ? ((value / totalAssetValue) * 100).toFixed(1) : '0.0';
-                    return {
-                      text: label + ' (' + percentage + '%)',
-                      fillStyle: style.backgroundColor,
-                      strokeStyle: style.borderColor,
-                      lineWidth: style.borderWidth,
-                      hidden: isNaN(data.datasets[0].data[i]) || meta.data[i].hidden,
-                      index: i,
-                      fontColor: '#94a3b8'
-                    };
-                  });
-                }
-                return [];
-              }
-            }
-          },
-          tooltip: chartTooltipConfig
-        }
-      },
-      plugins: [{
-        id: 'customLegendColor',
-        afterUpdate: function(chart) {
-          var legend = chart.legend;
-          if (legend && legend.legendItems) {
-            legend.legendItems.forEach(function(item) {
-              item.fontColor = '#94a3b8';
-              item.color = '#94a3b8';
-            });
-          }
-        }
-      }]
-    });
-  }
-
-  if (summary.bySector && summary.bySector.length > 0) {
-    var ctx = document.getElementById('portfolioSectorChart').getContext('2d');
-    if (charts.portfolioSector) charts.portfolioSector.destroy();
-    charts.portfolioSector = new Chart(ctx, {
-      type: 'doughnut',
-      data: {
-        labels: summary.bySector.map(function(d) { return d.name; }),
-        datasets: [{
-          data: summary.bySector.map(function(d) { return d.value; }),
-          backgroundColor: palette.slice().reverse(),
-          borderWidth: 0,
-          hoverOffset: 6
-        }]
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        cutout: '70%',
-        plugins: {
-          legend: {
-            position: window.innerWidth < 640 ? 'bottom' : 'right',
-            labels: {
-              color: '#94a3b8',
-              usePointStyle: true,
-              pointStyle: 'circle',
-              font: { size: window.innerWidth < 640 ? 10 : 11 },
-              padding: window.innerWidth < 640 ? 10 : 16,
-              boxWidth: window.innerWidth < 640 ? 8 : 10,
-              generateLabels: function(chart) {
-                var data = chart.data;
-                if (data.labels.length && data.datasets.length) {
-                  return data.labels.map(function(label, i) {
-                    var meta = chart.getDatasetMeta(0);
-                    var style = meta.controller.getStyle(i);
-                    var value = data.datasets[0].data[i] || 0;
-                    var percentage = totalSectorValue > 0 ? ((value / totalSectorValue) * 100).toFixed(1) : '0.0';
-                    return {
-                      text: label + ' (' + percentage + '%)',
-                      fillStyle: style.backgroundColor,
-                      strokeStyle: style.borderColor,
-                      lineWidth: style.borderWidth,
-                      hidden: isNaN(data.datasets[0].data[i]) || meta.data[i].hidden,
-                      index: i,
-                      fontColor: '#94a3b8'
-                    };
-                  });
-                }
-                return [];
-              }
-            }
-          },
-          tooltip: chartTooltipConfig
-        }
-      },
-      plugins: [{
-        id: 'customLegendColor',
-        afterUpdate: function(chart) {
-          var legend = chart.legend;
-          if (legend && legend.legendItems) {
-            legend.legendItems.forEach(function(item) {
-              item.fontColor = '#94a3b8';
-              item.color = '#94a3b8';
-            });
-          }
-        }
-      }]
-    });
-  }
-}
-
-// ============================================================
 // TABLA PORTAFOLIO
 // ============================================================
 function renderPortfolioTable(portfolio) {
@@ -895,7 +754,7 @@ function renderPortfolioTable(portfolio) {
       '<div class="w-5 h-5 mr-2 rounded bg-slate-700/50 flex items-center justify-center text-[9px] text-slate-500 font-bold">' + (p.ticker ? p.ticker.charAt(0) : '?') + '</div>';
 
     return '<tr class="hover:bg-slate-800/40 transition-colors group">' +
-      '<td class="py-3 px-3 sm:px-4 font-bold text-brand-400 flex items-center">' + iconHtml + (p.ticker || '-') + soldBadge + '</td>' +
+      '<td class="py-3 px-3 sm:px-4 font-bold text-brand-400"><div class="flex items-center">' + iconHtml + (p.ticker || '-') + soldBadge + buildTickerPerfBtn(p.ticker) + '</div></td>' +
       '<td class="py-3 px-3 sm:px-4 text-slate-300 truncate max-w-[120px] sm:max-w-[150px]">' + (p.assetName || '-') + '</td>' +
       '<td class="py-3 px-3 sm:px-4"><span class="badge bg-slate-800 border-slate-700/50 text-slate-400">' + (p.assetClass || '-') + '</span></td>' +
       '<td class="py-3 px-3 sm:px-4 text-slate-500 hidden lg:table-cell text-[11px]">' + (p.sector || '-') + '</td>' +
@@ -927,7 +786,7 @@ function renderPortfolioTable(portfolio) {
     return '<div class="position-mobile-card" onclick="toggleCardDetails(this)">' +
       '<div class="flex items-center justify-between">' +
         '<div class="flex items-center gap-2 flex items-center">' + mobileIconHtml +
-          '<span class="font-bold text-sm text-brand-400">' + (p.ticker || '-') + '</span>' + soldBadge +
+          '<span class="font-bold text-sm text-brand-400">' + (p.ticker || '-') + '</span>' + soldBadge + buildTickerPerfBtn(p.ticker) +
           '<span class="badge bg-slate-800 border-slate-700/50 text-slate-400">' + (p.assetClass || '-') + '</span>' +
         '</div>' +
         '<div class="text-right">' +
@@ -1043,7 +902,7 @@ function renderBrokersSummary(platforms) {
       '</div>' +
       '<div class="text-center mb-3">' +
         '<p class="text-[10px] text-slate-500 uppercase font-bold tracking-wider mb-1">Valor Total</p>' +
-        '<p class="text-xl sm:text-2xl font-extrabold text-white tracking-tight">' + formatCurrency(totalValue) + '</p>' +
+        '<p class="text-xl sm:text-2xl font-extrabold text-white tracking-tight valuetotal">' + formatCurrency(totalValue) + '</p>' +
       '</div>' +
       '<div class="broker-grid">' +
         '<div class="broker-stat">' +
@@ -1822,6 +1681,37 @@ function getActionBadge(action) {
   return badges[action] || '<span class="' + b + 'bg-slate-800 text-slate-400">' + (action || '-') + '</span>';
 }
 
+
+function buildTickerPerfBtn(ticker) {
+  if (!ticker) return '';
+  
+  var data = window.dashboardData;
+  var perf = data && data.rendimiento;
+  
+  // ¿Hay datos de rendimiento para este ticker?
+  var hasData = false;
+  if (perf && perf.tickers) {
+    hasData = perf.tickers.some(function(t) {
+      if (String(t.ticker || '').toUpperCase() !== String(ticker).toUpperCase()) return false;
+      // ¿Tiene al menos un mes con valor no cero?
+      return Object.keys(t.months || {}).some(function(k) {
+        return Math.abs(t.months[k] || 0) > 0.0001;
+      });
+    });
+  }
+  
+  var cls = 'ticker-perf-btn' + (hasData ? ' has-data' : ' no-data');
+  var title = hasData ? 'Ver histórico de ' + ticker : 'Sin histórico disponible';
+  var disabled = hasData ? '' : 'disabled';
+  var clickHandler = hasData
+    ? 'onclick="event.stopPropagation(); openTickerPerformanceModal(\'' + escapeHtml(ticker) + '\')"'
+    : 'onclick="event.stopPropagation()"';
+  
+  return '<button class="' + cls + '" ' + clickHandler + ' ' + disabled + ' title="' + title + '">' +
+    '<i class="fas fa-chart-simple"></i>' +
+  '</button>';
+}
+
 function formatCurrency(value) {
   if (value === undefined || value === null || isNaN(value)) {
     return currentCurrency === 'DOP' ? 'DOP$0.00' : '$0.00';
@@ -2492,17 +2382,6 @@ const chartCache = {
 setHistoryRange('ALL');
 loadData();
 
-// Resize handling
-var resizeTimeout;
-window.addEventListener('resize', function() {
-  clearTimeout(resizeTimeout);
-  resizeTimeout = setTimeout(function() {
-    if (portfolioSummary && portfolioSummary.byAssetClass) {
-      renderPortfolioCharts(portfolioSummary);
-    }
-  }, 250);
-});
-
 const debouncedResize = debounce(() => {
   if (charts.history) {
     renderHistoryChart();
@@ -3134,29 +3013,297 @@ function initAllocation() {
 }
 
 
-// Alterna el estado y actualiza íconos + la vista global
 function togglePrivacyMode() {
   isPrivacyMode = !isPrivacyMode;
-  
-  // Alternar visibilidad de los íconos
-  const openIcon = document.getElementById('eyeIconOpen');
-  const closedIcon = document.getElementById('eyeIconClosed');
+
+  // Toggle de íconos
+  var openIcon = document.getElementById('eyeIconOpen');
+  var closedIcon = document.getElementById('eyeIconClosed');
   if (openIcon && closedIcon) {
     openIcon.classList.toggle('hidden', isPrivacyMode);
     closedIcon.classList.toggle('hidden', !isPrivacyMode);
   }
 
-  // Refrescar el Dashboard/Tabla para aplicar o quitar el enmascaramiento
-  renderDashboard(); // O llama a la función principal que renderiza tus tablas/resumen
+  // Cambiar clase del body — el CSS hace el resto (sin re-renderizar)
+  document.body.classList.toggle('privacy-mode', isPrivacyMode);
+
+  // Persistir preferencia
+  try {
+    localStorage.setItem('privacy_mode', isPrivacyMode ? '1' : '0');
+  } catch(e) {}
 }
 
-// Función helper para formatear valores respetando la privacidad
-function formatPrivacyValue(value, isCurrency = true) {
-  if (isPrivacyMode) {
-    return '••••••'; // Máscara oculta
+// ============================================================
+// MODAL: Histórico P/L por ticker
+// ============================================================
+let tickerModalChartInstance = null;
+
+function openTickerPerformanceModal(ticker) {
+  if (!ticker) return;
+  
+  var data = window.dashboardData;
+  var perf = data && data.rendimiento;
+  
+  if (!perf || !perf.tickers || perf.tickers.length === 0) {
+    showToast('Sin datos de rendimiento disponibles');
+    return;
   }
-  // Retorna el formato normal (usa tu formateador actual, ej. formatCurrency o similar)
-  return isCurrency ? formatCurrency(value, currentCurrency) : value;
+  
+  // Buscar registros del ticker (puede estar en varios brokers)
+  var tickerData = perf.tickers.filter(function(t) {
+    return String(t.ticker || '').toUpperCase() === String(ticker).toUpperCase();
+  });
+  
+  if (tickerData.length === 0) {
+    showToast('Sin histórico para ' + ticker);
+    return;
+  }
+  
+  // Combinar meses de todos los brokers
+  var combined = {};
+  var brokersSet = {};
+  var grandTotal = 0;
+  
+  tickerData.forEach(function(t) {
+    brokersSet[t.broker || 'Sin Plataforma'] = true;
+    grandTotal += t.total || 0;
+    Object.keys(t.months || {}).forEach(function(k) {
+      var v = t.months[k];
+      if (v === undefined || v === null) return;
+      if (!combined[k]) combined[k] = 0;
+      combined[k] += v;
+    });
+  });
+  
+  // Filtrar solo meses con movimiento (valor !== 0)
+  var months = Object.keys(combined)
+    .filter(function(k) { return Math.abs(combined[k]) > 0.0001; })
+    .sort();
+  
+  if (months.length === 0) {
+    showToast('Sin movimientos registrados para ' + ticker);
+    return;
+  }
+  
+  // Métricas
+  var totalAbs = months.reduce(function(s, k) { return s + Math.abs(combined[k]); }, 0);
+  var positiveMonths = months.filter(function(k) { return combined[k] > 0; }).length;
+  var negativeMonths = months.filter(function(k) { return combined[k] < 0; }).length;
+  var winRate = months.length > 0 ? (positiveMonths / months.length) * 100 : 0;
+  
+  var bestMonthKey = months.reduce(function(a, b) { return combined[b] > combined[a] ? b : a; }, months[0]);
+  var worstMonthKey = months.reduce(function(a, b) { return combined[b] < combined[a] ? b : a; }, months[0]);
+  
+  function monthLabel(key) {
+    if (!key) return '-';
+    var parts = key.split('-');
+    var monthNames = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+    var mIdx = parseInt(parts[1]) - 1;
+    return (monthNames[mIdx] || '?') + " '" + parts[0].slice(2);
+  }
+  
+  // Info del ticker desde el portafolio (para el ícono y nombre)
+  var portfolioPos = null;
+  if (data.portfolio && data.portfolio.portfolio) {
+    portfolioPos = data.portfolio.portfolio.find(function(p) {
+      return String(p.ticker || '').toUpperCase() === String(ticker).toUpperCase();
+    });
+  }
+  
+  var iconUrl = portfolioPos && portfolioPos.iconUrl;
+  var assetName = portfolioPos && portfolioPos.assetName;
+  var brokers = Object.keys(brokersSet);
+  
+  // ===== Poblar header =====
+  var iconEl = document.getElementById('tickerModalIcon');
+  if (iconEl) {
+    if (iconUrl) {
+      iconEl.innerHTML = '<img src="' + iconUrl + '" alt="" onerror="this.style.display=\'none\'">';
+    } else {
+      iconEl.textContent = (ticker || '?').charAt(0).toUpperCase();
+    }
+  }
+  
+  var titleEl = document.getElementById('tickerModalTitle');
+  if (titleEl) titleEl.textContent = ticker;
+  
+  var subEl = document.getElementById('tickerModalSubtitle');
+  if (subEl) {
+    var subParts = [];
+    if (assetName && assetName !== ticker) subParts.push(assetName);
+    subParts.push(brokers.length > 1 ? brokers.length + ' brókers' : brokers[0]);
+    subEl.textContent = subParts.join(' · ');
+  }
+  
+  // ===== Poblar métricas =====
+  var totalClass = grandTotal >= 0 ? 'text-emerald-400' : 'text-rose-400';
+  var totalSign = grandTotal >= 0 ? '+' : '';
+  
+  var metricsEl = document.getElementById('tickerModalMetrics');
+  if (metricsEl) {
+    metricsEl.innerHTML =
+      '<div class="bg-slate-900/50 border border-slate-700/40 rounded-xl p-3">' +
+        '<p class="text-[9px] text-slate-500 uppercase font-bold tracking-wider mb-1">P/L Total</p>' +
+        '<p class="text-sm font-bold ' + totalClass + '">' + totalSign + formatCurrency(grandTotal) + '</p>' +
+      '</div>' +
+      '<div class="bg-slate-900/50 border border-slate-700/40 rounded-xl p-3">' +
+        '<p class="text-[9px] text-slate-500 uppercase font-bold tracking-wider mb-1">Meses activos</p>' +
+        '<p class="text-sm font-bold text-white">' + months.length + '</p>' +
+      '</div>' +
+      '<div class="bg-slate-900/50 border border-slate-700/40 rounded-xl p-3">' +
+        '<p class="text-[9px] text-slate-500 uppercase font-bold tracking-wider mb-1">Win rate</p>' +
+        '<p class="text-sm font-bold ' + (winRate >= 50 ? 'text-emerald-400' : 'text-rose-400') + '">' + winRate.toFixed(0) + '%</p>' +
+      '</div>' +
+      '<div class="bg-slate-900/50 border border-slate-700/40 rounded-xl p-3">' +
+        '<p class="text-[9px] text-slate-500 uppercase font-bold tracking-wider mb-1">Mejor / Peor</p>' +
+        '<p class="text-[11px] font-bold text-emerald-400">' + monthLabel(bestMonthKey) + ' · ' + (combined[bestMonthKey] >= 0 ? '+' : '') + formatCurrency(combined[bestMonthKey]) + '</p>' +
+        '<p class="text-[11px] font-bold text-rose-400">' + monthLabel(worstMonthKey) + ' · ' + formatCurrency(combined[worstMonthKey]) + '</p>' +
+      '</div>';
+  }
+  
+  // ===== Tabla mensual =====
+  var tableEl = document.getElementById('tickerModalTable');
+  if (tableEl) {
+    var rowsHtml = months.slice().reverse().map(function(k) {
+      var v = combined[k];
+      var vClass = v >= 0 ? 'text-emerald-400' : 'text-rose-400';
+      var vSign = v >= 0 ? '+' : '';
+      return '<div class="ticker-modal-row">' +
+        '<span class="text-xs text-slate-400 font-medium w-20">' + monthLabel(k) + '</span>' +
+        '<div class="flex items-center gap-3 flex-1 justify-end">' +
+          '<div class="hidden sm:block w-24 h-1 bg-slate-800 rounded-full overflow-hidden">' +
+            '<div class="h-1 rounded-full ' + (v >= 0 ? 'bg-emerald-500' : 'bg-rose-500') + '" ' +
+              'style="width:' + Math.min(Math.abs(v) / (totalAbs / months.length) * 100, 100).toFixed(1) + '%"></div>' +
+          '</div>' +
+          '<span class="font-mono font-bold text-xs ' + vClass + ' whitespace-nowrap">' +
+            vSign + formatCurrency(v) +
+          '</span>' +
+        '</div>' +
+      '</div>';
+    }).join('');
+    
+    tableEl.innerHTML = rowsHtml;
+  }
+  
+  var countEl = document.getElementById('tickerModalMonthsCount');
+  if (countEl) countEl.textContent = months.length + ' meses';
+  
+  // ===== Abrir modal =====
+  var modal = document.getElementById('tickerModal');
+  if (modal) modal.classList.remove('hidden');
+  document.body.style.overflow = 'hidden';
+  
+  // ===== Chart (con setTimeout para que el canvas tenga dimensiones) =====
+  setTimeout(function() {
+    var canvas = document.getElementById('tickerModalChart');
+    if (!canvas) return;
+    
+    if (tickerModalChartInstance) tickerModalChartInstance.destroy();
+    
+    var labels = months.map(monthLabel);
+    var values = months.map(function(k) { return combined[k]; });
+    var bgColors = values.map(function(v) {
+      return v >= 0 ? 'rgba(16, 185, 129, 0.7)' : 'rgba(244, 63, 94, 0.7)';
+    });
+    var borderColors = values.map(function(v) {
+      return v >= 0 ? '#10b981' : '#f43f5e';
+    });
+    
+    tickerModalChartInstance = new Chart(canvas.getContext('2d'), {
+      type: 'bar',
+      data: {
+        labels: labels,
+        datasets: [{
+          label: ticker + ' P/L',
+          data: values,
+          backgroundColor: bgColors,
+          borderColor: borderColors,
+          borderWidth: 1,
+          borderRadius: 4,
+          barPercentage: 0.7,
+          categoryPercentage: 0.85
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            backgroundColor: 'rgba(15, 23, 42, 0.95)',
+            titleColor: '#f8fafc',
+            bodyColor: '#cbd5e1',
+            borderColor: '#334155',
+            borderWidth: 1,
+            padding: 12,
+            cornerRadius: 8,
+            callbacks: {
+              title: function(ctx) { return ctx[0].label; },
+              label: function(ctx) {
+                var v = ctx.parsed.y;
+                return (v >= 0 ? '+' : '') + formatCurrency(v);
+              }
+            }
+          }
+        },
+        scales: {
+          x: {
+            grid: { display: false },
+            ticks: {
+              color: '#64748b',
+              font: { size: 10 },
+              maxRotation: 0,
+              minRotation: 0,
+              autoSkip: true,
+              maxTicksLimit: 10
+            }
+          },
+          y: {
+            grid: { color: 'rgba(51, 65, 85, 0.15)', drawBorder: false },
+            ticks: {
+              color: '#64748b',
+              font: { size: 10 },
+              callback: function(v) {
+                if (Math.abs(v) >= 1000) return '$' + (v / 1000).toFixed(1) + 'k';
+                return '$' + v.toFixed(0);
+              }
+            }
+          }
+        }
+      }
+    });
+  }, 60);
+}
+
+function closeTickerModal() {
+  var modal = document.getElementById('tickerModal');
+  if (modal) modal.classList.add('hidden');
+  document.body.style.overflow = '';
+  if (tickerModalChartInstance) {
+    tickerModalChartInstance.destroy();
+    tickerModalChartInstance = null;
+  }
+}
+
+// Cerrar con ESC
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape') closeTickerModal();
+});
+
+// Toast ligero (si no lo tienes ya)
+function showToast(msg) {
+  var t = document.createElement('div');
+  t.textContent = msg;
+  t.style.cssText = 'position:fixed;bottom:24px;left:50%;transform:translateX(-50%);' +
+    'background:rgba(15,23,42,0.95);color:#e2e8f0;padding:10px 18px;border-radius:10px;' +
+    'border:1px solid rgba(51,65,85,0.6);font-size:12px;font-weight:600;z-index:200;' +
+    'box-shadow:0 8px 24px -6px rgba(0,0,0,0.5);opacity:0;transition:opacity 0.2s ease;';
+  document.body.appendChild(t);
+  requestAnimationFrame(function() { t.style.opacity = '1'; });
+  setTimeout(function() {
+    t.style.opacity = '0';
+    setTimeout(function() { t.remove(); }, 250);
+  }, 2200);
 }
 
 
@@ -4327,7 +4474,7 @@ function renderNetWorthHero() {
     if (elBar) elBar.style.width = Math.min(Math.abs(pct), 100) + '%';
   };
 
-  var totalRef = Math.abs(nw.total) || 1;
+  var totalRef = (Math.abs(nw.totalAssets) + Math.abs(nw.pasivos)) || 1;
   setKpi('nwInvestments', 'nwInvestmentsPct', 'nwInvestmentsBar',
          nw.inversiones, (nw.inversiones / totalRef) * 100, false);
   setKpi('nwCash', 'nwCashPct', 'nwCashBar',
@@ -4848,6 +4995,8 @@ function renderCompositionDetail(category) {
     }
   };
 })();
+
+
 
 // ============================================================
 // FASE 3 — EVOLUCIÓN DEL PATRIMONIO UNIFICADA

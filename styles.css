@@ -168,7 +168,11 @@ body {
 
 @media (max-width: 767px) {
   .desktop-table { display: none !important; }
+  .desktop-table.force-show { display: block !important; }
+  
   .mobile-card { display: block; }
+  .mobile-card.force-hide { display: none !important; }
+  
   .view-toggle-container { display: flex !important; }
 }
 
@@ -1638,4 +1642,227 @@ html, body {
     width: 3px;
     height: 3px;
   }
+}
+
+
+/* ===== MODO PRIVACIDAD ===== */
+body.privacy-mode :is(
+  /* Hero Patrimonio Neto */
+  #nwTotal,
+  #nwTotalUsd,
+  #nwInvestments, #nwCash, #nwDebts, #nwOthers,
+
+  /* Detalle Inversiones Internacionales */
+  #pfTotalBalance, #pfMarketValue, #pfTotalCash, #pfTotalCost,
+  #pfUnrealizedPL, #pfRealizedPL, #pfTotalPL, #pfDailyChange,
+
+  /* Balance Patrimonial */
+  #bsNetworth, #bsTotalLiquido, #bsTotalCreditos,
+  #bsTotalActivos, #bsTotalPasivos, #bsTotalNeto,
+  .bs-account-balance, .broker-stat-value, .valuetotal,
+
+  /* Centros de donuts */
+  #compositionCenterTotal,
+  #allocationCenterTotal,
+  #allocationTotalBadge,
+
+  /* Leyendas */
+  .alloc-legend-value-amount,
+  .comp-legend-value-amount,
+  .buffett-value,
+
+  /* Mobile stat values */
+  .mobile-stat-value
+) {
+  filter: blur(9px);
+  user-select: none;
+  pointer-events: none;
+  transition: filter 0.15s ease;
+}
+
+/* Los % se mantienen visibles — no están en la lista de arriba */
+body.privacy-mode :is(
+  #nwAssetsPct, #nwLiabilitiesPct,
+  #nwInvestmentsPct, #nwCashPct, #nwDebtsPct, #nwOthersPct,
+  #pfUnrealizedROI, #pfDailyChangePct,
+  .alloc-legend-value-pct,
+  .alloc-legend-roi-up, .alloc-legend-roi-down,
+  .buffett-percent
+) {
+  /* Sin blur — visible siempre */
+  filter: none !important;
+}
+
+/* Icono del ojo cuando está cerrado */
+body.privacy-mode #privacyToggleBtn {
+  border-color: rgba(244, 63, 94, 0.5);
+  background: rgba(244, 63, 94, 0.1);
+}
+
+/* ===== MODAL: Histórico P/L por ticker ===== */
+.ticker-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+}
+
+.ticker-modal.hidden { display: none; }
+
+.ticker-modal-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(2, 6, 23, 0.75);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  animation: tickerFadeIn 0.2s ease-out;
+}
+
+.ticker-modal-content {
+  position: relative;
+  width: 100%;
+  max-width: 720px;
+  max-height: 92vh;
+  background: rgba(15, 23, 42, 0.98);
+  border: 1px solid rgba(51, 65, 85, 0.6);
+  border-radius: 20px;
+  box-shadow: 0 24px 60px -12px rgba(0, 0, 0, 0.7);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  animation: tickerSlideUp 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.ticker-modal-header {
+  padding: 14px 18px;
+  border-bottom: 1px solid rgba(51, 65, 85, 0.5);
+  background: rgba(30, 41, 59, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-shrink: 0;
+}
+
+.ticker-modal-icon {
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  font-weight: 700;
+  flex-shrink: 0;
+  background: rgba(59, 130, 246, 0.15);
+  color: #60a5fa;
+}
+.ticker-modal-icon img {
+  width: 100%;
+  height: 100%;
+  border-radius: 10px;
+  object-fit: contain;
+}
+
+.ticker-modal-close {
+  width: 34px;
+  height: 34px;
+  min-width: 34px;
+  min-height: 34px;
+  border-radius: 10px;
+  background: rgba(51, 65, 85, 0.5);
+  border: 1px solid rgba(71, 85, 105, 0.5);
+  color: #94a3b8;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.ticker-modal-close:hover {
+  background: rgba(244, 63, 94, 0.15);
+  border-color: rgba(244, 63, 94, 0.4);
+  color: #f87171;
+}
+
+.ticker-modal-body {
+  padding: 16px 18px 18px;
+  overflow-y: auto;
+  flex: 1;
+  min-height: 0;
+}
+
+/* Botón "ver histórico" en filas/cards */
+.ticker-perf-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  min-width: 22px;
+  min-height: 22px;
+  margin-left: 6px;
+  border-radius: 6px;
+  background: rgba(59, 130, 246, 0.12);
+  border: 1px solid rgba(59, 130, 246, 0.3);
+  color: #60a5fa;
+  font-size: 10px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  flex-shrink: 0;
+}
+.ticker-perf-btn:hover {
+  background: rgba(59, 130, 246, 0.25);
+  border-color: rgba(59, 130, 246, 0.6);
+  transform: scale(1.08);
+}
+.ticker-perf-btn.has-data {
+  background: rgba(16, 185, 129, 0.15);
+  border-color: rgba(16, 185, 129, 0.4);
+  color: #34d399;
+}
+.ticker-perf-btn.has-data:hover {
+  background: rgba(16, 185, 129, 0.28);
+  border-color: rgba(16, 185, 129, 0.7);
+}
+.ticker-perf-btn.no-data {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+.ticker-perf-btn.no-data:hover {
+  transform: none;
+  background: rgba(59, 130, 246, 0.12);
+}
+
+/* Fila del modal */
+.ticker-modal-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 9px 14px;
+  border-bottom: 1px solid rgba(51, 65, 85, 0.2);
+  transition: background 0.15s ease;
+}
+.ticker-modal-row:last-child { border-bottom: none; }
+.ticker-modal-row:hover { background: rgba(51, 65, 85, 0.2); }
+
+@keyframes tickerFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes tickerSlideUp {
+  from { opacity: 0; transform: translateY(12px) scale(0.98); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+/* Móvil */
+@media (max-width: 640px) {
+  .ticker-modal-content {
+    max-height: 95vh;
+    border-radius: 16px;
+  }
+  .ticker-modal-body { padding: 12px 14px 14px; }
 }
