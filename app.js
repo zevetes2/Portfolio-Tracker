@@ -109,7 +109,7 @@ async function loadData(forceRefresh = false) {
       }
     }
 
-    var url = API_URL + "?action=dashboard&currency=" + currentCurrency;
+    var url = API_URL + "?action=dashboardLite&currency=" + currentCurrency;
     if (currentCurrency !== "USD" && currentRate) {
       url += "&rate=" + currentRate;
     }
@@ -117,7 +117,9 @@ async function loadData(forceRefresh = false) {
       url += "&force=1";
     }
 
-    var data = await fetchAPI(url, 60000, 2);
+    var data = await fetchAPI(url, 120000, 0);
+
+    
 
     if (data.error) throw new Error(data.error);
 
@@ -156,6 +158,7 @@ async function loadData(forceRefresh = false) {
     }
 
     renderDashboard(data);
+    loadHeavyDataInBackground();
     document.getElementById('lastUpdate').textContent =
       new Date().toLocaleTimeString('es-DO', { hour: '2-digit', minute: '2-digit' });
     showContent();
@@ -166,6 +169,45 @@ async function loadData(forceRefresh = false) {
   }
 }
 
+async function loadHeavyDataInBackground() {
+  try {
+    // Cargar historicoBrokers
+    var hbUrl = API_URL + "?action=historicoBrokers&currency=" + currentCurrency;
+    if (currentRate) hbUrl += "&rate=" + currentRate;
+    
+    var hbData = await fetchAPI(hbUrl, 120000, 0);
+    if (hbData && !hbData.error && hbData.dates && hbData.dates.length > 0) {
+      window.dashboardData.historicoBrokers = hbData;
+      historyData = [];
+      for (var i = 0; i < hbData.dates.length; i++) {
+        historyData.push({
+          date: hbData.dates[i],
+          total: hbData.totals[i] || 0,
+          marketValue: hbData.totals[i] || 0,
+          cash: 0,
+          invested: 0
+        });
+      }
+      renderHistoryChart();
+    }
+  } catch(e) {
+    console.warn("historicoBrokers falló:", e);
+  }
+  
+  try {
+    // Cargar rendimiento
+    var rUrl = API_URL + "?action=rendimiento&currency=" + currentCurrency;
+    if (currentRate) rUrl += "&rate=" + currentRate;
+    
+    var rData = await fetchAPI(rUrl, 120000, 0);
+    if (rData && !rData.error) {
+      window.dashboardData.rendimiento = rData;
+      renderPerformanceOverview();
+    }
+  } catch(e) {
+    console.warn("rendimiento falló:", e);
+  }
+}
 
 
 async function loadPerformanceData() {
@@ -247,8 +289,8 @@ function switchTab(tab) {
 // FETCH API (con fallback a JSONP)
 // ============================================================
 async function fetchAPI(url, timeoutMs, retries) {
-  timeoutMs = timeoutMs || 60000;
-  retries = retries || 0;   // ← Desactivar JSONP por defecto (respuestas grandes)
+  timeoutMs = timeoutMs || 120000;
+  retries = retries || 0;
 
   console.log("fetchAPI called, URL:", url);
 
